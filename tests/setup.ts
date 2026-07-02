@@ -1,1 +1,3 @@
-// Task 2 replaces this with DATABASE_URL wiring for the test database.
+import path from 'node:path'
+
+process.env.DATABASE_URL = 'file:' + path.resolve(process.cwd(), 'prisma', 'test.db')

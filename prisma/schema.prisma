@@ -1,0 +1,289 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Source {
+  id              String     @id @default(cuid())
+  name            String     @unique
+  category        String
+  accessMethod    String
+  url             String?
+  isActive        Boolean    @default(true)
+  isFixture       Boolean    @default(false)
+  collectorStatus String     @default("UNSUPPORTED")
+  lastRunStatus   String?
+  lastRunAt       DateTime?
+  notes           String?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  documents       Document[]
+  signals         Signal[]
+}
+
+model Entity {
+  id           String                 @id @default(cuid())
+  name         String                 @unique
+  entityType   String                 @default("ORGANISATION")
+  sector       String?
+  region       String?
+  createdAt    DateTime               @default(now())
+  updatedAt    DateTime               @updatedAt
+  claims       Claim[]
+  signals      Signal[]
+  clusterLinks SignalClusterEntity[]
+  eventLinks   EventCandidateEntity[]
+  primaryFor   EventCandidate[]       @relation("PrimaryEntity")
+}
+
+model Document {
+  id                    String          @id @default(cuid())
+  sourceId              String
+  source                Source          @relation(fields: [sourceId], references: [id])
+  url                   String
+  title                 String
+  rawContent            String
+  rawContentHash        String
+  normalisedContentHash String
+  fetchedAt             DateTime        @default(now())
+  publishedAt           DateTime?
+  documentType          String
+  language              String          @default("en")
+  isFixture             Boolean         @default(false)
+  metadataJson          String          @default("{}")
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+  parsedDocument        ParsedDocument?
+  claims                Claim[]
+  signals               Signal[]
+
+  @@unique([sourceId, rawContentHash])
+}
+
+model ParsedDocument {
+  id                     String    @id @default(cuid())
+  documentId             String    @unique
+  document               Document  @relation(fields: [documentId], references: [id])
+  title                  String
+  bodyText               String
+  publishedAt            DateTime?
+  authorsJson            String    @default("[]")
+  language               String    @default("en")
+  linksJson              String    @default("[]")
+  entitiesMentionedJson  String    @default("[]")
+  parserName             String
+  parserConfidence       Float
+  status                 String    @default("PARSED")
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+}
+
+model Claim {
+  id                   String    @id @default(cuid())
+  documentId           String
+  document             Document  @relation(fields: [documentId], references: [id])
+  entityId             String?
+  entity               Entity?   @relation(fields: [entityId], references: [id])
+  claimType            String
+  claimText            String
+  claimDate            DateTime?
+  extractedValue       String?
+  unit                 String?
+  sector               String?
+  region               String?
+  extractionMethod     String
+  extractionConfidence Float
+  credibilityScore     Float
+  needsReview          Boolean   @default(false)
+  isFixture            Boolean   @default(false)
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  signal               Signal?
+}
+
+model Signal {
+  id           String                @id @default(cuid())
+  claimId      String                @unique
+  claim        Claim                 @relation(fields: [claimId], references: [id])
+  documentId   String
+  document     Document              @relation(fields: [documentId], references: [id])
+  sourceId     String
+  source       Source                @relation(fields: [sourceId], references: [id])
+  entityId     String?
+  entity       Entity?               @relation(fields: [entityId], references: [id])
+  signalType   String
+  signalValue  String?
+  signalDate   DateTime
+  confidence   Float
+  strength     Float
+  direction    String
+  timeWindow   String?
+  explanation  String
+  sector       String?
+  region       String?
+  isFixture    Boolean               @default(false)
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+  clusterLinks SignalClusterSignal[]
+}
+
+model SignalCluster {
+  id               String                @id @default(cuid())
+  title            String
+  clusterType      String
+  sector           String?
+  region           String?
+  strength         Float
+  confidence       Float
+  novelty          Float
+  explanation      String
+  isFixture        Boolean               @default(false)
+  eventCandidateId String?
+  eventCandidate   EventCandidate?       @relation(fields: [eventCandidateId], references: [id])
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  signals          SignalClusterSignal[]
+  entities         SignalClusterEntity[]
+}
+
+model SignalClusterSignal {
+  id        String        @id @default(cuid())
+  clusterId String
+  cluster   SignalCluster @relation(fields: [clusterId], references: [id])
+  signalId  String
+  signal    Signal        @relation(fields: [signalId], references: [id])
+
+  @@unique([clusterId, signalId])
+}
+
+model SignalClusterEntity {
+  id        String        @id @default(cuid())
+  clusterId String
+  cluster   SignalCluster @relation(fields: [clusterId], references: [id])
+  entityId  String
+  entity    Entity        @relation(fields: [entityId], references: [id])
+
+  @@unique([clusterId, entityId])
+}
+
+model EventCandidate {
+  id                   String                 @id @default(cuid())
+  title                String
+  eventType            String
+  eventClass           String
+  summary              String
+  status               String                 @default("NEW")
+  severity             Float
+  probability          Float
+  confidence           Float
+  timeWindowStart      DateTime?
+  timeWindowEnd        DateTime?
+  firstDetectedAt      DateTime               @default(now())
+  lastUpdatedAt        DateTime               @updatedAt
+  primaryEntityId      String?
+  primaryEntity        Entity?                @relation("PrimaryEntity", fields: [primaryEntityId], references: [id])
+  affectedSector       String?
+  affectedRegion       String?
+  evidenceCount        Int
+  sourceDiversityScore Float
+  signalStrength       Float
+  noveltyScore         Float
+  opportunityScore     Float
+  riskScore            Float
+  createdFromScanRunId String
+  createdFromScanRun   ScanRun                @relation(fields: [createdFromScanRunId], references: [id])
+  isFixture            Boolean                @default(false)
+  createdAt            DateTime               @default(now())
+  clusters             SignalCluster[]
+  riskOpportunities    RiskOpportunity[]
+  feedItems            DashboardFeedItem[]
+  dataGaps             DataGap[]
+  triggerConditions    TriggerCondition[]
+  entities             EventCandidateEntity[]
+}
+
+model EventCandidateEntity {
+  id               String         @id @default(cuid())
+  eventCandidateId String
+  eventCandidate   EventCandidate @relation(fields: [eventCandidateId], references: [id])
+  entityId         String
+  entity           Entity         @relation(fields: [entityId], references: [id])
+
+  @@unique([eventCandidateId, entityId])
+}
+
+model RiskOpportunity {
+  id               String         @id @default(cuid())
+  eventCandidateId String
+  eventCandidate   EventCandidate @relation(fields: [eventCandidateId], references: [id])
+  type             String
+  title            String
+  explanation      String
+  riskLogic        String
+  opportunityLogic String
+  questionsJson    String         @default("[]")
+  confidence       Float
+  createdAt        DateTime       @default(now())
+}
+
+model DashboardFeedItem {
+  id               String         @id @default(cuid())
+  eventCandidateId String
+  eventCandidate   EventCandidate @relation(fields: [eventCandidateId], references: [id])
+  feedType         String
+  priority         Int
+  title            String
+  summary          String
+  status           String         @default("NEW")
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+}
+
+model ScanRun {
+  id                        String           @id @default(cuid())
+  scanType                  String           @default("FULL")
+  status                    String           @default("RUNNING")
+  startedAt                 DateTime         @default(now())
+  completedAt               DateTime?
+  sourcesScanned            Int              @default(0)
+  sourcesSkipped            Int              @default(0)
+  documentsFetched          Int              @default(0)
+  claimsExtracted           Int              @default(0)
+  signalsCreated            Int              @default(0)
+  clustersCreated           Int              @default(0)
+  eventCandidatesCreated    Int              @default(0)
+  dashboardFeedItemsCreated Int              @default(0)
+  errorsJson                String           @default("[]")
+  createdAt                 DateTime         @default(now())
+  updatedAt                 DateTime         @updatedAt
+  events                    EventCandidate[]
+}
+
+model DataGap {
+  id                      String         @id @default(cuid())
+  eventCandidateId        String
+  eventCandidate          EventCandidate @relation(fields: [eventCandidateId], references: [id])
+  title                   String
+  description             String
+  impactOnConfidence      Float
+  suggestedSourceCategory String
+  severity                String
+  createdAt               DateTime       @default(now())
+}
+
+model TriggerCondition {
+  id                String         @id @default(cuid())
+  eventCandidateId  String
+  eventCandidate    EventCandidate @relation(fields: [eventCandidateId], references: [id])
+  signalType        String
+  conditionText     String
+  direction         String
+  probabilityImpact Float
+  priority          Int
+  resolvedAt        DateTime?
+  createdAt         DateTime       @default(now())
+}
