@@ -52,4 +52,21 @@ describe('generateGapsAndTriggers', () => {
     expect(triggerConditions.some((t) => t.direction === 'LOWERS')).toBe(true)
     expect(triggerConditions.every((t) => t.eventCandidateId === event.id)).toBe(true)
   })
+
+  it('skips events with no member signals, recording an error instead of inventing gaps', async () => {
+    const scanRun = await prisma.scanRun.create({ data: {} })
+    const orphan = await prisma.eventCandidate.create({
+      data: {
+        title: 'Orphan event', eventType: 'LAYOFF_SIGNAL', eventClass: 'RISK', summary: 't',
+        severity: 0.5, probability: 0.5, confidence: 0.5, evidenceCount: 0,
+        sourceDiversityScore: 0, signalStrength: 0.5, noveltyScore: 0.5,
+        opportunityScore: 0.2, riskScore: 0.5, createdFromScanRunId: scanRun.id, isFixture: true,
+      },
+    })
+    const { dataGaps, triggerConditions, errors } = await generateGapsAndTriggers([orphan])
+    expect(dataGaps).toHaveLength(0)
+    expect(triggerConditions).toHaveLength(0)
+    expect(errors).toHaveLength(1)
+    expect(errors[0].message).toContain('no member signals')
+  })
 })

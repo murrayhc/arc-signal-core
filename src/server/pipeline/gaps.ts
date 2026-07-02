@@ -55,6 +55,15 @@ export async function generateGapsAndTriggers(
         include: { signals: { include: { signal: true } } },
       })
       const members = clusters.flatMap((c) => c.signals.map((link) => link.signal))
+
+      if (members.length === 0) {
+        errors.push({
+          stage: 'gaps',
+          message: `Event ${event.id} has no member signals; skipping gap and trigger analysis`,
+        })
+        continue
+      }
+
       const distinctSources = new Set(members.map((m) => m.sourceId)).size
       const directions = new Set(members.map((m) => m.direction))
       const newest = Math.max(...members.map((m) => m.signalDate.getTime()))
