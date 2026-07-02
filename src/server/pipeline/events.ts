@@ -143,15 +143,16 @@ export async function createEventCandidates(
             ? 'RISING'
             : existing.status
         // Dependents must reflect current evidence: clear them; classify/gaps regenerate downstream.
-        await prisma.$transaction([
+        // The event update rides the same transaction so a mid-merge crash can never leave
+        // stale scores alongside deleted dependents (missing feed items alone self-heal).
+        const [, , , , updated] = await prisma.$transaction([
           prisma.riskOpportunity.deleteMany({ where: { eventCandidateId: existing.id } }),
           prisma.dataGap.deleteMany({ where: { eventCandidateId: existing.id } }),
           prisma.triggerCondition.deleteMany({ where: { eventCandidateId: existing.id } }),
           prisma.dashboardFeedItem.deleteMany({ where: { eventCandidateId: existing.id } }),
-        ])
-        const updated = await prisma.eventCandidate.update({
-          where: { id: existing.id },
-          data: {
+          prisma.eventCandidate.update({
+            where: { id: existing.id },
+            data: {
             eventClass: m.eventClass,
             summary: buildSummary(existing.title, m, cluster.explanation),
             status,
@@ -166,8 +167,9 @@ export async function createEventCandidates(
             opportunityScore: m.opportunityScore,
             riskScore: m.riskScore,
             isFixture: m.isFixture,
-          },
-        })
+            },
+          }),
+        ])
         updatedEvents.push(updated)
         feedItems.push(...(await createFeedItems(updated, m, cluster.explanation)))
         continue
