@@ -66,6 +66,7 @@ describe('runFullScan', () => {
     expect(second.counts.documentsFetched).toBe(0)
     expect(second.counts.signalsCreated).toBe(0)
     expect(second.counts.eventCandidatesCreated).toBe(0)
+    expect(second.counts.eventCandidatesUpdated).toBe(0)
     expect(await prisma.document.count()).toBe(8)
   })
 

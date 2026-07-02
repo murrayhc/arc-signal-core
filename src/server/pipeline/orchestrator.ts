@@ -23,6 +23,7 @@ export type ScanSummary = {
     signalsCreated: number
     clustersCreated: number
     eventCandidatesCreated: number
+    eventCandidatesUpdated: number
     dashboardFeedItemsCreated: number
   }
   errors: PipelineError[]
@@ -44,6 +45,7 @@ export async function runFullScan(options: { scanType?: string } = {}): Promise<
     signalsCreated: 0,
     clustersCreated: 0,
     eventCandidatesCreated: 0,
+    eventCandidatesUpdated: 0,
     dashboardFeedItemsCreated: 0,
   }
 
@@ -83,14 +85,16 @@ export async function runFullScan(options: { scanType?: string } = {}): Promise<
     const events = await createEventCandidates(clusters.clusters, scanRun.id)
     errors.push(...events.errors)
     counts.eventCandidatesCreated = events.events.length
+    counts.eventCandidatesUpdated = events.updatedEvents.length
     counts.dashboardFeedItemsCreated = events.feedItems.length
+    const allEvents = [...events.events, ...events.updatedEvents]
 
     // 11. Risk/opportunity classification.
-    const classified = await classifyEvents(events.events)
+    const classified = await classifyEvents(allEvents)
     errors.push(...classified.errors)
 
     // 12. Data gaps + trigger conditions.
-    const gaps = await generateGapsAndTriggers(events.events)
+    const gaps = await generateGapsAndTriggers(allEvents)
     errors.push(...gaps.errors)
 
     const status = errors.length > 0 ? 'COMPLETED_WITH_ERRORS' : 'COMPLETED'
