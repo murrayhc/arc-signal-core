@@ -1,0 +1,25 @@
+{
+  "items": [
+    {
+      "id": "b-1",
+      "url": "https://fixture.archlight.local/b/1",
+      "title": "Meridian Grid Systems to shed hundreds of roles as orders slow",
+      "content": "Technology supplier Meridian Grid Systems will reduce its UK workforce by around 400 roles, citing weaker demand. The job cuts affect the Manchester operation and mark the sector's largest workforce reduction this quarter.",
+      "publishedAt": "2026-06-28T13:20:00Z"
+    },
+    {
+      "id": "b-2",
+      "url": "https://fixture.archlight.local/b/2",
+      "title": "Second UK council launches £30m highways tender",
+      "content": "Another UK local authority has issued a £30m tender for highways maintenance, the second major public contract in the region this week. Procurement advisers say framework agreement activity is accelerating.",
+      "publishedAt": "2026-06-29T16:05:00Z"
+    },
+    {
+      "id": "b-3",
+      "url": "https://fixture.archlight.local/b/3",
+      "title": "Retail payments probe widens to online checkout providers",
+      "content": "The UK regulator investigating retail payment fees has widened its inquiry to online checkout providers, and signalled that compliance obligations for the UK retail payments sector may tighten.",
+      "publishedAt": "2026-07-01T09:40:00Z"
+    }
+  ]
+}
