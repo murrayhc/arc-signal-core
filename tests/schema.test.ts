@@ -75,4 +75,15 @@ describe('event discovery data layer', () => {
     await makeSignal(claim.id, doc.id, source.id)
     await expect(makeSignal(claim.id, doc.id, source.id)).rejects.toThrow()
   })
+
+  it('supports SourceHealth rows and the new ScanRun columns', async () => {
+    const source = await makeSource()
+    const health = await prisma.sourceHealth.create({
+      data: { sourceId: source.id, status: 'HEALTHY', healthScore: 1, documentsStoredLastRun: 5 },
+    })
+    expect(health.failureCount).toBe(0)
+    const run = await prisma.scanRun.create({ data: {} })
+    expect(run.warningsJson).toBe('[]')
+    expect(run.eventCandidatesUpdated).toBe(0)
+  })
 })

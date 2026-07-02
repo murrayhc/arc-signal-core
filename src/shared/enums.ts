@@ -72,3 +72,6 @@ export type EventStatus = (typeof EVENT_STATUSES)[number]
 
 export const FEED_TYPES = ['RISK_RADAR', 'OPPORTUNITY_RADAR', 'INBOX', 'WATCHLIST'] as const
 export type FeedType = (typeof FEED_TYPES)[number]
+
+export const SOURCE_HEALTH_STATUSES = ['HEALTHY', 'DEGRADED', 'FAILING', 'UNSUPPORTED', 'UNKNOWN'] as const
+export type SourceHealthStatus = (typeof SOURCE_HEALTH_STATUSES)[number]

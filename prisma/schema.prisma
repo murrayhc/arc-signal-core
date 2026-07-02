@@ -23,6 +23,7 @@ model Source {
   updatedAt       DateTime   @updatedAt
   documents       Document[]
   signals         Signal[]
+  health          SourceHealth?
 }
 
 model Entity {
@@ -256,8 +257,10 @@ model ScanRun {
   signalsCreated            Int              @default(0)
   clustersCreated           Int              @default(0)
   eventCandidatesCreated    Int              @default(0)
+  eventCandidatesUpdated    Int              @default(0)
   dashboardFeedItemsCreated Int              @default(0)
   errorsJson                String           @default("[]")
+  warningsJson              String           @default("[]")
   createdAt                 DateTime         @default(now())
   updatedAt                 DateTime         @updatedAt
   events                    EventCandidate[]
@@ -286,4 +289,19 @@ model TriggerCondition {
   priority          Int
   resolvedAt        DateTime?
   createdAt         DateTime       @default(now())
+}
+
+model SourceHealth {
+  id                     String    @id @default(cuid())
+  sourceId               String    @unique
+  source                 Source    @relation(fields: [sourceId], references: [id])
+  status                 String    @default("UNKNOWN")
+  lastSuccessfulFetchAt  DateTime?
+  lastFailedFetchAt      DateTime?
+  failureCount           Int       @default(0)
+  documentsStoredLastRun Int       @default(0)
+  healthScore            Float     @default(0)
+  notes                  String?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
 }

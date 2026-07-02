@@ -17,6 +17,7 @@ export async function resetDb() {
     prisma.parsedDocument.deleteMany(),
     prisma.document.deleteMany(),
     prisma.scanRun.deleteMany(),
+    prisma.sourceHealth.deleteMany(),
     prisma.entity.deleteMany(),
     prisma.source.deleteMany(),
   ])
