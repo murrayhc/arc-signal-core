@@ -81,4 +81,14 @@ describe('AUTONOMOUS RADAR PROOF: scan → rows at every stage → dashboard →
     expect(signal.claim.documentId).toBe(signal.document.id)
     expect(signal.document.source.name).toContain('Fixture Wire')
   })
+
+  it('generates commercial opportunities and positioning from scan events, guard-clean', async () => {
+    const cards = await prisma.opportunityCard.findMany()
+    expect(cards.length).toBeGreaterThan(0)
+    const examples = await prisma.strategicPositioningExample.findMany()
+    expect(examples.length).toBeGreaterThan(0)
+    const { findAdviceLanguage } = await import('@/server/safety/advice-language')
+    for (const c of cards) expect(findAdviceLanguage(`${c.summary} ${c.buyerPain} ${c.suggestedOffer} ${c.nextBestAction}`)).toEqual([])
+    for (const e of examples) expect(findAdviceLanguage(`${e.howItCouldBeUsed} ${e.whyItMayMatter} ${e.constraints}`)).toEqual([])
+  })
 })

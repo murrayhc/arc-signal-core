@@ -54,6 +54,15 @@ describe('runFullScan', () => {
     expect(await prisma.sourceHealth.count()).toBe(3)
     const healthStatuses = (await prisma.sourceHealth.findMany()).map((h) => h.status).sort()
     expect(healthStatuses).toEqual(['HEALTHY', 'HEALTHY', 'UNSUPPORTED'])
+
+    expect(summary.counts.opportunityCardsCreated).toBeGreaterThan(0)
+    expect(summary.counts.positioningExamplesCreated).toBeGreaterThan(0)
+    const cards = await prisma.opportunityCard.findMany()
+    expect(cards.every((c) => c.isFixture)).toBe(true)
+    // every card links to an event that exists
+    for (const c of cards) {
+      expect(await prisma.eventCandidate.count({ where: { id: c.eventCandidateId } })).toBe(1)
+    }
   })
 
   it('completes even when one source fails, recording the error', async () => {

@@ -7,6 +7,8 @@ import { clusterSignals } from './cluster'
 import { createEventCandidates } from './events'
 import { classifyEvents } from './classify'
 import { generateGapsAndTriggers } from './gaps'
+import { generateOpportunities } from './opportunity'
+import { generatePositioning } from './positioning'
 import { updateSourceHealth } from './health'
 import type { PipelineError } from './types'
 
@@ -26,6 +28,9 @@ export type ScanSummary = {
     eventCandidatesCreated: number
     eventCandidatesUpdated: number
     dashboardFeedItemsCreated: number
+    opportunityCardsCreated: number
+    opportunityCardsUpdated: number
+    positioningExamplesCreated: number
   }
   errors: PipelineError[]
   warnings: PipelineError[]
@@ -48,6 +53,9 @@ export async function runFullScan(options: { scanType?: string } = {}): Promise<
     eventCandidatesCreated: 0,
     eventCandidatesUpdated: 0,
     dashboardFeedItemsCreated: 0,
+    opportunityCardsCreated: 0,
+    opportunityCardsUpdated: 0,
+    positioningExamplesCreated: 0,
   }
 
   try {
@@ -101,6 +109,22 @@ export async function runFullScan(options: { scanType?: string } = {}): Promise<
     // 12. Data gaps + trigger conditions.
     const gaps = await generateGapsAndTriggers(allEvents)
     errors.push(...gaps.errors)
+
+    // 13. Commercial opportunity conversion + strategic positioning (deterministic).
+    const lens =
+      (await prisma.revenueLens.findFirst({ where: { active: true, isDefault: true } })) ??
+      (await prisma.revenueLens.findFirst({ where: { active: true } }))
+    const opps = await generateOpportunities(allEvents, lens)
+    errors.push(...opps.errors)
+    counts.opportunityCardsCreated = opps.created.length
+    counts.opportunityCardsUpdated = opps.updated.length
+    const cardsWithEvents = [...opps.created, ...opps.updated].map((c) => ({
+      ...c,
+      eventCandidate: allEvents.find((e) => e.id === c.eventCandidateId)!,
+    }))
+    const positioning = await generatePositioning(cardsWithEvents, lens)
+    errors.push(...positioning.errors)
+    counts.positioningExamplesCreated = positioning.created.length
 
     const status = errors.length > 0 ? 'COMPLETED_WITH_ERRORS' : 'COMPLETED'
     const completed = await prisma.scanRun.update({
