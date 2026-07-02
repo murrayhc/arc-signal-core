@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { prisma } from '@/server/db'
 import { runFullScan } from '@/server/pipeline/orchestrator'
 import { runSeed } from '@/server/seed'
@@ -14,7 +14,10 @@ describe('runFullScan', () => {
   it('runs the full pipeline from fixture sources to dashboard feed items', async () => {
     const summary = await runFullScan()
 
-    expect(summary.status).toBe('COMPLETED_WITH_ERRORS') // unsupported source is skipped+recorded
+    expect(summary.status).toBe('COMPLETED') // skips are warnings, not errors
+    expect(summary.errors).toHaveLength(0)
+    expect(summary.warnings).toHaveLength(1)
+    expect(summary.warnings[0].stage).toBe('collect:skip')
     expect(summary.counts.sourcesScanned).toBe(2)
     expect(summary.counts.sourcesSkipped).toBe(1)
     expect(summary.counts.documentsFetched).toBe(8)
@@ -62,6 +65,19 @@ describe('runFullScan', () => {
     const second = await runFullScan()
     expect(second.counts.documentsFetched).toBe(0)
     expect(second.counts.signalsCreated).toBe(0)
+    expect(second.counts.eventCandidatesCreated).toBe(0)
     expect(await prisma.document.count()).toBe(8)
+  })
+
+  it('marks the ScanRun FAILED and still returns a summary when the orchestrator itself throws', async () => {
+    const spy = vi.spyOn(prisma.source, 'findMany').mockRejectedValueOnce(new Error('db exploded'))
+    const summary = await runFullScan()
+    spy.mockRestore()
+    expect(summary.status).toBe('FAILED')
+    expect(summary.message).toContain('db exploded')
+    const run = await prisma.scanRun.findUniqueOrThrow({ where: { id: summary.scanRunId } })
+    expect(run.status).toBe('FAILED')
+    expect(run.completedAt).not.toBeNull()
+    expect(run.errorsJson).toContain('db exploded')
   })
 })

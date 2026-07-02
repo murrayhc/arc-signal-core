@@ -26,6 +26,7 @@ export type ScanSummary = {
     dashboardFeedItemsCreated: number
   }
   errors: PipelineError[]
+  warnings: PipelineError[]
 }
 
 export async function runFullScan(options: { scanType?: string } = {}): Promise<ScanSummary> {
@@ -33,6 +34,8 @@ export async function runFullScan(options: { scanType?: string } = {}): Promise<
     data: { scanType: options.scanType ?? 'FULL', status: 'RUNNING' },
   })
   const errors: PipelineError[] = []
+  const warnings: PipelineError[] = []
+  // documentsFetched counts newly STORED documents; re-scans of unchanged feeds report 0 (dedupe).
   const counts = {
     sourcesScanned: 0,
     sourcesSkipped: 0,
@@ -50,7 +53,7 @@ export async function runFullScan(options: { scanType?: string } = {}): Promise<
     const collected = await collectFromSources(sources)
     errors.push(...collected.errors)
     for (const skip of collected.skipped) {
-      errors.push({ stage: 'collect:skip', sourceId: skip.sourceId, message: skip.reason })
+      warnings.push({ stage: 'collect:skip', sourceId: skip.sourceId, message: skip.reason })
     }
     counts.sourcesSkipped = collected.skipped.length
     counts.sourcesScanned = sources.length - collected.skipped.length
@@ -93,23 +96,24 @@ export async function runFullScan(options: { scanType?: string } = {}): Promise<
     const status = errors.length > 0 ? 'COMPLETED_WITH_ERRORS' : 'COMPLETED'
     const completed = await prisma.scanRun.update({
       where: { id: scanRun.id },
-      data: { status, completedAt: new Date(), errorsJson: JSON.stringify(errors), ...counts },
+      data: { status, completedAt: new Date(), errorsJson: JSON.stringify(errors), warningsJson: JSON.stringify(warnings), ...counts },
     })
     return {
       scanRunId: completed.id,
       status,
       startedAt: completed.startedAt.toISOString(),
       completedAt: completed.completedAt?.toISOString() ?? null,
-      message: `Scan ${status.toLowerCase().replace(/_/g, ' ')}: ${counts.eventCandidatesCreated} event candidate(s) detected.`,
+      message: `Scan ${status.toLowerCase().replace(/_/g, ' ')}: ${counts.eventCandidatesCreated} event candidate(s) detected (${errors.length} error(s), ${warnings.length} warning(s)).`,
       counts,
       errors,
+      warnings,
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     errors.push({ stage: 'orchestrator', message })
     const failed = await prisma.scanRun.update({
       where: { id: scanRun.id },
-      data: { status: 'FAILED', completedAt: new Date(), errorsJson: JSON.stringify(errors), ...counts },
+      data: { status: 'FAILED', completedAt: new Date(), errorsJson: JSON.stringify(errors), warningsJson: JSON.stringify(warnings), ...counts },
     })
     return {
       scanRunId: failed.id,
@@ -119,6 +123,7 @@ export async function runFullScan(options: { scanType?: string } = {}): Promise<
       message: `Scan failed: ${message}`,
       counts,
       errors,
+      warnings,
     }
   }
 }

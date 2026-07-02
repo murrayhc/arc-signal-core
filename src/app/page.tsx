@@ -40,6 +40,13 @@ export default async function DashboardPage() {
         </div>
       )}
 
+      {data.lastScan && data.lastScan.warnings.length > 0 && (
+        <p className="mt-2 text-xs text-slate-500">
+          {data.lastScan.warnings.length} expected skip(s):{' '}
+          {data.lastScan.warnings.slice(0, 3).map((w) => w.message).join(' · ')}
+        </p>
+      )}
+
       <section className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
           { label: 'New events', value: data.counts.newEvents },

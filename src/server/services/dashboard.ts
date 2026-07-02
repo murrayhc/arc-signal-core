@@ -20,6 +20,7 @@ export type DashboardData = {
     id: string; status: string; startedAt: string; completedAt: string | null
     eventCandidatesCreated: number; documentsFetched: number
     errors: { stage: string; message: string }[]
+    warnings: { stage: string; message: string }[]
   } | null
   counts: { newEvents: number; rising: number; highConfidence: number; watch: number }
   riskRadar: FeedCardData[]
@@ -86,6 +87,7 @@ export async function getDashboardData(): Promise<DashboardData> {
           eventCandidatesCreated: lastScanRow.eventCandidatesCreated,
           documentsFetched: lastScanRow.documentsFetched,
           errors: JSON.parse(lastScanRow.errorsJson),
+          warnings: JSON.parse(lastScanRow.warningsJson),
         }
       : null,
     counts: { newEvents, rising, highConfidence, watch },
