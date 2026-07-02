@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { getDashboardData } from '@/server/services/dashboard'
 import { EventCard } from '@/components/EventCard'
+import { OpportunityCard } from '@/components/OpportunityCard'
 import { InboxList } from '@/components/InboxList'
 import { RunScanButton } from '@/components/RunScanButton'
 import { FixtureBadge } from '@/components/badges'
@@ -84,12 +85,23 @@ export default async function DashboardPage() {
           </section>
 
           <section className="mt-10">
-            <h2 className="text-lg font-semibold text-emerald-300">Opportunity Radar</h2>
-            {data.opportunityRadar.length === 0 ? (
+            <h2 className="text-lg font-semibold text-emerald-300">Opportunity Signals</h2>
+            {data.opportunitySignals.length === 0 ? (
               <p className="mt-2 text-sm text-slate-500">No opportunity events detected.</p>
             ) : (
               <div className="mt-3 grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-                {data.opportunityRadar.map((card) => <EventCard key={card.eventId} card={card} />)}
+                {data.opportunitySignals.map((card) => <EventCard key={card.eventId} card={card} />)}
+              </div>
+            )}
+          </section>
+
+          <section className="mt-10">
+            <h2 className="text-lg font-semibold text-emerald-300">Opportunity Radar</h2>
+            {data.opportunityRadar.length === 0 ? (
+              <p className="mt-2 text-sm text-slate-500">No commercial opportunities detected.</p>
+            ) : (
+              <div className="mt-3 grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                {data.opportunityRadar.map((card) => <OpportunityCard key={card.id} card={card} />)}
               </div>
             )}
           </section>

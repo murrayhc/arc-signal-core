@@ -1,5 +1,6 @@
 import { prisma } from '@/server/db'
 import type { EventCandidate, RiskOpportunity } from '@prisma/client'
+import { getOpportunityRadar, type OpportunityCardData } from '@/server/services/opportunities'
 
 export type FeedCardData = {
   eventId: string; title: string; eventType: string; eventClass: string; status: string
@@ -25,7 +26,8 @@ export type DashboardData = {
   } | null
   counts: { newEvents: number; rising: number; highConfidence: number; watch: number }
   riskRadar: FeedCardData[]
-  opportunityRadar: FeedCardData[]
+  opportunitySignals: FeedCardData[]
+  opportunityRadar: OpportunityCardData[]
   inbox: FeedCardData[]
   sources: SourceStatus[]
 }
@@ -111,7 +113,8 @@ export async function getDashboardData(): Promise<DashboardData> {
       : null,
     counts: { newEvents, rising, highConfidence, watch },
     riskRadar: await radar('RISK_RADAR'),
-    opportunityRadar: await radar('OPPORTUNITY_RADAR'),
+    opportunitySignals: await radar('OPPORTUNITY_RADAR'),
+    opportunityRadar: await getOpportunityRadar(),
     inbox: inboxEvents.map(toCard),
     sources: await getSources(),
   }

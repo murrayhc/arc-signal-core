@@ -126,4 +126,33 @@ describe('dashboard + events + sources API', () => {
     expect(body[0].errorCount).toBe(0)
     expect(body[0].errorsJson).toBeUndefined()
   })
+
+  it('GET /api/opportunities returns commercial cards from the scan', async () => {
+    const { GET } = await import('@/app/api/opportunities/route')
+    const res = await GET()
+    const body = await res.json()
+    expect(body.length).toBeGreaterThan(0)
+    expect(body[0].opportunityType).toBeTruthy()
+    expect(body[0].likelyBuyers).toBeInstanceOf(Array)
+  })
+
+  it('GET + PATCH /api/opportunities/[id] returns detail and updates status', async () => {
+    const card = await prisma.opportunityCard.findFirstOrThrow()
+    const { GET, PATCH } = await import('@/app/api/opportunities/[id]/route')
+    const detail = await GET(new Request('http://t/'), { params: Promise.resolve({ id: card.id }) })
+    const body = await detail.json()
+    expect(body.card.id).toBe(card.id)
+    expect(body.positioning).toBeInstanceOf(Array)
+    const patched = await PATCH(
+      new Request('http://t/', { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'DISMISS' }) }),
+      { params: Promise.resolve({ id: card.id }) },
+    )
+    expect(patched.status).toBe(200)
+    expect((await patched.json()).status).toBe('DISMISSED')
+    const bad = await PATCH(
+      new Request('http://t/', { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'NOPE' }) }),
+      { params: Promise.resolve({ id: card.id }) },
+    )
+    expect(bad.status).toBe(400)
+  })
 })

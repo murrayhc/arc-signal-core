@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getEventDetail } from '@/server/services/events'
 import type { EvidenceItem } from '@/server/services/events'
+import { getOpportunitiesForEvent } from '@/server/services/opportunities'
 import { EventActions } from '@/components/EventActions'
 import { ClassBadge, FixtureBadge, StatusBadge, pct } from '@/components/badges'
 
@@ -40,6 +41,7 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
   const detail = await getEventDetail(id)
   if (!detail) notFound()
   const { event } = detail
+  const opportunities = await getOpportunitiesForEvent(event.id)
 
   return (
     <main className="mx-auto max-w-4xl px-6 py-8">
@@ -174,6 +176,29 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
         <ul className="list-inside list-disc space-y-1 text-sm text-slate-300">
           {detail.suggestedQuestions.map((q, i) => <li key={i}>{q}</li>)}
         </ul>
+      </Section>
+
+      <Section title="Opportunities & positioning">
+        {opportunities.length === 0 ? (
+          <p className="text-sm text-slate-500">No commercial opportunities derived from this event yet.</p>
+        ) : (
+          <ul className="space-y-2">
+            {opportunities.map((o) => (
+              <li key={o.id}>
+                <Link
+                  href={`/opportunities/${o.id}`}
+                  className="flex items-center justify-between gap-2 rounded-md border border-slate-800 bg-slate-900 p-3 text-sm transition hover:border-slate-600"
+                >
+                  <span className="text-slate-200">{o.title}</span>
+                  <span className="flex shrink-0 items-center gap-2 text-xs text-slate-500">
+                    {o.opportunityType.replace(/_/g, ' ')} · value {pct(o.commercialValueScore)}
+                    {o.isFixture && <FixtureBadge />}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
       </Section>
     </main>
   )
