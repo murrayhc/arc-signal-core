@@ -87,7 +87,9 @@ export async function clusterSignals(signals: Signal[]): Promise<{
           confidence,
           novelty,
           explanation,
-          isFixture: members.every((m) => m.isFixture),
+          // Conservative provenance: one fixture member taints the whole cluster's label.
+          // Mislabelling live-influenced data as fixture is safe; the reverse is not.
+          isFixture: members.some((m) => m.isFixture),
           signals: { create: members.map((m) => ({ signalId: m.id })) },
         },
       })

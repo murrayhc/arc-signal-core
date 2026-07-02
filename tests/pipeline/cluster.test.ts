@@ -77,4 +77,15 @@ describe('clusterSignals', () => {
     // single-signal penalty applied
     expect(clusters[0].confidence).toBeLessThan(0.45)
   })
+
+  it('labels mixed fixture/live clusters as fixture (conservative provenance)', async () => {
+    const fixtureSig = await signalFrom({ name: 'Fixture Wire' }, { sector: 'technology', region: 'UK' })
+    const liveSource = await makeSource({ name: 'Live Wire', isFixture: false, accessMethod: 'RSS', url: 'https://example.org/feed.xml' })
+    const liveDoc = await makeDocument(liveSource.id, { isFixture: false })
+    const liveClaim = await makeClaim(liveDoc.id, { isFixture: false })
+    const liveSig = await makeSignal(liveClaim.id, liveDoc.id, liveSource.id, { isFixture: false, sector: 'technology', region: 'UK' })
+    const { clusters } = await clusterSignals([fixtureSig, liveSig])
+    expect(clusters).toHaveLength(1)
+    expect(clusters[0].isFixture).toBe(true)
+  })
 })

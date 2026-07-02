@@ -16,8 +16,8 @@ export function RunScanButton() {
     try {
       const res = await fetch('/api/scans/run', { method: 'POST' })
       const body = await res.json()
-      if (!res.ok) {
-        setError(body.error ?? `Scan failed (HTTP ${res.status})`)
+      if (!res.ok || body.status === 'FAILED') {
+        setError(body.error ?? body.message ?? `Scan failed (HTTP ${res.status})`)
       } else {
         setMessage(body.message)
         router.refresh()

@@ -37,6 +37,17 @@ describe('scan API', () => {
     expect(res.status).toBe(409)
   })
 
+  it('recovers from a stale RUNNING scan left by a crash', async () => {
+    const stale = await prisma.scanRun.create({
+      data: { status: 'RUNNING', startedAt: new Date(Date.now() - 11 * 60 * 1000) },
+    })
+    const res = await runScan()
+    expect(res.status).toBe(201)
+    const updated = await prisma.scanRun.findUniqueOrThrow({ where: { id: stale.id } })
+    expect(updated.status).toBe('FAILED')
+    expect(updated.errorsJson).toContain('stale RUNNING row')
+  })
+
   it('GET /api/scans/[id] returns counts and errors; 404 for unknown', async () => {
     const summary = await runFullScan()
     const res = await getScan(req('GET'), { params: Promise.resolve({ id: summary.scanRunId }) })
