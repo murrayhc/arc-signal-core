@@ -346,7 +346,13 @@ per-source outcome of the run above: BBC News Business is `HEALTHY` (fetched
 and stored 1 new document this run), the two fixture wires are `DEGRADED`
 (their documents already existed from earlier scans, so this run stored 0 new
 documents each — degraded rather than healthy despite zero failures, since
-`documentsStoredLastRun` was 0), and Companies House Filings is `UNSUPPORTED`
+`documentsStoredLastRun` was 0). Important context for auditors: these were the
+FIRST-EVER `SourceHealth` rows — the table was added in Phase 2a, after the
+fixture wires had already stored their documents in the original proof run, so
+the "already HEALTHY" ratchet in `health.ts` had no prior status to preserve.
+This is a cold-start artifact of retrofitting health onto an existing database:
+on a fresh database the fixture wires are marked HEALTHY on their first
+producing scan. Companies House Filings is `UNSUPPORTED`
 (no collector exists for its access method — unchanged from the original
 proof).
 
