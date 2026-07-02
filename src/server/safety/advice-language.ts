@@ -21,6 +21,16 @@ const PROHIBITED_ADVICE_PATTERNS: RegExp[] = [
   /\b(personal|personalised|personalized)\s+(financial|investment|portfolio)\s+(advice|recommendation)\b/i,
   /\b(allocate|rebalance)\s+your\s+(portfolio|holdings)\b/i,
   /\bfinancial\s+advice\b/i,
+  // Strengthened after an adversarial false-negative probe (Phase 3a Task 2 review):
+  /\brate[sd]?\s+(this|it|them)\s+(a\s+)?(strong\s+)?(buy|sell|hold)\b/i, // "rate this a strong buy"
+  /\b(strong|outright)\s+(buy|sell)\b/i, // analyst-register ratings
+  /\bprice\s+target\b/i, // reverse order of "target price"
+  /\breturns?\s+of\s+\d/i, // "returns of 20%"
+  /\b\d+\s?%\s+(returns?|gains?|profit)\b/i, // "20% returns"
+  /\b(sure\s+thing|can'?t\s+lose|can'?t\s+go\s+wrong|guaranteed\s+win)\b/i, // idiomatic guarantees
+  /\b(short|long)\s+(this|the|these|that)\s+(stock|share|shares|name|ticker|position|instrument|holding)\b/i, // "short this name" (asset noun required — avoids "cut short the meeting")
+  /\bload\s+up\s+on\b/i, // "load up on shares"
+  /\b(going|headed|heading)\s+to\s+the\s+moon\b/i, // slang overconfidence
 ]
 
 export function findAdviceLanguage(text: string): string[] {

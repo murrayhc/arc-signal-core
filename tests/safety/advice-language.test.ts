@@ -22,6 +22,35 @@ describe('findAdviceLanguage', () => {
     expect(findAdviceLanguage('This will definitely happen, act now.').length).toBeGreaterThan(0)
     expect(findAdviceLanguage('Personalised financial advice for your portfolio.').length).toBeGreaterThan(0)
   })
+
+  it('catches evasions found in the adversarial probe', () => {
+    for (const bad of [
+      'We rate this a strong buy.',
+      'Analysts have a strong buy on the name.',
+      'Our price target is 45p.',
+      "You'll see returns of 20%.",
+      'Expect 20% returns this year.',
+      "It's a sure thing, you can't lose.",
+      'Short this name before earnings.',
+      'Load up on shares now.',
+      'This stock is going to the moon.',
+    ]) {
+      expect(findAdviceLanguage(bad).length).toBeGreaterThan(0)
+    }
+  })
+
+  it('does not false-positive on the strategic vocabulary the templates use', () => {
+    for (const ok of [
+      'Strong buyer demand may be forming in this sector.',
+      'A supplier could review which buyer groups face pressure.',
+      'This may cut short the planning window for procurement teams.',
+      'A recruiter might watch for a short-term spike in interim demand.',
+      'Consider monitoring long-term sector momentum.',
+      'Review the returns of the recent tender process.',
+    ]) {
+      expect(findAdviceLanguage(ok)).toEqual([])
+    }
+  })
 })
 
 describe('assertNoAdviceLanguage', () => {
