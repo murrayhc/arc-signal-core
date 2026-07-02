@@ -23,8 +23,8 @@ export async function collectFromSources(sources: Source[]): Promise<{
   const errors: PipelineError[] = []
 
   for (const source of sources) {
-    const collector = getCollector(source.accessMethod)
-    if (!collector) {
+    const entry = getCollector(source.accessMethod)
+    if (!entry) {
       const reason = `No compatible collector for access method ${source.accessMethod} (UNSUPPORTED)`
       skipped.push({ sourceId: source.id, reason })
       await prisma.source.update({
@@ -34,7 +34,7 @@ export async function collectFromSources(sources: Source[]): Promise<{
       continue
     }
     try {
-      const items = await collector(source)
+      const items = await entry.collect(source)
       for (const item of items) {
         try {
           const doc = await prisma.document.create({
@@ -46,7 +46,7 @@ export async function collectFromSources(sources: Source[]): Promise<{
               rawContentHash: sha256(item.content),
               normalisedContentHash: sha256(normalise(item.content)),
               publishedAt: item.publishedAt,
-              documentType: source.accessMethod === 'FIXTURE' ? 'FIXTURE_ITEM' : 'RSS_ITEM',
+              documentType: entry.documentType,
               isFixture: source.isFixture,
             },
           })

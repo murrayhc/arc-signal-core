@@ -79,4 +79,22 @@ describe('extractClaims (persistence)', () => {
     expect(claims).toHaveLength(0)
     expect(await prisma.claim.count()).toBe(0)
   })
+
+  it('skips parsed documents whose status is not PARSED', async () => {
+    const source = await makeSource()
+    const doc = await makeDocument(source.id)
+    const parsed = await makeParsedDocument(doc.id, { status: 'UNSUPPORTED', bodyText: 'The firm is cutting 400 jobs.' })
+    const { claims, errors } = await extractClaims([parsed], new Map([[doc.id, doc]]))
+    expect(claims).toHaveLength(0)
+    expect(errors).toHaveLength(0)
+  })
+
+  it('records an error when the document is missing from docsById', async () => {
+    const source = await makeSource()
+    const doc = await makeDocument(source.id)
+    const parsed = await makeParsedDocument(doc.id, { bodyText: 'The firm is cutting 400 jobs.' })
+    const { claims, errors } = await extractClaims([parsed], new Map())
+    expect(claims).toHaveLength(0)
+    expect(errors[0].message).toContain('No document loaded')
+  })
 })

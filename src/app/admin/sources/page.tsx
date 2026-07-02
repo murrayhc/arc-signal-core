@@ -1,11 +1,11 @@
 import Link from 'next/link'
-import { getDashboardData } from '@/server/services/dashboard'
+import { getSources } from '@/server/services/dashboard'
 import { FixtureBadge } from '@/components/badges'
 
 export const dynamic = 'force-dynamic'
 
 export default async function SourcesAdminPage() {
-  const { sources } = await getDashboardData()
+  const sources = await getSources()
   return (
     <main className="mx-auto max-w-4xl px-6 py-8">
       <Link href="/" className="text-xs text-slate-400 underline hover:text-slate-200">← Dashboard</Link>

@@ -15,8 +15,11 @@ export async function collectFixture(source: Source): Promise<RawItem[]> {
   if (!resolved.startsWith(fixturesRoot + path.sep)) {
     throw new Error(`Fixture path resolves outside fixtures/: ${source.url}`)
   }
-  const parsed = JSON.parse(await readFile(resolved, 'utf8')) as FixtureFile
-  return parsed.items.map((item) => ({
+  const parsed = JSON.parse(await readFile(resolved, 'utf8')) as unknown
+  if (!parsed || typeof parsed !== 'object' || !Array.isArray((parsed as FixtureFile).items)) {
+    throw new Error(`Malformed fixture file (missing items array): ${source.url}`)
+  }
+  return (parsed as FixtureFile).items.map((item) => ({
     url: item.url,
     title: item.title,
     content: `${item.title}\n\n${item.content}`,

@@ -20,7 +20,7 @@ const MATCHERS: Matcher[] = [
 ]
 
 const SECTORS: Record<string, RegExp> = {
-  technology: /\b(tech(?:nology)? (?:firm|manufacturer|supplier|company)|software|semiconductor|grid systems)\b/i,
+  technology: /\b(tech(?:nology)? (?:firm|manufacturer|supplier|company)|software|semiconductor)\b/i,
   retail: /\b(retail|high street|supermarket|merchants?|checkout)\b/i,
   energy: /\b(energy|solar|oil|gas|renewables|inverters|grid storage)\b/i,
   healthcare: /\b(health(?:care)?|hospital|pharma)\b/i,

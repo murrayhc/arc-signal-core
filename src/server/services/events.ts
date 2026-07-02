@@ -22,7 +22,7 @@ export type EventDetail = {
   evidence: EvidenceItem[]
   evidenceAgainst: EvidenceItem[]
   dataGaps: { title: string; description: string; impactOnConfidence: number; suggestedSourceCategory: string; severity: string }[]
-  triggerConditions: { signalType: string; conditionText: string; direction: string; probabilityImpact: number; priority: number }[]
+  triggerConditions: { signalType: string; conditionText: string; direction: 'RAISES' | 'LOWERS'; probabilityImpact: number; priority: number }[]
   relatedEntities: { id: string; name: string }[]
 }
 
@@ -129,7 +129,7 @@ export async function getEventDetail(id: string): Promise<EventDetail | null> {
     triggerConditions: event.triggerConditions.map((t) => ({
       signalType: t.signalType,
       conditionText: t.conditionText,
-      direction: t.direction,
+      direction: t.direction as 'RAISES' | 'LOWERS',
       probabilityImpact: t.probabilityImpact,
       priority: t.priority,
     })),

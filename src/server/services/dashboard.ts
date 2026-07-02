@@ -63,6 +63,21 @@ async function radar(feedType: string): Promise<FeedCardData[]> {
   return items.map((i) => toCard(i.eventCandidate))
 }
 
+export async function getSources(): Promise<SourceStatus[]> {
+  const sources = await prisma.source.findMany({ orderBy: { name: 'asc' } })
+  return sources.map((s) => ({
+    id: s.id,
+    name: s.name,
+    category: s.category,
+    accessMethod: s.accessMethod,
+    isActive: s.isActive,
+    isFixture: s.isFixture,
+    collectorStatus: s.collectorStatus,
+    lastRunStatus: s.lastRunStatus,
+    lastRunAt: s.lastRunAt?.toISOString() ?? null,
+  }))
+}
+
 export async function getDashboardData(): Promise<DashboardData> {
   const lastScanRow = await prisma.scanRun.findFirst({ orderBy: { startedAt: 'desc' } })
   const [newEvents, rising, highConfidence, watch] = await Promise.all([
@@ -76,7 +91,6 @@ export async function getDashboardData(): Promise<DashboardData> {
     take: 50,
     include: { riskOpportunities: { take: 1 } },
   })
-  const sources = await prisma.source.findMany({ orderBy: { name: 'asc' } })
   return {
     lastScan: lastScanRow
       ? {
@@ -94,16 +108,6 @@ export async function getDashboardData(): Promise<DashboardData> {
     riskRadar: await radar('RISK_RADAR'),
     opportunityRadar: await radar('OPPORTUNITY_RADAR'),
     inbox: inboxEvents.map(toCard),
-    sources: sources.map((s) => ({
-      id: s.id,
-      name: s.name,
-      category: s.category,
-      accessMethod: s.accessMethod,
-      isActive: s.isActive,
-      isFixture: s.isFixture,
-      collectorStatus: s.collectorStatus,
-      lastRunStatus: s.lastRunStatus,
-      lastRunAt: s.lastRunAt?.toISOString() ?? null,
-    })),
+    sources: await getSources(),
   }
 }

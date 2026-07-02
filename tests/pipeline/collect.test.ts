@@ -64,4 +64,11 @@ describe('collectFromSources', () => {
     expect(result.documents).toHaveLength(0)
     expect(result.errors[0].message).toContain('outside fixtures')
   })
+
+  it('reports a clear error for a malformed fixture file', async () => {
+    const bad = await makeSource({ name: 'Bad Fixture', url: 'fixtures/malformed-fixture.json' })
+    const result = await collectFromSources([bad])
+    expect(result.documents).toHaveLength(0)
+    expect(result.errors[0].message).toContain('Malformed fixture file')
+  })
 })

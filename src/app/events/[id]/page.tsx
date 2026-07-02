@@ -94,7 +94,7 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
         </div>
       ))}
 
-      <Section title={`Evidence timeline (${detail.evidence.length})`}>
+      <Section title={`Evidence timeline (${detail.evidence.length} claims)`}>
         {detail.evidence.length === 0 ? (
           <p className="text-sm text-slate-500">No evidence collected for this event.</p>
         ) : (
