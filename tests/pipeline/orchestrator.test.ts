@@ -49,6 +49,11 @@ describe('runFullScan', () => {
     expect(withTrail.clusters[0].signals.length).toBeGreaterThan(0)
     expect(withTrail.riskOpportunities.length).toBe(1)
     expect(withTrail.triggerConditions.length).toBeGreaterThan(0)
+
+    // source health recorded for every active source
+    expect(await prisma.sourceHealth.count()).toBe(3)
+    const healthStatuses = (await prisma.sourceHealth.findMany()).map((h) => h.status).sort()
+    expect(healthStatuses).toEqual(['HEALTHY', 'HEALTHY', 'UNSUPPORTED'])
   })
 
   it('completes even when one source fails, recording the error', async () => {

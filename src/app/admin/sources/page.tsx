@@ -21,6 +21,7 @@ export default async function SourcesAdminPage() {
             <th className="py-2 pr-4">Category</th>
             <th className="py-2 pr-4">Access</th>
             <th className="py-2 pr-4">Collector</th>
+            <th className="py-2 pr-4">Health</th>
             <th className="py-2 pr-4">Last run</th>
           </tr>
         </thead>
@@ -38,6 +39,22 @@ export default async function SourcesAdminPage() {
                 <span className={s.collectorStatus === 'FUNCTIONAL' ? 'text-emerald-400' : 'text-amber-400'}>
                   {s.collectorStatus}
                 </span>
+              </td>
+              <td className="py-2 pr-4">
+                <span
+                  className={
+                    s.healthStatus === 'HEALTHY'
+                      ? 'text-emerald-400'
+                      : s.healthStatus === 'FAILING'
+                        ? 'text-rose-400'
+                        : s.healthStatus === 'UNKNOWN'
+                          ? 'text-slate-500'
+                          : 'text-amber-400'
+                  }
+                >
+                  {s.healthStatus}
+                </span>{' '}
+                <span className="text-slate-500">({Math.round(s.healthScore * 100)}%)</span>
               </td>
               <td className="py-2 pr-4 text-xs text-slate-400">
                 {s.lastRunStatus ?? 'never run'}

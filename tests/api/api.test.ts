@@ -8,6 +8,7 @@ import { GET as getScan } from '@/app/api/scans/[id]/route'
 import { GET as getDashboard } from '@/app/api/dashboard/route'
 import { GET as getEvent, PATCH as patchEvent } from '@/app/api/events/[id]/route'
 import { GET as getSources } from '@/app/api/sources/route'
+import { GET as getScans } from '@/app/api/scans/route'
 
 const req = (method: string, body?: unknown) =>
   new Request('http://test.local/api', {
@@ -113,5 +114,16 @@ describe('dashboard + events + sources API', () => {
     const body = await res.json()
     expect(body.length).toBe(3)
     expect(body.some((s: { collectorStatus: string }) => s.collectorStatus === 'UNSUPPORTED')).toBe(true)
+  })
+
+  it('GET /api/scans lists scan history with error and warning counts', async () => {
+    const res = await getScans()
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.length).toBe(1)
+    expect(body[0].eventCandidatesCreated).toBeGreaterThan(0)
+    expect(body[0].warningCount).toBe(1)
+    expect(body[0].errorCount).toBe(0)
+    expect(body[0].errorsJson).toBeUndefined()
   })
 })

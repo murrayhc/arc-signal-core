@@ -7,6 +7,7 @@ import { clusterSignals } from './cluster'
 import { createEventCandidates } from './events'
 import { classifyEvents } from './classify'
 import { generateGapsAndTriggers } from './gaps'
+import { updateSourceHealth } from './health'
 import type { PipelineError } from './types'
 
 export type ScanSummary = {
@@ -61,6 +62,10 @@ export async function runFullScan(options: { scanType?: string } = {}): Promise<
     counts.sourcesScanned = sources.length - collected.skipped.length
     counts.documentsFetched = collected.documents.length
     const docsById = new Map(collected.documents.map((d) => [d.id, d]))
+
+    // 4b. Update per-source health from this scan's outcomes.
+    const health = await updateSourceHealth(collected.perSource)
+    errors.push(...health.errors)
 
     // 5. Parse.
     const parsed = await parseDocuments(collected.documents)

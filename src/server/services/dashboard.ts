@@ -13,6 +13,7 @@ export type FeedCardData = {
 export type SourceStatus = {
   id: string; name: string; category: string; accessMethod: string; isActive: boolean
   isFixture: boolean; collectorStatus: string; lastRunStatus: string | null; lastRunAt: string | null
+  healthStatus: string; healthScore: number; failureCount: number; lastSuccessfulFetchAt: string | null
 }
 
 export type DashboardData = {
@@ -64,7 +65,7 @@ async function radar(feedType: string): Promise<FeedCardData[]> {
 }
 
 export async function getSources(): Promise<SourceStatus[]> {
-  const sources = await prisma.source.findMany({ orderBy: { name: 'asc' } })
+  const sources = await prisma.source.findMany({ orderBy: { name: 'asc' }, include: { health: true } })
   return sources.map((s) => ({
     id: s.id,
     name: s.name,
@@ -75,6 +76,10 @@ export async function getSources(): Promise<SourceStatus[]> {
     collectorStatus: s.collectorStatus,
     lastRunStatus: s.lastRunStatus,
     lastRunAt: s.lastRunAt?.toISOString() ?? null,
+    healthStatus: s.health?.status ?? 'UNKNOWN',
+    healthScore: s.health?.healthScore ?? 0,
+    failureCount: s.health?.failureCount ?? 0,
+    lastSuccessfulFetchAt: s.health?.lastSuccessfulFetchAt?.toISOString() ?? null,
   }))
 }
 

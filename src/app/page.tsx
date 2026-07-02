@@ -106,22 +106,29 @@ export default async function DashboardPage() {
       <section className="mt-10">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">Source Coverage</h2>
-          <Link href="/admin/sources" className="text-xs text-slate-400 underline hover:text-slate-200">
-            Source admin
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link href="/scans" className="text-xs text-slate-400 underline hover:text-slate-200">
+              Scan history
+            </Link>
+            <Link href="/admin/sources" className="text-xs text-slate-400 underline hover:text-slate-200">
+              Source admin
+            </Link>
+          </div>
         </div>
         <div className="mt-3 flex flex-wrap gap-2">
           {data.sources.map((s) => (
             <div key={s.id} className="flex items-center gap-2 rounded-md border border-slate-800 bg-slate-900 px-3 py-1.5 text-xs">
               <span
                 className={`h-2 w-2 rounded-full ${
-                  s.collectorStatus !== 'FUNCTIONAL'
-                    ? 'bg-slate-600'
-                    : s.lastRunStatus === 'SUCCESS'
-                      ? 'bg-emerald-500'
-                      : s.lastRunStatus === 'FAILED'
+                  s.healthStatus === 'HEALTHY'
+                    ? 'bg-emerald-500'
+                    : s.healthStatus === 'DEGRADED'
+                      ? 'bg-amber-500'
+                      : s.healthStatus === 'FAILING'
                         ? 'bg-rose-500'
-                        : 'bg-amber-500'
+                        : s.healthStatus === 'UNSUPPORTED'
+                          ? 'bg-slate-600'
+                          : 'bg-slate-700'
                 }`}
               />
               <span className="text-slate-300">{s.name}</span>
