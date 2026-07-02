@@ -37,6 +37,10 @@ confidence, source diversity, data gaps, trigger conditions and actions.
 Fixture-derived records are badged **FIXTURE** everywhere. They are never
 presented as live evidence.
 
+Repeat scans update existing events rather than duplicating them — corroborated
+events are marked RISING. Source health and the full scan audit trail live at
+/admin/sources and /scans.
+
 Archlight is a local-only MVP: the scan endpoint is unauthenticated until the
 deferred security-hardening pass. Do not deploy it exposed to a network.
 
@@ -62,7 +66,6 @@ recorded end-to-end proof and `docs/superpowers/specs/` for the design spec.
 
 ## Deferred (post-spine)
 
-Human review queue · watchlist & alerts · backtesting loop · source-health
-tables · security-hardening pass · deployment runbook · event lifecycle
-across scans (merging/updating recurring events — activates the RISING
-status and dashboard counter) · LLM enrichment · entity resolution.
+Human review queue · watchlist & alerts · backtesting loop ·
+security-hardening pass · deployment runbook · LLM enrichment · entity
+resolution.

@@ -262,3 +262,147 @@ event, including the "Suggested interrogation questions" section. This
 satisfies the PASS rule: the dashboard actually displayed an event created by
 the scan pipeline, verified via curl against a running dev server, not just
 asserted from unit tests.
+
+## Phase 2a addendum (2026-07-02)
+
+This addendum records a real Phase 2a run (event lifecycle, warnings/errors
+split, per-source health) against the existing `prisma/dev.db` — the same
+database populated by the original proof run above, now carrying data from
+multiple prior scans.
+
+```
+$ npx tsx -e "import('./src/server/pipeline/orchestrator').then(async (m) => { const s = await m.runFullScan(); console.log(JSON.stringify(s, null, 2)); process.exit(0) })"
+{
+  "scanRunId": "cmr3znnaw0000ww2798j8fb6z",
+  "status": "COMPLETED",
+  "startedAt": "2026-07-02T21:00:21.559Z",
+  "completedAt": "2026-07-02T21:00:21.739Z",
+  "message": "Scan completed: 0 event candidate(s) detected (0 error(s), 1 warning(s)).",
+  "counts": {
+    "sourcesScanned": 3,
+    "sourcesSkipped": 1,
+    "documentsFetched": 1,
+    "claimsExtracted": 0,
+    "signalsCreated": 0,
+    "clustersCreated": 0,
+    "eventCandidatesCreated": 0,
+    "eventCandidatesUpdated": 0,
+    "dashboardFeedItemsCreated": 0
+  },
+  "errors": [],
+  "warnings": [
+    {
+      "stage": "collect:skip",
+      "sourceId": "cmr3wor9i0002wwerp0exl0k0",
+      "message": "No compatible collector for access method UNSUPPORTED (UNSUPPORTED)"
+    }
+  ]
+}
+```
+
+Status is `COMPLETED` (not `COMPLETED_WITH_ERRORS`) because the Phase 2a
+errors/warnings split now correctly classifies the UNSUPPORTED-source skip as
+a warning, not an error — `errors: []`, `warnings` has exactly the one
+expected entry. `documentsFetched: 1` (not 57, as in the original fresh-DB
+proof) because this run executed against a `dev.db` that already contains the
+fixture corpora from earlier scans in this session — collector-level dedupe
+correctly recognised the fixture documents as already stored and only the
+live BBC RSS source contributed one new document. `eventCandidatesCreated: 0`
+and `eventCandidatesUpdated: 0` for the same reason: no new claims/signals
+were extracted from documents that were all duplicates, so no clustering
+occurred on this particular run (this is expected dedupe behaviour, not a
+regression — see the row counts and `SourceHealth` table below, which confirm
+per-source outcomes precisely).
+
+```
+$ sqlite3 prisma/dev.db "SELECT status, sourcesScanned, sourcesSkipped, documentsFetched, eventCandidatesCreated, eventCandidatesUpdated FROM ScanRun ORDER BY startedAt DESC LIMIT 3;"
+COMPLETED|3|1|1|0|0
+COMPLETED_WITH_ERRORS|3|1|0|0|0
+COMPLETED_WITH_ERRORS|3|1|0|0|0
+```
+
+The most recent row is the `runFullScan()` call above (`COMPLETED`, 0 new
+event candidates on this dedupe-heavy rerun); the two older rows predate the
+Phase 2a errors/warnings split (recorded as `COMPLETED_WITH_ERRORS` under the
+pre-2a status semantics, from earlier sessions against this same `dev.db`).
+
+```
+$ sqlite3 prisma/dev.db "SELECT status, COUNT(*) FROM SourceHealth GROUP BY status;"
+DEGRADED|2
+HEALTHY|1
+UNSUPPORTED|1
+```
+
+```
+$ sqlite3 prisma/dev.db "SELECT s.name, sh.status, sh.failureCount, sh.documentsStoredLastRun, sh.healthScore FROM SourceHealth sh JOIN Source s ON s.id = sh.sourceId ORDER BY s.name;"
+BBC News Business|HEALTHY|0|1|1.0
+Companies House Filings|UNSUPPORTED|0|0|0.0
+Fixture Wire A|DEGRADED|0|0|0.5
+Fixture Wire B|DEGRADED|0|0|0.5
+```
+
+One `SourceHealth` row per seeded source (4 rows total), each reflecting the
+per-source outcome of the run above: BBC News Business is `HEALTHY` (fetched
+and stored 1 new document this run), the two fixture wires are `DEGRADED`
+(their documents already existed from earlier scans, so this run stored 0 new
+documents each — degraded rather than healthy despite zero failures, since
+`documentsStoredLastRun` was 0), and Companies House Filings is `UNSUPPORTED`
+(no collector exists for its access method — unchanged from the original
+proof).
+
+Dev server verification, `PORT=3210` (port 3000 is occupied by an unrelated
+process on this Mac):
+
+```
+$ PORT=3210 npm run dev
+   ▲ Next.js 15.5.20
+   - Local:        http://localhost:3210
+ ✓ Ready in 1080ms
+
+$ curl -s http://localhost:3210/scans -o /tmp/archlight-scans.html -w "HTTP %{http_code}\n"
+HTTP 200
+
+$ grep -o "Scan History" /tmp/archlight-scans.html
+Scan History
+Scan History
+
+$ grep -oE "COMPLETED[A-Z_]*" /tmp/archlight-scans.html | sort | uniq -c
+   9 COMPLETED
+   3 COMPLETED_WITH_ERRORS
+
+$ grep -o "cmr3znnaw[a-z0-9]*" /tmp/archlight-scans.html
+cmr3znnaw0000ww2798j8fb6z
+```
+
+`/scans` returns HTTP 200, renders "Scan History", and lists both status
+values across the audit trail's rows — including `cmr3znnaw0000ww2798j8fb6z`,
+the exact `scanRunId` from the `runFullScan()` call above, confirming the run
+just executed is visible in the audit trail, not just asserted from the JSON
+summary.
+
+```
+$ curl -s http://localhost:3210/ -o /tmp/archlight-home.html -w "HTTP %{http_code}\n"
+HTTP 200
+
+$ grep -oi "fixture[a-z]*" /tmp/archlight-home.html | sort -u
+Fixture
+FixtureBadge
+
+$ grep -o "Layoff pressure[^<]*" /tmp/archlight-home.html | head -3
+Layoff pressure — technology (UK)
+Layoff pressure — technology (UK)
+```
+
+`/` still returns HTTP 200 and still serves the dashboard feed populated by
+earlier scans in this database (the "Layoff pressure — technology (UK)"
+event from the original proof run, still honestly badged `FixtureBadge`),
+confirming the Phase 2a changes did not regress the dashboard route.
+
+The dev server was then stopped and port 3210 confirmed free.
+
+Verified: scan status semantics (COMPLETED with N warning(s), 0 errors on the
+default seed), SourceHealth rows per source, /scans renders the audit trail,
+dashboard unaffected. Event lifecycle (merge → RISING) is proven by unit tests
+in tests/pipeline/events.test.ts (fixture dedupe means a plain rescan creates
+no new signals, so the merge path is exercised at unit level).
+Phase 2a verdict: PASS — the radar is a living radar.
