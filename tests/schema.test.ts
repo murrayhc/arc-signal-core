@@ -86,4 +86,42 @@ describe('event discovery data layer', () => {
     expect(run.warningsJson).toBe('[]')
     expect(run.eventCandidatesUpdated).toBe(0)
   })
+
+  it('creates an OpportunityCard and positioning example linked to an event, deduped per lens', async () => {
+    const scanRun = await prisma.scanRun.create({ data: {} })
+    const event = await prisma.eventCandidate.create({
+      data: {
+        title: 'Layoff pressure — technology (UK)', eventType: 'LAYOFF_SIGNAL', eventClass: 'RISK',
+        summary: 't', severity: 0.8, probability: 0.7, confidence: 0.8, evidenceCount: 2,
+        sourceDiversityScore: 1, signalStrength: 0.8, noveltyScore: 0.9, opportunityScore: 0.2,
+        riskScore: 0.7, createdFromScanRunId: scanRun.id, isFixture: true,
+      },
+    })
+    const lens = await prisma.revenueLens.create({ data: { name: 'L1', isDefault: true } })
+    const card = await prisma.opportunityCard.create({
+      data: {
+        eventCandidateId: event.id, revenueLensId: lens.id, title: 'Talent window', opportunityType: 'TALENT_ACQUISITION',
+        summary: 's', buyerPain: 'p', suggestedOffer: 'o', urgencyScore: 0.6, commercialValueScore: 0.5,
+        confidence: 0.8, evidenceScore: 0.7, actionabilityScore: 0.6, opportunityLogic: 'ol', riskLogic: 'rl',
+        nextBestAction: 'review buyer groups', isFixture: true,
+      },
+    })
+    await prisma.strategicPositioningExample.create({
+      data: {
+        eventCandidateId: event.id, opportunityCardId: card.id, revenueLensId: lens.id, title: 'For recruiters',
+        userType: 'RECRUITER', positioningAngle: 'a', howItCouldBeUsed: 'may watch demand', whyItMayMatter: 'w',
+        evidenceSummary: 'e', confidence: 0.8, constraints: 'Strategic example, not investment advice.', isFixture: true,
+      },
+    })
+    expect(await prisma.opportunityCard.count()).toBe(1)
+    await expect(
+      prisma.opportunityCard.create({
+        data: {
+          eventCandidateId: event.id, revenueLensId: lens.id, title: 'dup', opportunityType: 'ADVISORY', summary: 's',
+          buyerPain: 'p', suggestedOffer: 'o', urgencyScore: 0.5, commercialValueScore: 0.5, confidence: 0.5,
+          evidenceScore: 0.5, actionabilityScore: 0.5, opportunityLogic: 'ol', riskLogic: 'rl', nextBestAction: 'review',
+        },
+      }),
+    ).rejects.toThrow()
+  })
 })

@@ -205,6 +205,8 @@ model EventCandidate {
   dataGaps             DataGap[]
   triggerConditions    TriggerCondition[]
   entities             EventCandidateEntity[]
+  opportunityCards     OpportunityCard[]
+  positioningExamples  StrategicPositioningExample[]
 }
 
 model EventCandidateEntity {
@@ -304,4 +306,78 @@ model SourceHealth {
   notes                  String?
   createdAt              DateTime  @default(now())
   updatedAt              DateTime  @updatedAt
+}
+
+model RevenueLens {
+  id                 String              @id @default(cuid())
+  name               String              @unique
+  description        String?
+  userType           String              @default("GENERAL")
+  targetSectorsJson  String              @default("[]")
+  targetRegionsJson  String              @default("[]")
+  offerTypesJson     String              @default("[]")
+  buyerPersonasJson  String              @default("[]")
+  averageDealSize    String?
+  salesCycle         String?
+  excludedSectorsJson String             @default("[]")
+  riskAppetite       String              @default("MEDIUM")
+  active             Boolean             @default(true)
+  isDefault          Boolean             @default(false)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  opportunityCards   OpportunityCard[]
+  positioningExamples StrategicPositioningExample[]
+}
+
+model OpportunityCard {
+  id                   String                        @id @default(cuid())
+  eventCandidateId     String
+  eventCandidate       EventCandidate                @relation(fields: [eventCandidateId], references: [id])
+  revenueLensId        String?
+  revenueLens          RevenueLens?                  @relation(fields: [revenueLensId], references: [id])
+  title                String
+  opportunityType      String
+  summary              String
+  buyerPain            String
+  likelyBuyersJson     String                        @default("[]")
+  affectedSectorsJson  String                        @default("[]")
+  affectedRegionsJson  String                        @default("[]")
+  suggestedOffer       String
+  urgencyScore         Float
+  commercialValueScore Float
+  confidence           Float
+  evidenceScore        Float
+  actionabilityScore   Float
+  opportunityLogic     String
+  riskLogic            String
+  nextBestAction       String
+  status               String                        @default("NEW")
+  isFixture            Boolean                       @default(false)
+  createdAt            DateTime                      @default(now())
+  updatedAt            DateTime                      @updatedAt
+  positioningExamples  StrategicPositioningExample[]
+
+  @@unique([eventCandidateId, revenueLensId])
+}
+
+model StrategicPositioningExample {
+  id                String           @id @default(cuid())
+  eventCandidateId  String
+  eventCandidate    EventCandidate   @relation(fields: [eventCandidateId], references: [id])
+  opportunityCardId String?
+  opportunityCard   OpportunityCard? @relation(fields: [opportunityCardId], references: [id])
+  evidenceArcId     String?
+  revenueLensId     String?
+  revenueLens       RevenueLens?     @relation(fields: [revenueLensId], references: [id])
+  title             String
+  userType          String
+  positioningAngle  String
+  howItCouldBeUsed  String
+  whyItMayMatter    String
+  evidenceSummary   String
+  confidence        Float
+  constraints       String
+  isFixture         Boolean          @default(false)
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
 }

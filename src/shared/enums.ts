@@ -75,3 +75,24 @@ export type FeedType = (typeof FEED_TYPES)[number]
 
 export const SOURCE_HEALTH_STATUSES = ['HEALTHY', 'DEGRADED', 'FAILING', 'UNSUPPORTED', 'UNKNOWN'] as const
 export type SourceHealthStatus = (typeof SOURCE_HEALTH_STATUSES)[number]
+
+export const OPPORTUNITY_TYPES = [
+  'SALES', 'PARTNERSHIP', 'PROCUREMENT', 'INVESTMENT_WATCH', 'HIRING',
+  'TALENT_ACQUISITION', 'M_AND_A', 'CONTENT', 'ADVISORY', 'PRODUCT_GAP',
+  'MARKET_ENTRY', 'COMPETITOR_DISPLACEMENT', 'COMPLIANCE', 'CRISIS_SUPPORT',
+] as const
+export type OpportunityType = (typeof OPPORTUNITY_TYPES)[number]
+
+export const OPPORTUNITY_STATUSES = [
+  'NEW', 'RISING', 'STABLE', 'DECLINING', 'DISMISSED', 'ESCALATED', 'ACTIONED',
+] as const
+export type OpportunityStatus = (typeof OPPORTUNITY_STATUSES)[number]
+
+export const POSITIONING_USER_TYPES = [
+  'SUPPLIER', 'RECRUITER', 'PRODUCT_TEAM', 'PROCUREMENT', 'INVESTOR_WATCH',
+  'ADVISOR', 'ANALYST', 'GENERAL',
+] as const
+export type PositioningUserType = (typeof POSITIONING_USER_TYPES)[number]
+
+export const RISK_APPETITES = ['LOW', 'MEDIUM', 'HIGH'] as const
+export type RiskAppetite = (typeof RISK_APPETITES)[number]

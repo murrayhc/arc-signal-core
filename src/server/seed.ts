@@ -69,5 +69,23 @@ export async function runSeed(options: { includeLive?: boolean } = {}) {
       },
     })
   }
+  await prisma.revenueLens.upsert({
+    where: { name: 'General Commercial Lens' },
+    create: {
+      name: 'General Commercial Lens',
+      description: 'Broad default commercial context so opportunity conversion works out of the box.',
+      userType: 'GENERAL',
+      targetSectorsJson: '[]',
+      targetRegionsJson: '[]',
+      offerTypesJson: JSON.stringify(['ADVISORY', 'SALES', 'PARTNERSHIP']),
+      buyerPersonasJson: '[]',
+      excludedSectorsJson: '[]',
+      riskAppetite: 'MEDIUM',
+      active: true,
+      isDefault: true,
+    },
+    update: { active: true, isDefault: true },
+  })
+
   return { sourcesSeeded: sources.length }
 }

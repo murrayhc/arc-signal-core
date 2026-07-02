@@ -25,6 +25,9 @@ describe('runSeed', () => {
     expect(unsupported.accessMethod).toBe('UNSUPPORTED')
     expect(unsupported.collectorStatus).toBe('UNSUPPORTED')
     expect(unsupported.isActive).toBe(true)
+
+    const lens = await prisma.revenueLens.findFirstOrThrow({ where: { isDefault: true } })
+    expect(lens.name).toBe('General Commercial Lens')
   })
 
   it('includes the live BBC RSS source when includeLive is true and is idempotent', async () => {
