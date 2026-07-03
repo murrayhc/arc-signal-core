@@ -11,6 +11,7 @@ import { generateOpportunities } from './opportunity'
 import { generatePositioning } from './positioning'
 import { updateSourceHealth } from './health'
 import { syncGraphForEvents } from '@/server/graph/builder'
+import { recordGraphEvents } from '@/server/graph/timeline'
 import type { PipelineError } from './types'
 
 export type ScanSummary = {
@@ -136,6 +137,12 @@ export async function runFullScan(options: { scanType?: string } = {}): Promise<
     errors.push(...g.errors)
     counts.graphNodesUpserted = g.nodesUpserted
     counts.graphEdgesUpserted = g.edgesUpserted
+
+    // 15. Graph-event timeline: record real diffs (first-detected, confidence/source/status
+    // changes, contradictions, new opportunities) + formation/escalation snapshots. Non-fatal:
+    // recordGraphEvents never throws, so a timeline failure never fails the scan.
+    const timeline = await recordGraphEvents(allEvents, new Date())
+    errors.push(...timeline.errors)
 
     const status = errors.length > 0 ? 'COMPLETED_WITH_ERRORS' : 'COMPLETED'
     const completed = await prisma.scanRun.update({
