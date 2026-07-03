@@ -55,8 +55,15 @@ export function NodeDetailPanel({ children }: { children: React.ReactNode }) {
         if (cancelled) return
         setDetail(data)
         if (data.node.nodeType === 'EVENT') {
-          const res = await fetch(`/api/events/${data.node.refId}`)
-          if (!cancelled && res.ok) setEvent((await res.json()) as EventDetail)
+          // Isolated: an event-detail failure degrades to the node-only view —
+          // it must not surface as a panel-level "could not load" error when
+          // the node detail has already rendered.
+          try {
+            const res = await fetch(`/api/events/${data.node.refId}`)
+            if (!cancelled && res.ok) setEvent((await res.json()) as EventDetail)
+          } catch {
+            /* node-only view */
+          }
         }
       })
       .catch(() => {

@@ -14,7 +14,8 @@ function severityTag(severity: number): { label: string; className: string } {
  */
 export function TopRisks({ risks }: { risks: FeedCardData[] }) {
   return (
-    <Panel id="top-risks" className="flex h-full flex-col">
+    // #top-risks anchor lives on the page-level wrapper (survives detail swap)
+    <Panel className="flex h-full flex-col">
       <div className="border-b border-line/70 px-3 py-2">
         <Eyebrow accent="text-risk" live={risks.length > 0}>
           Top Risks

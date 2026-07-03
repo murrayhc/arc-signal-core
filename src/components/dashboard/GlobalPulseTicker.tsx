@@ -36,7 +36,10 @@ export function GlobalPulseTicker({ items }: { items: TickerItem[] }) {
 
   function renderItems(hidden: boolean) {
     return (
-      <span aria-hidden={hidden || undefined} className="flex shrink-0 items-center">
+      <span
+        aria-hidden={hidden || undefined}
+        className={`flex shrink-0 items-center ${hidden ? 'cc-ticker-dup' : ''}`}
+      >
         {items.map((item, i) => (
           <span key={`${hidden ? 'b' : 'a'}-${i}`} className="flex shrink-0 items-center gap-1.5 px-5">
             <span className="text-[9px] uppercase tracking-wider text-ink-faint">{item.label}</span>
@@ -59,9 +62,13 @@ export function GlobalPulseTicker({ items }: { items: TickerItem[] }) {
         </span>
         <span className="text-[9px] uppercase text-ink-faint">UTC</span>
       </p>
-      <div className="cc-ticker-track flex w-max items-center whitespace-nowrap">
-        {renderItems(false)}
-        {renderItems(true)}
+      {/* Viewport becomes horizontally scrollable (and the duplicate copy is
+          hidden) under prefers-reduced-motion — see globals.css */}
+      <div className="cc-ticker-viewport min-w-0 flex-1 overflow-hidden">
+        <div className="cc-ticker-track flex w-max items-center whitespace-nowrap">
+          {renderItems(false)}
+          {renderItems(true)}
+        </div>
       </div>
     </footer>
   )

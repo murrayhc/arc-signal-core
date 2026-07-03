@@ -36,9 +36,9 @@ export const dynamic = 'force-dynamic'
 /** Secondary drawer: the pre-redesign card sections, preserved one click away. */
 function Drawer({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <details className="border border-line bg-abyss/40">
+    <details className="group border border-line bg-abyss/40">
       <summary className="cursor-pointer list-none px-3 py-2 font-display text-[10px] font-semibold uppercase tracking-[0.22em] text-ink-dim transition hover:text-ink [&::-webkit-details-marker]:hidden">
-        <span aria-hidden className="mr-2 text-signal">▸</span>
+        <span aria-hidden className="mr-2 inline-block text-signal transition-transform group-open:rotate-90">▸</span>
         {title}
       </summary>
       <div className="border-t border-line/60 p-3">{children}</div>
@@ -67,13 +67,10 @@ export default async function DashboardPage() {
   const healthySources = data.sources.filter((s) => s.healthStatus === 'HEALTHY').length
   const activeSources = data.sources.filter((s) => s.isActive).length
   const issueCount = data.lastScan?.errors.length ?? 0
-  // Risk pressure column: RISK feed first, then MIXED events from the inbox.
-  const risks = [
-    ...data.riskRadar,
-    ...data.inbox.filter(
-      (item) => item.eventClass === 'MIXED' && !data.riskRadar.some((r) => r.eventId === item.eventId),
-    ),
-  ]
+  // Risk pressure column: the RISK_RADAR feed as-is. The pipeline already
+  // routes MIXED events into this feed, and the feed respects dismissals —
+  // merging from the status-unfiltered inbox would resurrect dismissed events.
+  const risks = data.riskRadar
   const replayTarget = data.inbox[0] ? `/events/${data.inbox[0].eventId}#graph-replay` : '/graph'
 
   const ticker: TickerItem[] = [
@@ -83,12 +80,14 @@ export default async function DashboardPage() {
     { label: 'Graph', value: `${graph.stats.nodeCount} nodes · ${graph.stats.edgeCount} edges`, tone: 'signal' },
     ...trends.slice(0, 3).map((t) => ({
       label: t.novelty >= 0.6 ? 'Rising signal' : 'Signal',
-      value: `${t.title} ${pct(t.strength)}`,
+      value: `${t.title} ${pct(t.strength)}${t.isFixture ? ' · fixture' : ''}`,
       tone: 'teal' as const,
     })),
-    ...(risks[0] ? [{ label: 'Top risk', value: `${risks[0].title} ${pct(risks[0].riskScore)}`, tone: 'risk' as const }] : []),
+    ...(risks[0]
+      ? [{ label: 'Top risk', value: `${risks[0].title} ${pct(risks[0].riskScore)}${risks[0].isFixture ? ' · fixture' : ''}`, tone: 'risk' as const }]
+      : []),
     ...(data.opportunityRadar[0]
-      ? [{ label: 'Top opportunity', value: `${data.opportunityRadar[0].title} ${pct(data.opportunityRadar[0].commercialValueScore)}`, tone: 'gold' as const }]
+      ? [{ label: 'Top opportunity', value: `${data.opportunityRadar[0].title} ${pct(data.opportunityRadar[0].commercialValueScore)}${data.opportunityRadar[0].isFixture ? ' · fixture' : ''}`, tone: 'gold' as const }]
       : []),
     { label: 'Sources', value: `${healthySources}/${data.sources.length} healthy`, tone: healthySources === data.sources.length ? 'teal' : 'warn' },
     {
@@ -173,7 +172,9 @@ export default async function DashboardPage() {
                     lastScanAt={data.lastScan?.startedAt ?? null}
                   />
                 </div>
-                <div className="order-3 min-h-80 lg:col-span-2 xl:col-span-1">
+                {/* id lives on the wrapper so the #top-risks anchor survives
+                    the panel swapping to node detail */}
+                <div id="top-risks" className="order-3 min-h-80 lg:col-span-2 xl:col-span-1">
                   <NodeDetailPanel>
                     <TopRisks risks={risks} />
                   </NodeDetailPanel>

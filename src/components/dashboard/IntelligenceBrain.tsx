@@ -10,6 +10,7 @@ const LEGEND_ORDER = [
   'EVENT',
   'SIGNAL',
   'CLAIM',
+  'DOCUMENT',
   'SOURCE',
   'SECTOR',
   'REGION',
@@ -67,7 +68,7 @@ export function IntelligenceBrain({
             </span>
           )}
           <span>
-            model confidence <span className="text-ink-dim">{meanConfidence === null ? '—' : pct(meanConfidence)}</span>
+            system confidence <span className="text-ink-dim">{meanConfidence === null ? '—' : pct(meanConfidence)}</span>
           </span>
           <span className={lastScanAt ? 'text-teal' : 'text-ink-faint'}>
             {lastScanAt ? 'LIVE' : 'IDLE'}

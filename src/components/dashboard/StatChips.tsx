@@ -33,8 +33,9 @@ export function StatChips({
           key={chip.label}
           className={`flex items-baseline gap-2 px-3 py-1.5 ${i > 0 ? 'border-l border-line' : ''}`}
         >
-          <dd className={`font-data text-sm font-semibold ${chip.accent ?? 'text-ink'}`}>{chip.value}</dd>
-          <dt className="text-[9px] uppercase tracking-wider text-ink-faint">{chip.label}</dt>
+          {/* dt precedes dd in the DOM (dl content model); value renders first via order */}
+          <dt className="order-2 text-[9px] uppercase tracking-wider text-ink-faint">{chip.label}</dt>
+          <dd className={`order-1 font-data text-sm font-semibold ${chip.accent ?? 'text-ink'}`}>{chip.value}</dd>
         </div>
       ))}
     </dl>

@@ -105,4 +105,14 @@
   .cc-live {
     animation: none;
   }
+
+  /* Static ticker stays fully reachable: scroll instead of marquee, and the
+     aria-hidden duplicate copy (only needed for the loop) disappears. */
+  .cc-ticker-viewport {
+    overflow-x: auto;
+  }
+
+  .cc-ticker-dup {
+    display: none;
+  }
 }

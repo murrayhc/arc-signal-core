@@ -175,10 +175,12 @@ export function BrainGraph({
       ctx.arc(node.x ?? 0, node.y ?? 0, r, 0, 2 * Math.PI)
       ctx.fill()
     },
-    // Reduced motion: lay out up front, then hold still (zero cooldown ticks).
+    // Reduced motion: lay out up front (warmup ticks run the force simulation
+    // synchronously at default velocity decay), then hold still — zero cooldown
+    // ticks means no animated settling. Overriding d3VelocityDecay to 1 here
+    // would zero d3's position multiplier and freeze the initial spiral instead.
     warmupTicks: reducedMotion ? 90 : undefined,
     cooldownTicks: reducedMotion ? 0 : undefined,
-    d3VelocityDecay: reducedMotion ? 1 : undefined,
     // The pulse needs continuous redraw; skip it entirely under reduced motion.
     autoPauseRedraw: reducedMotion,
   }
