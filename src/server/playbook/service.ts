@@ -398,7 +398,10 @@ export async function generatePlaybook(
       validate: {
         schema: PlaybookSchema,
         evidenceIds,
-        requireGrounding: evidenceIds.length > 0,
+        // Always require grounding: an LLM playbook citing no stored evidence is
+        // rejected (kept deterministic), not trusted. With an empty evidence set the
+        // gate fails closed instead of trivially passing.
+        requireGrounding: true,
       },
     },
   )

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { prisma } from '@/server/db'
 import { resetDb } from '../helpers'
+import { makeClaim, makeDocument, makeSignal, makeSource } from '../factories'
 import { findAdviceLanguage } from '@/server/safety/advice-language'
 import {
   generatePlaybook,
@@ -70,6 +71,24 @@ async function seedCard() {
   return { card, event }
 }
 
+/** A card whose event has a real evidence chain, so evidenceClaimIds() is non-empty
+ *  and the LLM grounding gate can actually be exercised. Returns the claim id. */
+async function seedCardWithEvidence() {
+  const { card, event } = await seedCard()
+  const source = await makeSource({ name: `Src ${event.id}` })
+  const doc = await makeDocument(source.id)
+  const claim = await makeClaim(doc.id)
+  const signal = await makeSignal(claim.id, doc.id, source.id)
+  await prisma.signalCluster.create({
+    data: {
+      title: 'Layoff signals', clusterType: 'LAYOFF_SIGNAL', strength: 0.7, confidence: 0.8,
+      novelty: 0.9, explanation: 'e', isFixture: true, eventCandidateId: event.id,
+      signals: { create: [{ signalId: signal.id }] },
+    },
+  })
+  return { card, event, claimId: claim.id }
+}
+
 describe('generatePlaybook (deterministic)', () => {
   beforeEach(resetDb)
 
@@ -121,17 +140,17 @@ describe('generatePlaybook (deterministic)', () => {
   })
 
   it('with a FakeProvider returning a valid, grounded, schema-correct playbook, upgrades to LLM', async () => {
-    const { card, event } = await seedCard()
+    const { card, claimId } = await seedCardWithEvidence()
     const provider = new FakeProvider(() => ({
       text: JSON.stringify({
         targetBuyer: 'Recruiters',
-        commercialHypothesis: `Given the ${event.eventType} pattern, recruiters may find candidate availability opening up.`,
+        commercialHypothesis: `Recruiters may find candidate availability opening up (evidence ${claimId}).`,
         painStatement: 'Organisations may face disruption releasing experienced staff.',
         offerAngle: 'A recruiter could prepare a shortlist of available candidates.',
         discoveryQuestions: ['What is the current headcount trend?', 'Which teams were affected?'],
         outreachAngle: 'A tailored note referencing the recent workforce pattern.',
         likelyObjections: ['We already have a recruiter relationship.'],
-        proofPoints: ['Evidence drawn from the observed signal pattern.'],
+        proofPoints: [`Grounded in claim ${claimId}.`],
         firstAction: 'Draft a shortlist and confirm the buyer contact.',
       }),
       tokensIn: 50,
@@ -144,23 +163,46 @@ describe('generatePlaybook (deterministic)', () => {
   })
 
   it('with a FakeProvider returning advice language, stays DETERMINISTIC (rejected)', async () => {
-    const { card, event } = await seedCard()
+    const { card, claimId } = await seedCardWithEvidence()
+    // Grounded (cites the claim id) but contains advice language → rejected for advice, not grounding.
     const provider = new FakeProvider(() => ({
       text: JSON.stringify({
         targetBuyer: 'Recruiters',
-        commercialHypothesis: `Given the ${event.eventType} pattern, you should buy this stock immediately.`,
+        commercialHypothesis: `Evidence ${claimId}: you should buy this stock immediately.`,
         painStatement: 'Organisations may face disruption releasing experienced staff.',
         offerAngle: 'A recruiter could prepare a shortlist of available candidates.',
         discoveryQuestions: ['What is the current headcount trend?'],
         outreachAngle: 'A tailored note referencing the recent workforce pattern.',
         likelyObjections: ['We already have a recruiter relationship.'],
-        proofPoints: ['Evidence drawn from the observed signal pattern.'],
+        proofPoints: [`Grounded in claim ${claimId}.`],
         firstAction: 'Draft a shortlist and confirm the buyer contact.',
       }),
       tokensIn: 50,
       tokensOut: 80,
     }))
     const playbook = await generatePlaybook(card.id, { provider })
+    expect(playbook.generatedBy).toBe('DETERMINISTIC')
+  })
+
+  it('with a card that has no evidence, an ungrounded LLM playbook is rejected (stays DETERMINISTIC)', async () => {
+    const { card } = await seedCard() // no evidence chain → evidenceClaimIds() empty
+    const provider = new FakeProvider(() => ({
+      text: JSON.stringify({
+        targetBuyer: 'Recruiters',
+        commercialHypothesis: 'Recruiters may find candidate availability opening up.',
+        painStatement: 'Organisations may face disruption releasing experienced staff.',
+        offerAngle: 'A recruiter could prepare a shortlist of available candidates.',
+        discoveryQuestions: ['What is the current headcount trend?'],
+        outreachAngle: 'A tailored note referencing the recent workforce pattern.',
+        likelyObjections: ['We already have a recruiter relationship.'],
+        proofPoints: ['Observed signal pattern.'],
+        firstAction: 'Draft a shortlist and confirm the buyer contact.',
+      }),
+      tokensIn: 50,
+      tokensOut: 80,
+    }))
+    const playbook = await generatePlaybook(card.id, { provider })
+    // requireGrounding is always on: no evidence ids means grounding cannot pass.
     expect(playbook.generatedBy).toBe('DETERMINISTIC')
   })
 })
