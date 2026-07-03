@@ -218,6 +218,62 @@ describe('generatePlaybook (deterministic)', () => {
     expect(run.outputSummary).toContain('redacted')
   })
 
+  it('with a FakeProvider whose raw text JSON-escapes an advice phrase (decodes to advice only after parsing), stays DETERMINISTIC and never persists the advice string', async () => {
+    const { card, claimId } = await seedCardWithEvidence()
+    // The raw text below contains a JSON unicode escape (b = "b") inside
+    // offerAngle so the literal raw string does NOT contain "buy" — it passes
+    // runLLMTask's raw-text advice-language scan (validateLLMOutput scans `raw`).
+    // JSON.parse decodes buy -> "buy", so result.parsed.offerAngle becomes
+    // "You should buy this now for a great deal." — advice language that only
+    // exists post-parse. This proves the parsed output needs its own guard.
+    const rawWithEscapedAdvice =
+      '{"targetBuyer":"Recruiters",' +
+      `"commercialHypothesis":"Evidence ${claimId}: safe copy here.",` +
+      '"painStatement":"Organisations may face disruption releasing experienced staff.",' +
+      '"offerAngle":"You should \\u0062uy this now for a great deal.",' +
+      '"discoveryQuestions":["What is the current headcount trend?"],' +
+      '"outreachAngle":"A tailored note referencing the recent workforce pattern.",' +
+      '"likelyObjections":["We already have a recruiter relationship."],' +
+      `"proofPoints":["Grounded in claim ${claimId}."],` +
+      '"firstAction":"Draft a shortlist and confirm the buyer contact."}'
+
+    // Sanity: the raw text itself must NOT contain the literal advice phrase —
+    // otherwise this test would not be exercising the escape-decoupling bug.
+    expect(rawWithEscapedAdvice).not.toContain('buy this now')
+    expect(findAdviceLanguage(rawWithEscapedAdvice)).toEqual([])
+    // But JSON.parse decodes the escape, revealing the advice phrase.
+    expect(JSON.parse(rawWithEscapedAdvice).offerAngle).toContain('should buy this now')
+
+    const provider = new FakeProvider(() => ({
+      text: rawWithEscapedAdvice,
+      tokensIn: 50,
+      tokensOut: 80,
+    }))
+    const playbook = await generatePlaybook(card.id, { provider })
+
+    expect(playbook.generatedBy).toBe('DETERMINISTIC')
+    expect(playbook.offerAngle).not.toContain('should buy this now')
+    expect(playbook.offerAngle.toLowerCase()).not.toContain('buy this now')
+
+    // The advice string must never reach the persisted row at all, on any field.
+    const persisted = await prisma.opportunityPlaybook.findUniqueOrThrow({
+      where: { opportunityCardId: card.id },
+    })
+    const allPersistedText = [
+      persisted.title,
+      persisted.targetBuyer,
+      persisted.commercialHypothesis,
+      persisted.painStatement,
+      persisted.offerAngle,
+      persisted.outreachAngle,
+      persisted.firstAction,
+      persisted.discoveryQuestionsJson,
+      persisted.likelyObjectionsJson,
+      persisted.proofPointsJson,
+    ].join(' ')
+    expect(allPersistedText.toLowerCase()).not.toContain('buy this now')
+  })
+
   it('with a card that has no evidence, an ungrounded LLM playbook is rejected (stays DETERMINISTIC)', async () => {
     const { card } = await seedCard() // no evidence chain → evidenceClaimIds() empty
     const provider = new FakeProvider(() => ({

@@ -213,6 +213,10 @@ Every existing safety gate (schema, advice-language, grounding, audit
 logging) applies identically to live calls — nothing about activation
 bypasses validation.
 
+**`routeTask` prefers but does not require `enabled`**: at activation, ensure
+at least one enabled config supports each task type you use, or a disabled
+config may still be selected as the sole supporter of that task type.
+
 ## 8. Safety guarantees
 
 - **No key → no network call, ever.** Verified by tests injecting

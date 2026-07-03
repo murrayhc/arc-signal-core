@@ -172,9 +172,15 @@ export type GeneratePlaybookOptions = {
  *  THEN, if a provider is active (opts.provider or getActiveProvider()),
  *  attempts an LLM upgrade via runLLMTask. The upgrade only takes effect when
  *  the run SUCCEEDED (schema + evidence-grounding + advice-language all
- *  passed inside runLLMTask's validation) AND the parsed output independently
- *  passes the playbook's own guard checks. Any failure at any stage leaves
- *  the deterministic playbook in place — fail closed. */
+ *  passed inside runLLMTask's validation, scanning the RAW provider text) AND
+ *  the PARSED output independently passes assertGuardClean on every persisted
+ *  string/array field (targetBuyer, commercialHypothesis, painStatement,
+ *  offerAngle, outreachAngle, firstAction, discoveryQuestions, likelyObjections,
+ *  proofPoints) — this second pass matters because JSON escapes in the raw text
+ *  (e.g. buy) decode to plain words (buy) only once parsed, so raw-text
+ *  scanning alone cannot catch advice language hidden behind an escape. Any
+ *  failure at any stage — including this parsed-output guard — leaves the
+ *  deterministic playbook in place, unmodified — fail closed. */
 export async function generatePlaybook(
   cardId: string,
   opts: GeneratePlaybookOptions = {},
@@ -244,6 +250,26 @@ export async function generatePlaybook(
   const parseAttempt = PlaybookSchema.safeParse(result.parsed)
   if (!parseAttempt.success) return playbook
   const output = parseAttempt.data
+
+  // Guard the PARSED output before persisting. runLLMTask/validateLLMOutput only
+  // scans the RAW provider text — JSON escapes (e.g. buy decodes to "buy")
+  // decouple raw from parsed, so advice language can be absent from the raw scan
+  // yet present once JSON.parse decodes the string. Re-run the same guard the
+  // deterministic path uses over every persisted string/array field of `output`.
+  // On any match: fail closed, keep the deterministic playbook, never persist.
+  try {
+    assertGuardClean(output.targetBuyer, 'OpportunityPlaybook.targetBuyer (LLM)')
+    assertGuardClean(output.commercialHypothesis, 'OpportunityPlaybook.commercialHypothesis (LLM)')
+    assertGuardClean(output.painStatement, 'OpportunityPlaybook.painStatement (LLM)')
+    assertGuardClean(output.offerAngle, 'OpportunityPlaybook.offerAngle (LLM)')
+    assertGuardClean(output.outreachAngle, 'OpportunityPlaybook.outreachAngle (LLM)')
+    assertGuardClean(output.firstAction, 'OpportunityPlaybook.firstAction (LLM)')
+    for (const q of output.discoveryQuestions) assertGuardClean(q, 'OpportunityPlaybook.discoveryQuestions (LLM)')
+    for (const o of output.likelyObjections) assertGuardClean(o, 'OpportunityPlaybook.likelyObjections (LLM)')
+    for (const p of output.proofPoints) assertGuardClean(p, 'OpportunityPlaybook.proofPoints (LLM)')
+  } catch {
+    return playbook
+  }
 
   playbook = await prisma.opportunityPlaybook.update({
     where: { opportunityCardId: cardId },

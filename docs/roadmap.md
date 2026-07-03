@@ -1,7 +1,7 @@
 # Archlight Roadmap
 
 Last updated: 2026-07-03 · Current state: spine + Phase 2a + the full
-intelligence-radar upgrade (Phases 3a–3f) shipped, 330/330 tests green.
+intelligence-radar upgrade (Phases 3a–3f) shipped, 342/342 tests green.
 Source of truth for phase history: `.superpowers/sdd/progress.md` (local
 ledger) and `docs/superpowers/specs/`/`docs/superpowers/plans/` (design
 docs). This file is a short current-state summary, not the durable record.
@@ -43,7 +43,7 @@ docs). This file is a short current-state summary, not the durable record.
   graph-event timeline recording with momentum/confidence-decay scoring,
   event replay, and configurable revenue lenses.
 
-Current test count: **330**, all green
+Current test count: **342**, all green
 (`.superpowers/sdd/progress.md` has the per-phase task-by-task ledger; each
 phase's detailed design lives in `docs/superpowers/specs/` and
 `docs/superpowers/plans/`).
@@ -71,15 +71,16 @@ phase's detailed design lives in `docs/superpowers/specs/` and
   schema uses string-enum columns specifically to make this mechanical
   whenever it's actually needed.
 - **3a–3f minor rollups** tracked in `.superpowers/sdd/progress.md` — small,
-  scoped items surfaced by each phase's whole-phase review, none blocking:
+  scoped items surfaced by each phase's whole-phase review. DONE (`acb1d99`):
   a P2002 sweep on duplicate-name POST/PATCH for `/watch` and `/lenses`
   (409) and portfolio POST (return-existing 200); `confidenceDecay`/
-  freshness semantics on a fresh contradiction event (decide and document);
-  `CLAIM_REPEATED`/`SIGNAL_STRENGTHENED` timeline-event reachability; a
-  server-side whitespace-term filter on watch-scope matching; assorted
-  doc-completeness and dedupe nits (`findNodeId`/`safeUpsertEdge` duplicated
-  between `graph/builder.ts` and `market/graph.ts`; a builder↔market/graph
-  circular import, runtime-safe today).
+  freshness semantics on a fresh contradiction event (decided and
+  documented); `CLAIM_REPEATED`/`SIGNAL_STRENGTHENED` timeline-event
+  reachability; a server-side whitespace-term filter on watch-scope
+  matching. Still open, none blocking: assorted doc-completeness and dedupe
+  nits (`findNodeId`/`safeUpsertEdge` duplicated between `graph/builder.ts`
+  and `market/graph.ts`; a builder↔market/graph circular import, runtime-safe
+  today).
 
 ## How this file works
 

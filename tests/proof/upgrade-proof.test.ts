@@ -112,9 +112,12 @@ describe('Stage 14 upgrade proofs 1-12: full scan -> DB/API state', () => {
   })
 
   it('proof 6: EvidenceArc supports 6-degree traversal where data allows', async () => {
-    // Sweep every EVENT root; fixture data guarantees at least one reaches the
-    // full 6-degree cap (proven deterministically in tests/graph/arc.test.ts —
-    // this proof re-asserts it end-to-end from a real scan, not a synthetic graph).
+    // Sweep every EVENT root and assert the traversal genuinely reaches the full
+    // 6-degree cap on at least one of them — a regression that capped traversal
+    // at 3 degrees would fail this assertion. (Previously this proof only
+    // asserted >=3, identical to proof 5, so a 3-degree cap regression would
+    // have passed both; this pins the real 6-degree behaviour end-to-end from a
+    // real scan, not a synthetic graph.)
     const eventNodes = await prisma.graphNode.findMany({ where: { nodeType: 'EVENT' } })
     let bestMaxDegree = 0
     for (const node of eventNodes) {
@@ -123,8 +126,7 @@ describe('Stage 14 upgrade proofs 1-12: full scan -> DB/API state', () => {
       const maxDegree = Math.max(...result.steps.map((s) => s.degree))
       bestMaxDegree = Math.max(bestMaxDegree, maxDegree)
     }
-    expect(bestMaxDegree).toBeGreaterThanOrEqual(3)
-    expect(bestMaxDegree).toBeLessThanOrEqual(6)
+    expect(bestMaxDegree).toBe(6)
   })
 
   it('proof 7: positioning examples generated with NO advice language', async () => {
