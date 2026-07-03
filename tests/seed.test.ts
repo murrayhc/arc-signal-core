@@ -40,4 +40,19 @@ describe('runSeed', () => {
     expect(bbc.isFixture).toBe(false)
     expect(bbc.url).toBe('https://feeds.bbci.co.uk/news/business/rss.xml')
   })
+
+  it('seeds ≥1 LLMProviderConfig with enabled=false', async () => {
+    await runSeed({ includeLive: false })
+    const configs = await prisma.lLMProviderConfig.findMany()
+    expect(configs.length).toBeGreaterThanOrEqual(1)
+    for (const config of configs) {
+      expect(config.enabled).toBe(false)
+      expect(config.providerName).toBe('Anthropic')
+    }
+    // Verify at least one fast and one reasoning model exist
+    const fastModel = configs.find((c) => c.modelName === 'claude-fast')
+    const reasoningModel = configs.find((c) => c.modelName === 'claude-reasoning')
+    expect(fastModel).toBeDefined()
+    expect(reasoningModel).toBeDefined()
+  })
 })

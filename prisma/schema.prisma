@@ -361,6 +361,7 @@ model OpportunityCard {
   createdAt            DateTime                      @default(now())
   updatedAt            DateTime                      @updatedAt
   positioningExamples  StrategicPositioningExample[]
+  playbook             OpportunityPlaybook?
 
   @@unique([eventCandidateId, revenueLensId])
 }
@@ -462,4 +463,72 @@ model EvidenceArcStep {
   sourceCount      Int
   pathWeight       Float
   createdAt        DateTime    @default(now())
+}
+
+model LLMProviderConfig {
+  id               String   @id @default(cuid())
+  providerName     String
+  modelName        String   @unique
+  taskTypesJson    String   @default("[]")
+  maxContextTokens Int      @default(0)
+  costTier         String   @default("MEDIUM")
+  latencyTier      String   @default("MEDIUM")
+  strengthsJson    String   @default("[]")
+  weaknessesJson   String   @default("[]")
+  enabled          Boolean  @default(false)
+  fallbackProviderId String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model LLMRun {
+  id               String              @id @default(cuid())
+  taskType         String
+  provider         String
+  model            String
+  promptHash       String
+  inputSummary     String              @default("")
+  outputSummary    String              @default("")
+  status           String
+  tokenCountInput  Int                 @default(0)
+  tokenCountOutput Int                 @default(0)
+  estimatedCost    Float               @default(0)
+  latencyMs        Int                 @default(0)
+  errorMessage     String?
+  createdAt        DateTime            @default(now())
+  validations      LLMOutputValidation[]
+}
+
+model LLMOutputValidation {
+  id                        String   @id @default(cuid())
+  llmRunId                  String
+  llmRun                    LLMRun   @relation(fields: [llmRunId], references: [id])
+  validationStatus          String
+  schemaValid               Boolean  @default(false)
+  evidenceGrounded          Boolean  @default(false)
+  prohibitedLanguageDetected Boolean @default(false)
+  unsupportedClaimsDetected Boolean  @default(false)
+  reviewNotes               String   @default("")
+  createdAt                 DateTime @default(now())
+}
+
+model OpportunityPlaybook {
+  id                    String          @id @default(cuid())
+  opportunityCardId     String          @unique
+  opportunityCard       OpportunityCard @relation(fields: [opportunityCardId], references: [id])
+  title                 String
+  targetBuyer           String
+  commercialHypothesis  String
+  painStatement         String
+  offerAngle            String
+  discoveryQuestionsJson String         @default("[]")
+  outreachAngle         String
+  likelyObjectionsJson  String          @default("[]")
+  proofPointsJson       String          @default("[]")
+  firstAction           String
+  confidence            Float
+  generatedBy           String          @default("DETERMINISTIC")
+  isFixture             Boolean         @default(false)
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
 }

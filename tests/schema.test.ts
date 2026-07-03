@@ -141,4 +141,107 @@ describe('event discovery data layer', () => {
     await prisma.evidenceArcStep.create({ data: { evidenceArcId: arc.id, degree: 1, nodeId: b.id, relationshipType: 'REPORTED_BY', explanation: 'x', confidence: 0.5, sourceCount: 1, pathWeight: 0.5 } })
     expect(await prisma.evidenceArcStep.count()).toBe(1)
   })
+
+  it('creates LLMProviderConfig, LLMRun + LLMOutputValidation, and OpportunityPlaybook linked to card', async () => {
+    // Create a provider config
+    const provider = await prisma.lLMProviderConfig.create({
+      data: {
+        providerName: 'Anthropic',
+        modelName: 'claude-test',
+        taskTypesJson: JSON.stringify(['CLAIM_EXTRACTION_ASSIST']),
+        maxContextTokens: 100000,
+        costTier: 'MEDIUM',
+        latencyTier: 'MEDIUM',
+        strengthsJson: JSON.stringify(['Test']),
+        weaknessesJson: JSON.stringify(['None']),
+        enabled: false,
+      },
+    })
+    expect(provider.modelName).toBe('claude-test')
+    expect(provider.enabled).toBe(false)
+
+    // Create an LLMRun
+    const run = await prisma.lLMRun.create({
+      data: {
+        taskType: 'CLAIM_EXTRACTION_ASSIST',
+        provider: 'Anthropic',
+        model: 'claude-test',
+        promptHash: 'hash123',
+        status: 'SUCCEEDED',
+        tokenCountInput: 100,
+        tokenCountOutput: 50,
+        estimatedCost: 0.01,
+        latencyMs: 500,
+      },
+    })
+    expect(run.status).toBe('SUCCEEDED')
+
+    // Create a validation linked to the run
+    const validation = await prisma.lLMOutputValidation.create({
+      data: {
+        llmRunId: run.id,
+        validationStatus: 'PASSED',
+        schemaValid: true,
+        evidenceGrounded: true,
+      },
+    })
+    expect(validation.schemaValid).toBe(true)
+    expect(validation.llmRunId).toBe(run.id)
+
+    // Create opportunity card and linked playbook
+    const scanRun = await prisma.scanRun.create({ data: {} })
+    const event = await prisma.eventCandidate.create({
+      data: {
+        title: 'Test event', eventType: 'HIRING_ACCELERATION', eventClass: 'OPPORTUNITY',
+        summary: 't', severity: 0.5, probability: 0.6, confidence: 0.7, evidenceCount: 1,
+        sourceDiversityScore: 0.8, signalStrength: 0.6, noveltyScore: 0.7, opportunityScore: 0.8,
+        riskScore: 0.2, createdFromScanRunId: scanRun.id, isFixture: true,
+      },
+    })
+    const card = await prisma.opportunityCard.create({
+      data: {
+        eventCandidateId: event.id, title: 'Test card', opportunityType: 'SALES',
+        summary: 's', buyerPain: 'p', suggestedOffer: 'o', urgencyScore: 0.5, commercialValueScore: 0.6,
+        confidence: 0.7, evidenceScore: 0.6, actionabilityScore: 0.7, opportunityLogic: 'ol', riskLogic: 'rl',
+        nextBestAction: 'review', isFixture: true,
+      },
+    })
+    const playbook = await prisma.opportunityPlaybook.create({
+      data: {
+        opportunityCardId: card.id,
+        title: 'Test playbook',
+        targetBuyer: 'Fortune 500 CIO',
+        commercialHypothesis: 'If hiring surge, then procurement risk',
+        painStatement: 'Talent cost pressure',
+        offerAngle: 'Cost reduction',
+        discoveryQuestionsJson: JSON.stringify(['Q1', 'Q2']),
+        outreachAngle: 'Leadership change',
+        likelyObjectionsJson: JSON.stringify(['Budget', 'Timeline']),
+        proofPointsJson: JSON.stringify(['Case study A', 'Case study B']),
+        firstAction: 'Call CFO',
+        confidence: 0.8,
+        generatedBy: 'DETERMINISTIC',
+        isFixture: true,
+      },
+    })
+    expect(playbook.opportunityCardId).toBe(card.id)
+    expect(playbook.confidence).toBe(0.8)
+
+    // Verify unique constraint on opportunityCardId
+    await expect(
+      prisma.opportunityPlaybook.create({
+        data: {
+          opportunityCardId: card.id,
+          title: 'Dup playbook',
+          targetBuyer: 'Buyer',
+          commercialHypothesis: 'Hyp',
+          painStatement: 'Pain',
+          offerAngle: 'Angle',
+          outreachAngle: 'Outreach',
+          firstAction: 'Action',
+          confidence: 0.5,
+        },
+      }),
+    ).rejects.toThrow()
+  })
 })
