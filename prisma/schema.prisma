@@ -264,6 +264,8 @@ model ScanRun {
   opportunityCardsCreated   Int              @default(0)
   opportunityCardsUpdated   Int              @default(0)
   positioningExamplesCreated Int             @default(0)
+  graphNodesUpserted        Int              @default(0)
+  graphEdgesUpserted        Int              @default(0)
   errorsJson                String           @default("[]")
   warningsJson              String           @default("[]")
   createdAt                 DateTime         @default(now())

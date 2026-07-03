@@ -63,6 +63,14 @@ describe('runFullScan', () => {
     for (const c of cards) {
       expect(await prisma.eventCandidate.count({ where: { id: c.eventCandidateId } })).toBe(1)
     }
+
+    // Graph sync stage: node/edge upsert counters recorded on both the summary and the ScanRun row.
+    expect(summary.counts.graphNodesUpserted).toBeGreaterThan(0)
+    expect(summary.counts.graphEdgesUpserted).toBeGreaterThan(0)
+    expect(scanRun.graphNodesUpserted).toBe(summary.counts.graphNodesUpserted)
+    expect(scanRun.graphEdgesUpserted).toBe(summary.counts.graphEdgesUpserted)
+    expect(await prisma.graphNode.count()).toBeGreaterThan(0)
+    expect(await prisma.graphEdge.count()).toBeGreaterThan(0)
   })
 
   it('completes even when one source fails, recording the error', async () => {

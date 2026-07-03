@@ -10,6 +10,7 @@ import { generateGapsAndTriggers } from './gaps'
 import { generateOpportunities } from './opportunity'
 import { generatePositioning } from './positioning'
 import { updateSourceHealth } from './health'
+import { syncGraphForEvents } from '@/server/graph/builder'
 import type { PipelineError } from './types'
 
 export type ScanSummary = {
@@ -31,6 +32,8 @@ export type ScanSummary = {
     opportunityCardsCreated: number
     opportunityCardsUpdated: number
     positioningExamplesCreated: number
+    graphNodesUpserted: number
+    graphEdgesUpserted: number
   }
   errors: PipelineError[]
   warnings: PipelineError[]
@@ -56,6 +59,8 @@ export async function runFullScan(options: { scanType?: string } = {}): Promise<
     opportunityCardsCreated: 0,
     opportunityCardsUpdated: 0,
     positioningExamplesCreated: 0,
+    graphNodesUpserted: 0,
+    graphEdgesUpserted: 0,
   }
 
   try {
@@ -125,6 +130,12 @@ export async function runFullScan(options: { scanType?: string } = {}): Promise<
     const positioning = await generatePositioning(cardsWithEvents, lens)
     errors.push(...positioning.errors)
     counts.positioningExamplesCreated = positioning.created.length
+
+    // 14. Graph sync: project events + evidence chains into GraphNodes/GraphEdges (upsert, idempotent).
+    const g = await syncGraphForEvents(allEvents)
+    errors.push(...g.errors)
+    counts.graphNodesUpserted = g.nodesUpserted
+    counts.graphEdgesUpserted = g.edgesUpserted
 
     const status = errors.length > 0 ? 'COMPLETED_WITH_ERRORS' : 'COMPLETED'
     const completed = await prisma.scanRun.update({
