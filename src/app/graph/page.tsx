@@ -26,7 +26,7 @@ async function getBottomStripData() {
 
   return {
     latestEvents: latestEventRows,
-    latestOpportunities: opportunityCards.slice(0, BOTTOM_STRIP_COUNT).map((o) => ({ id: o.eventId, title: o.title })),
+    latestOpportunities: opportunityCards.slice(0, BOTTOM_STRIP_COUNT).map((o) => ({ id: o.id, title: o.title })),
     latestContradictions: contradictionArcs,
   }
 }

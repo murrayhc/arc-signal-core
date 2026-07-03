@@ -100,19 +100,26 @@ non-null `disclaimer` string on the result (see §5).
 
 ## 4. 3D / 2D / paused render behaviours
 
-`ForceGraph` (`src/components/ForceGraph.tsx`) wraps `react-force-graph`
-(Three.js/WebGL), loaded client-only via `next/dynamic({ ssr: false })` —
-`ForceGraph3D` and `ForceGraph2D` are both named exports of the same package,
-picked per the `mode` prop.
+`ForceGraph` (`src/components/ForceGraph.tsx`) wraps the STANDALONE
+`react-force-graph-2d` / `react-force-graph-3d` packages (Three.js/WebGL /
+Canvas), loaded client-only via `next/dynamic({ ssr: false })` and picked per the
+`mode` prop. We deliberately do NOT use the umbrella `react-force-graph` package:
+it also bundles the VR/AR variants, which reference a global `AFRAME` at module
+load and crash the app. `ForceGraph` gates its own render behind a mount flag
+(`useState`/`useEffect`) so the server and first client render emit the identical
+placeholder — branching on `typeof window` instead would cause a hydration
+mismatch (as it did for the `/interrogate` mini subgraph until this was fixed).
 
 - **3D** (`mode="3d"`): `ForceGraph3D` — full orbit-controls 3D force layout.
 - **2D** (`mode="2d"`): `ForceGraph2D` — flat canvas force layout. 2D also
   draws a distinct square-ring marker (`nodeCanvasObject`) around
   `CONTRADICTION`/`DATA_GAP` nodes, on top of their colour, so those nodes
   are identifiable by shape as well as colour (see §6).
-- **Paused** (`paused` prop): stops the D3 force simulation from ticking —
-  `cooldownTicks: 0`, `d3VelocityDecay: 1`, `warmupTicks: 0` — so the layout
-  holds still. Used for reduced motion on `/graph` (toggle button) and always
+- **Paused** (`paused` prop): lays the graph out up front, then holds it still —
+  `warmupTicks: 80` (positions nodes before the first paint), `cooldownTicks: 0`
+  and `d3VelocityDecay: 1` (no ongoing animation). `warmupTicks: 0` here would
+  leave nodes un-positioned and crash the renderer, so the up-front warmup is
+  required. Used for reduced motion on `/graph` (toggle button) and always
   applied for the `/interrogate` mini subgraph preview, which is 2D + paused
   by default (a small, static view rather than a full running simulation).
 - On the server (SSR) or before the client bundle loads, `ForceGraph` renders
