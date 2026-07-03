@@ -335,4 +335,110 @@ describe('event discovery data layer', () => {
       }),
     ).rejects.toThrow()
   })
+
+  it('creates a WatchMarket and enforces unique constraint on name', async () => {
+    const market = await prisma.watchMarket.create({
+      data: {
+        name: 'Lithium supply chain',
+        description: 'Monitor lithium risks',
+        sectorsJson: JSON.stringify(['Mining', 'EV']),
+        regionsJson: JSON.stringify(['Australia', 'Chile']),
+        themesJson: JSON.stringify(['supply chain']),
+        queryTermsJson: JSON.stringify(['lithium']),
+        active: true,
+      },
+    })
+    expect(market.name).toBe('Lithium supply chain')
+    expect(market.active).toBe(true)
+    const parsed = JSON.parse(market.sectorsJson)
+    expect(parsed).toEqual(['Mining', 'EV'])
+
+    await expect(
+      prisma.watchMarket.create({
+        data: {
+          name: 'Lithium supply chain',
+          description: 'Duplicate',
+          active: true,
+        },
+      }),
+    ).rejects.toThrow()
+  })
+
+  it('creates an OpportunityPortfolioItem linked to an OpportunityCard and enforces unique constraint on opportunityCardId', async () => {
+    const scanRun = await prisma.scanRun.create({ data: {} })
+    const event = await prisma.eventCandidate.create({
+      data: {
+        title: 'Test event', eventType: 'HIRING_ACCELERATION', eventClass: 'OPPORTUNITY',
+        summary: 't', severity: 0.5, probability: 0.6, confidence: 0.7, evidenceCount: 1,
+        sourceDiversityScore: 0.8, signalStrength: 0.6, noveltyScore: 0.7, opportunityScore: 0.8,
+        riskScore: 0.2, createdFromScanRunId: scanRun.id, isFixture: true,
+      },
+    })
+    const card = await prisma.opportunityCard.create({
+      data: {
+        eventCandidateId: event.id, title: 'Test card', opportunityType: 'SALES',
+        summary: 's', buyerPain: 'p', suggestedOffer: 'o', urgencyScore: 0.5, commercialValueScore: 0.6,
+        confidence: 0.7, evidenceScore: 0.6, actionabilityScore: 0.7, opportunityLogic: 'ol', riskLogic: 'rl',
+        nextBestAction: 'review', isFixture: true,
+      },
+    })
+
+    const portfolioItem = await prisma.opportunityPortfolioItem.create({
+      data: {
+        opportunityCardId: card.id,
+        status: 'NEW',
+        estimatedValue: '£100,000',
+        owner: 'Alice',
+        nextAction: 'Contact buyer',
+        evidenceStrength: 0.8,
+        buyerClarity: 0.7,
+        confidenceMovement: 0.1,
+      },
+    })
+    expect(portfolioItem.opportunityCardId).toBe(card.id)
+    expect(portfolioItem.status).toBe('NEW')
+    expect(portfolioItem.owner).toBe('Alice')
+
+    await expect(
+      prisma.opportunityPortfolioItem.create({
+        data: {
+          opportunityCardId: card.id,
+          status: 'INVESTIGATING',
+        },
+      }),
+    ).rejects.toThrow()
+  })
+
+  it('creates GraphSnapshot and GraphEvent with round-trip Json parsing', async () => {
+    const snapshot = await prisma.graphSnapshot.create({
+      data: {
+        snapshotType: 'CURRENT_STATE',
+        rootNodeId: 'node-123',
+        nodesJson: JSON.stringify([{ id: 'n1', type: 'EVENT' }, { id: 'n2', type: 'SOURCE' }]),
+        edgesJson: JSON.stringify([{ from: 'n1', to: 'n2', type: 'REPORTED_BY' }]),
+      },
+    })
+    expect(snapshot.snapshotType).toBe('CURRENT_STATE')
+    expect(snapshot.rootNodeId).toBe('node-123')
+    const nodes = JSON.parse(snapshot.nodesJson)
+    expect(nodes).toHaveLength(2)
+    expect(nodes[0].id).toBe('n1')
+
+    const event = await prisma.graphEvent.create({
+      data: {
+        graphNodeId: 'node-456',
+        eventType: 'SIGNAL_STRENGTHENED',
+        description: 'Signal reinforced by new source',
+        metadataJson: JSON.stringify({ source: 'BBC News', strength: 0.85 }),
+      },
+    })
+    expect(event.graphNodeId).toBe('node-456')
+    expect(event.eventType).toBe('SIGNAL_STRENGTHENED')
+    const metadata = JSON.parse(event.metadataJson)
+    expect(metadata.strength).toBe(0.85)
+
+    const edges = JSON.parse(snapshot.edgesJson)
+    expect(edges).toHaveLength(1)
+    expect(edges[0].type).toBe('REPORTED_BY')
+  })
 })

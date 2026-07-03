@@ -240,5 +240,27 @@ export async function runSeed(options: { includeLive?: boolean } = {}) {
     })
   }
 
+  // Seed sample watch market
+  await prisma.watchMarket.upsert({
+    where: { name: 'Lithium supply chain' },
+    create: {
+      name: 'Lithium supply chain',
+      description: 'Monitor lithium supply chain risks and opportunities',
+      sectorsJson: JSON.stringify(['Mining', 'EV', 'Battery Storage']),
+      regionsJson: JSON.stringify(['Australia', 'Chile']),
+      themesJson: JSON.stringify(['supply chain']),
+      queryTermsJson: JSON.stringify(['lithium']),
+      active: true,
+    },
+    update: {
+      description: 'Monitor lithium supply chain risks and opportunities',
+      sectorsJson: JSON.stringify(['Mining', 'EV', 'Battery Storage']),
+      regionsJson: JSON.stringify(['Australia', 'Chile']),
+      themesJson: JSON.stringify(['supply chain']),
+      queryTermsJson: JSON.stringify(['lithium']),
+      active: true,
+    },
+  })
+
   return { sourcesSeeded: sources.length }
 }

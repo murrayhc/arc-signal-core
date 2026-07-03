@@ -152,3 +152,15 @@ export type CommodityCategory = (typeof COMMODITY_CATEGORIES)[number]
 
 export const MARKET_PROVIDER_STATUSES = ['CONFIGURED','NOT_CONFIGURED'] as const
 export type MarketProviderStatus = (typeof MARKET_PROVIDER_STATUSES)[number]
+
+export const PORTFOLIO_STATUSES = ['NEW','INVESTIGATING','QUALIFIED','REJECTED','ACTING','WON','LOST','WATCHING'] as const
+export type PortfolioStatus = (typeof PORTFOLIO_STATUSES)[number]
+
+export const GRAPH_EVENT_TYPES = [
+  'FIRST_DETECTED','NEW_SOURCE','CLAIM_REPEATED','SIGNAL_STRENGTHENED','CONTRADICTION_DETECTED',
+  'OPPORTUNITY_GENERATED','CONFIDENCE_ROSE','CONFIDENCE_FELL','EVENT_COOLED','EVENT_ESCALATED',
+] as const
+export type GraphEventType = (typeof GRAPH_EVENT_TYPES)[number]
+
+export const GRAPH_SNAPSHOT_TYPES = ['EVENT_FORMATION','CURRENT_STATE','MANUAL'] as const
+export type GraphSnapshotType = (typeof GRAPH_SNAPSHOT_TYPES)[number]

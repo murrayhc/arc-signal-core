@@ -362,6 +362,7 @@ model OpportunityCard {
   updatedAt            DateTime                      @updatedAt
   positioningExamples  StrategicPositioningExample[]
   playbook             OpportunityPlaybook?
+  portfolioItem        OpportunityPortfolioItem?
 
   @@unique([eventCandidateId, revenueLensId])
 }
@@ -588,4 +589,54 @@ model CommodityProfile {
   isFixture            Boolean   @default(false)
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
+}
+
+model WatchMarket {
+  id            String   @id @default(cuid())
+  name          String   @unique
+  description   String?
+  sectorsJson   String   @default("[]")
+  regionsJson   String   @default("[]")
+  themesJson    String   @default("[]")
+  queryTermsJson String  @default("[]")
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model OpportunityPortfolioItem {
+  id                 String          @id @default(cuid())
+  opportunityCardId  String          @unique
+  opportunityCard    OpportunityCard @relation(fields: [opportunityCardId], references: [id])
+  status             String          @default("NEW")
+  estimatedValue     String?
+  owner              String?
+  nextAction         String?
+  deadline           DateTime?
+  evidenceStrength   Float           @default(0)
+  buyerClarity       Float           @default(0)
+  confidenceMovement Float           @default(0)
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+}
+
+model GraphSnapshot {
+  id           String   @id @default(cuid())
+  snapshotType String
+  rootNodeId   String
+  nodesJson    String   @default("[]")
+  edgesJson    String   @default("[]")
+  createdAt    DateTime @default(now())
+}
+
+model GraphEvent {
+  id               String   @id @default(cuid())
+  graphNodeId      String
+  eventCandidateId String?
+  eventType        String
+  description      String
+  occurredAt       DateTime @default(now())
+  metadataJson     String   @default("{}")
+
+  @@index([graphNodeId, occurredAt])
 }

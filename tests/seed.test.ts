@@ -98,4 +98,16 @@ describe('runSeed', () => {
     expect(copper?.metadataJson).toBe('{}')
     expect(acme?.metadataJson).toBe('{}')
   })
+
+  it('seeds ≥1 WatchMarket with active=true', async () => {
+    await runSeed({ includeLive: false })
+    const markets = await prisma.watchMarket.findMany()
+    expect(markets.length).toBeGreaterThanOrEqual(1)
+    const lithium = markets.find((m) => m.name === 'Lithium supply chain')
+    expect(lithium).toBeDefined()
+    expect(lithium?.active).toBe(true)
+    const sectors = JSON.parse(lithium!.sectorsJson)
+    expect(sectors).toContain('Mining')
+    expect(sectors).toContain('EV')
+  })
 })

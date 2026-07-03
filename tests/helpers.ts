@@ -7,10 +7,13 @@ export async function resetDb() {
     prisma.lLMRun.deleteMany(),
     prisma.lLMProviderConfig.deleteMany(),
     prisma.opportunityPlaybook.deleteMany(),
+    prisma.opportunityPortfolioItem.deleteMany(),
     prisma.evidenceArcStep.deleteMany(),
     prisma.evidenceArc.deleteMany(),
     prisma.graphEdge.deleteMany(),
     prisma.graphNode.deleteMany(),
+    prisma.graphEvent.deleteMany(),
+    prisma.graphSnapshot.deleteMany(),
     prisma.strategicPositioningExample.deleteMany(),
     prisma.opportunityCard.deleteMany(),
     prisma.dashboardFeedItem.deleteMany(),
@@ -35,5 +38,6 @@ export async function resetDb() {
     prisma.source.deleteMany(),
     prisma.instrumentProfile.deleteMany(),
     prisma.commodityProfile.deleteMany(),
+    prisma.watchMarket.deleteMany(),
   ])
 }
