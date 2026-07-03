@@ -1,15 +1,17 @@
 import Link from 'next/link'
 import { getDashboardData } from '@/server/services/dashboard'
+import { getLiveGraph } from '@/server/services/graph'
 import { EventCard } from '@/components/EventCard'
 import { OpportunityCard } from '@/components/OpportunityCard'
 import { InboxList } from '@/components/InboxList'
 import { RunScanButton } from '@/components/RunScanButton'
+import { SearchBar } from '@/components/SearchBar'
 import { FixtureBadge } from '@/components/badges'
 
 export const dynamic = 'force-dynamic'
 
 export default async function DashboardPage() {
-  const data = await getDashboardData()
+  const [data, liveGraph] = await Promise.all([getDashboardData(), getLiveGraph()])
   const hasEvents = data.inbox.length > 0
 
   return (
@@ -60,6 +62,21 @@ export default async function DashboardPage() {
             <p className="text-xs uppercase tracking-wider text-slate-500">{stat.label}</p>
           </div>
         ))}
+      </section>
+
+      <section className="mt-6 flex flex-col gap-3 rounded-lg border border-slate-800 bg-slate-900 p-4 sm:flex-row sm:items-center">
+        <div className="sm:flex-1">
+          <SearchBar />
+        </div>
+        <Link
+          href="/graph"
+          className="flex shrink-0 items-center gap-2 rounded-md border border-sky-700/60 bg-sky-950/40 px-3 py-2 text-xs font-semibold text-sky-300 hover:bg-sky-900/40"
+        >
+          Open the living graph →
+          <span className="text-slate-400">
+            {liveGraph.graphStats.nodeCount} nodes · {liveGraph.graphStats.edgeCount} edges
+          </span>
+        </Link>
       </section>
 
       {!hasEvents ? (

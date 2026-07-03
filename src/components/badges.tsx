@@ -59,4 +59,13 @@ export function NodeTypeChip({ nodeType }: { nodeType: string }) {
   )
 }
 
+/** Compact chip for a classified interrogation QueryType, used on /interrogate. */
+export function QueryTypeChip({ queryType }: { queryType: string }) {
+  return (
+    <span className="rounded border border-sky-500/60 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-sky-400">
+      {queryType.replace(/_/g, ' ')}
+    </span>
+  )
+}
+
 export const pct = (n: number) => `${Math.round(n * 100)}%`
