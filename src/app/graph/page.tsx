@@ -1,87 +1,73 @@
 import Link from 'next/link'
-import { getLiveGraph } from '@/server/services/graph'
-import { FixtureBadge, NodeTypeChip, pct } from '@/components/badges'
+import { getGraphForRender } from '@/server/services/graph'
+import { getOpportunityRadar } from '@/server/services/opportunities'
+import { prisma } from '@/server/db'
+import { GraphExplorer } from '@/components/GraphExplorer'
 
 export const dynamic = 'force-dynamic'
 
-const TOP_NODE_COUNT = 30
+const BOTTOM_STRIP_COUNT = 5
+
+async function getBottomStripData() {
+  const [latestEventRows, opportunityCards, contradictionArcs] = await Promise.all([
+    prisma.eventCandidate.findMany({
+      orderBy: { lastUpdatedAt: 'desc' },
+      take: BOTTOM_STRIP_COUNT,
+      select: { id: true, title: true, eventClass: true },
+    }),
+    getOpportunityRadar(),
+    prisma.evidenceArc.findMany({
+      where: { chainClass: 'CONTRADICTED' },
+      orderBy: { updatedAt: 'desc' },
+      take: BOTTOM_STRIP_COUNT,
+      select: { id: true, title: true },
+    }),
+  ])
+
+  return {
+    latestEvents: latestEventRows,
+    latestOpportunities: opportunityCards.slice(0, BOTTOM_STRIP_COUNT).map((o) => ({ id: o.eventId, title: o.title })),
+    latestContradictions: contradictionArcs,
+  }
+}
 
 export default async function GraphPage() {
-  const data = await getLiveGraph()
-  const topNodes = [...data.nodes]
-    .sort((a, b) => b.impactScore + b.freshnessScore - (a.impactScore + a.freshnessScore))
-    .slice(0, TOP_NODE_COUNT)
+  const [graph, bottomStrip] = await Promise.all([getGraphForRender(), getBottomStripData()])
 
   return (
-    <main className="mx-auto max-w-5xl px-6 py-8">
+    <main className="mx-auto max-w-7xl px-6 py-8">
       <Link href="/" className="text-xs text-slate-400 underline hover:text-slate-200">← Dashboard</Link>
-      <h1 className="mt-3 text-xl font-bold">Living Intelligence Graph</h1>
-      <p className="mt-1 text-sm text-slate-400">
-        The projected node/edge graph behind every event, signal, and evidence arc.
-      </p>
-      <p className="mt-1 text-xs text-slate-500">
-        Interactive 3D view arrives in the next phase.
-      </p>
-
-      <section className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {[
-          { label: 'Nodes', value: String(data.graphStats.nodeCount) },
-          { label: 'Edges', value: String(data.graphStats.edgeCount) },
-          { label: 'Active events', value: String(data.activeEventCount) },
-          { label: 'Risks', value: String(data.riskCount) },
-          { label: 'Opportunities', value: String(data.opportunityCount) },
-          { label: 'High uncertainty', value: String(data.highUncertaintyCount) },
-        ].map((stat) => (
-          <div key={stat.label} className="rounded-lg border border-slate-800 bg-slate-900 p-3 text-center">
-            <p className="font-mono text-lg font-bold">{stat.value}</p>
-            <p className="text-[10px] uppercase tracking-wider text-slate-500">{stat.label}</p>
-          </div>
-        ))}
-      </section>
-
-      <section className="mt-8">
-        <h2 className="text-base font-semibold text-slate-200">Node types</h2>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {Object.entries(data.graphStats.byType)
-            .sort((a, b) => b[1] - a[1])
-            .map(([nodeType, count]) => (
-              <div
-                key={nodeType}
-                className="flex items-center gap-2 rounded-md border border-slate-800 bg-slate-900 px-3 py-1.5 text-xs"
-              >
-                <NodeTypeChip nodeType={nodeType} />
-                <span className="text-slate-300">{count}</span>
-              </div>
-            ))}
+      <div className="mt-3 flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-bold">Living Intelligence Graph</h1>
+          <p className="mt-1 text-sm text-slate-400">
+            The projected node/edge graph behind every event, signal, and evidence arc.
+          </p>
         </div>
-      </section>
+        <form action="/interrogate" method="get" className="flex items-center gap-2">
+          <input
+            type="text"
+            name="q"
+            placeholder="Ask the graph…"
+            aria-label="Search the graph"
+            className="w-56 rounded-md border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm text-slate-200 placeholder:text-slate-500"
+          />
+          <button
+            type="submit"
+            className="rounded-md bg-sky-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-sky-600"
+          >
+            Interrogate
+          </button>
+        </form>
+      </div>
 
-      <section className="mt-8">
-        <h2 className="text-base font-semibold text-slate-200">
-          Top {topNodes.length} nodes by impact + freshness
-        </h2>
-        {topNodes.length === 0 ? (
-          <p className="mt-3 text-sm text-slate-500">No graph nodes yet — run a scan to populate the graph.</p>
-        ) : (
-          <ul className="mt-3 space-y-2">
-            {topNodes.map((node) => (
-              <li
-                key={node.id}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-slate-800 bg-slate-900 p-3 text-sm"
-              >
-                <span className="flex items-center gap-2">
-                  <NodeTypeChip nodeType={node.nodeType} />
-                  <span className="text-slate-200">{node.title}</span>
-                  {node.isFixture && <FixtureBadge />}
-                </span>
-                <span className="flex shrink-0 items-center gap-2 text-xs text-slate-500">
-                  impact {pct(node.impactScore)} · freshness {pct(node.freshnessScore)}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+      <GraphExplorer
+        initialNodes={graph.nodes}
+        initialEdges={graph.edges}
+        latestEvents={bottomStrip.latestEvents.map((e) => ({ id: e.id, title: e.title, eventClass: e.eventClass }))}
+        latestOpportunities={bottomStrip.latestOpportunities}
+        latestContradictions={bottomStrip.latestContradictions}
+      />
     </main>
   )
 }

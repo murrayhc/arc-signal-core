@@ -22,6 +22,7 @@
     "next": "^15.5.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "react-force-graph": "^1.48.2",
     "zod": "^3.25.0"
   },
   "devDependencies": {
