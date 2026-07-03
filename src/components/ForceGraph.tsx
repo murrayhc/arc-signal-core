@@ -105,12 +105,13 @@ export function ForceGraph({
     linkTarget: 'target',
     onNodeClick: (node: SimNode) => onSelect(node.id),
     // paused (reduced motion): run warmup ticks UP FRONT so nodes get laid out
-    // before the first paint, then do zero cooldown ticks so there is no ongoing
-    // animation. warmupTicks:0 here would leave nodes un-positioned and crash the
-    // renderer ("cannot read x of undefined") when it draws links.
+    // before the first paint (at default velocity decay), then do zero cooldown
+    // ticks so there is no ongoing animation. warmupTicks:0 here would leave
+    // nodes un-positioned and crash the renderer ("cannot read x of undefined")
+    // when it draws links. Overriding d3VelocityDecay to 1 would zero d3's
+    // position multiplier and freeze the initial spiral instead.
     warmupTicks: paused ? 80 : undefined,
     cooldownTicks: paused ? 0 : undefined,
-    d3VelocityDecay: paused ? 1 : undefined,
   }
 
   return (
