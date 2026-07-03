@@ -1,5 +1,5 @@
 import type { EvidenceArcData, EvidenceArcStepData } from '@/server/services/graph'
-import { ChainClassBadge, NodeTypeChip, pct } from '@/components/badges'
+import { ChainClassBadge, FixtureBadge, NodeTypeChip, pct } from '@/components/badges'
 
 function degreeLabel(degree: number): string {
   return degree === 1 ? '1 degree out' : `${degree} degrees out`
@@ -30,7 +30,7 @@ export function EvidenceArc({ arc, steps }: { arc: EvidenceArcData | null; steps
     <div>
       <div className="flex flex-wrap items-center gap-2">
         <ChainClassBadge chainClass={arc.chainClass} />
-        {arc.isFixture && <span className="text-[10px] text-slate-500">fixture data</span>}
+        {arc.isFixture && <FixtureBadge />}
       </div>
       <p className="mt-2 text-sm leading-relaxed text-slate-300">{arc.summary}</p>
 

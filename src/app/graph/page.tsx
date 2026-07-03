@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { getLiveGraph } from '@/server/services/graph'
-import { NodeTypeChip, pct } from '@/components/badges'
+import { FixtureBadge, NodeTypeChip, pct } from '@/components/badges'
 
 export const dynamic = 'force-dynamic'
 
@@ -72,6 +72,7 @@ export default async function GraphPage() {
                 <span className="flex items-center gap-2">
                   <NodeTypeChip nodeType={node.nodeType} />
                   <span className="text-slate-200">{node.title}</span>
+                  {node.isFixture && <FixtureBadge />}
                 </span>
                 <span className="flex shrink-0 items-center gap-2 text-xs text-slate-500">
                   impact {pct(node.impactScore)} · freshness {pct(node.freshnessScore)}
