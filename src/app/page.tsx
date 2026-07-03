@@ -125,6 +125,9 @@ export default async function DashboardPage() {
             <Link href="/admin/sources" className="text-xs text-slate-400 underline hover:text-slate-200">
               Source admin
             </Link>
+            <Link href="/graph" className="text-xs text-slate-400 underline hover:text-slate-200">
+              Graph stats
+            </Link>
           </div>
         </div>
         <div className="mt-3 flex flex-wrap gap-2">

@@ -1,5 +1,6 @@
 import { prisma } from '@/server/db'
 import type { GraphEdge, GraphNode } from '@prisma/client'
+import { buildArc } from '@/server/graph/arc'
 
 export type GraphNodeData = {
   id: string
@@ -160,4 +161,84 @@ export async function getNodeNeighbourhood(id: string): Promise<NodeNeighbourhoo
 export async function getEventGraphNodeId(eventId: string): Promise<string | null> {
   const node = await prisma.graphNode.findUnique({ where: { refType_refId: { refType: 'event', refId: eventId } } })
   return node?.id ?? null
+}
+
+export type EvidenceArcData = {
+  id: string
+  rootNodeId: string
+  title: string
+  summary: string
+  maxDegrees: number
+  truePotentialScore: number
+  confidence: number
+  originStrength: number
+  sourceDiversity: number
+  contradictionScore: number
+  momentumScore: number
+  chainClass: string
+  isFixture: boolean
+}
+
+export type EvidenceArcStepData = {
+  degree: number
+  nodeType: string
+  nodeTitle: string
+  relationshipType: string
+  explanation: string
+  confidence: number
+  sourceCount: number
+}
+
+/**
+ * The evidence arc rooted at an event's EVENT GraphNode: finds the node via
+ * `getEventGraphNodeId`, runs `buildArc`, and joins each step to its node's
+ * title/nodeType for display. Returns null if the event has no graph node
+ * (not yet scanned/synced) or the node was since removed.
+ */
+export async function getEventArc(
+  eventId: string,
+): Promise<{ arc: EvidenceArcData; steps: EvidenceArcStepData[] } | null> {
+  const nodeId = await getEventGraphNodeId(eventId)
+  if (!nodeId) return null
+
+  const result = await buildArc(nodeId)
+  if (!result) return null
+
+  const { arc, steps } = result
+  const stepNodes = await prisma.graphNode.findMany({ where: { id: { in: steps.map((s) => s.nodeId) } } })
+  const nodeById = new Map(stepNodes.map((n) => [n.id, n]))
+
+  const stepsData: EvidenceArcStepData[] = steps
+    .map((s) => {
+      const node = nodeById.get(s.nodeId)
+      return {
+        degree: s.degree,
+        nodeType: node?.nodeType ?? 'UNKNOWN',
+        nodeTitle: node?.title ?? 'Unknown node',
+        relationshipType: s.relationshipType,
+        explanation: s.explanation,
+        confidence: s.confidence,
+        sourceCount: s.sourceCount,
+      }
+    })
+    .sort((a, b) => a.degree - b.degree)
+
+  return {
+    arc: {
+      id: arc.id,
+      rootNodeId: arc.rootNodeId,
+      title: arc.title,
+      summary: arc.summary,
+      maxDegrees: arc.maxDegrees,
+      truePotentialScore: arc.truePotentialScore,
+      confidence: arc.confidence,
+      originStrength: arc.originStrength,
+      sourceDiversity: arc.sourceDiversity,
+      contradictionScore: arc.contradictionScore,
+      momentumScore: arc.momentumScore,
+      chainClass: arc.chainClass,
+      isFixture: arc.isFixture,
+    },
+    steps: stepsData,
+  }
 }

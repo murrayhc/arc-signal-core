@@ -3,7 +3,9 @@ import { notFound } from 'next/navigation'
 import { getEventDetail } from '@/server/services/events'
 import type { EvidenceItem } from '@/server/services/events'
 import { getOpportunitiesForEvent } from '@/server/services/opportunities'
+import { getEventArc } from '@/server/services/graph'
 import { EventActions } from '@/components/EventActions'
+import { EvidenceArc } from '@/components/EvidenceArc'
 import { ClassBadge, FixtureBadge, StatusBadge, pct } from '@/components/badges'
 
 export const dynamic = 'force-dynamic'
@@ -42,6 +44,7 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
   if (!detail) notFound()
   const { event } = detail
   const opportunities = await getOpportunitiesForEvent(event.id)
+  const arcResult = await getEventArc(event.id)
 
   return (
     <main className="mx-auto max-w-4xl px-6 py-8">
@@ -81,6 +84,10 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
 
       <Section title="Summary">
         <p className="text-sm leading-relaxed text-slate-300">{event.summary}</p>
+      </Section>
+
+      <Section title="Evidence arc">
+        <EvidenceArc arc={arcResult?.arc ?? null} steps={arcResult?.steps ?? []} />
       </Section>
 
       {detail.riskOpportunities.map((ro, i) => (
