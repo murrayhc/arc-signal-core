@@ -96,3 +96,23 @@ export type PositioningUserType = (typeof POSITIONING_USER_TYPES)[number]
 
 export const RISK_APPETITES = ['LOW', 'MEDIUM', 'HIGH'] as const
 export type RiskAppetite = (typeof RISK_APPETITES)[number]
+
+export const NODE_TYPES = [
+  'EVENT','SOURCE','DOCUMENT','CLAIM','SIGNAL','COMPANY','SECTOR','COMMODITY',
+  'INSTRUMENT','PERSON','REGION','REGULATION','PROCUREMENT','RISK','OPPORTUNITY',
+  'POSITIONING','CONTRADICTION','DATA_GAP',
+] as const
+export type NodeType = (typeof NODE_TYPES)[number]
+
+export const EDGE_TYPES = [
+  'REPORTED_BY','DERIVED_FROM','SUPPORTS','CONTRADICTS','AFFECTS','EXPOSES',
+  'AMPLIFIES','WEAKENS','CAUSES_PRESSURE_ON','CREATES_OPPORTUNITY_FOR',
+  'LINKED_TO','PRICED_BY','REGULATED_BY','SUPPLIED_BY','DEPENDS_ON','COMPETES_WITH',
+] as const
+export type EdgeType = (typeof EDGE_TYPES)[number]
+
+export const ARC_CLASSES = [
+  'STRONG_CHAIN','WEAK_SIGNAL','WIDELY_REPEATED_WEAK_SOURCE','CONTRADICTED',
+  'HIGH_POTENTIAL_LOW_CONFIDENCE',
+] as const
+export type ArcClass = (typeof ARC_CLASSES)[number]

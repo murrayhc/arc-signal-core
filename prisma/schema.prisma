@@ -384,3 +384,80 @@ model StrategicPositioningExample {
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt
 }
+
+model GraphNode {
+  id               String      @id @default(cuid())
+  nodeType         String
+  refType          String
+  refId            String
+  title            String
+  summary          String      @default("")
+  confidence       Float       @default(0)
+  riskScore        Float       @default(0)
+  opportunityScore Float       @default(0)
+  impactScore      Float       @default(0)
+  freshnessScore   Float       @default(0)
+  isFixture        Boolean     @default(false)
+  metadataJson     String      @default("{}")
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  outEdges         GraphEdge[] @relation("SourceNode")
+  inEdges          GraphEdge[] @relation("TargetNode")
+  arcSteps         EvidenceArcStep[]
+
+  @@unique([refType, refId])
+}
+
+model GraphEdge {
+  id            String    @id @default(cuid())
+  sourceNodeId  String
+  sourceNode    GraphNode @relation("SourceNode", fields: [sourceNodeId], references: [id])
+  targetNodeId  String
+  targetNode    GraphNode @relation("TargetNode", fields: [targetNodeId], references: [id])
+  edgeType      String
+  label         String
+  weight        Float     @default(0.5)
+  confidence    Float     @default(0.5)
+  evidenceCount Int       @default(1)
+  metadataJson  String    @default("{}")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([sourceNodeId, targetNodeId, edgeType])
+}
+
+model EvidenceArc {
+  id                   String            @id @default(cuid())
+  rootNodeId           String
+  rootEventCandidateId String?
+  rootClaimId          String?
+  title                String
+  summary              String
+  maxDegrees           Int               @default(6)
+  truePotentialScore   Float
+  confidence           Float
+  originStrength       Float
+  sourceDiversity      Float
+  contradictionScore   Float
+  momentumScore        Float
+  chainClass           String
+  isFixture            Boolean           @default(false)
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+  steps                EvidenceArcStep[]
+}
+
+model EvidenceArcStep {
+  id               String      @id @default(cuid())
+  evidenceArcId    String
+  evidenceArc      EvidenceArc @relation(fields: [evidenceArcId], references: [id])
+  degree           Int
+  nodeId           String
+  node             GraphNode   @relation(fields: [nodeId], references: [id])
+  relationshipType String
+  explanation      String
+  confidence       Float
+  sourceCount      Int
+  pathWeight       Float
+  createdAt        DateTime    @default(now())
+}

@@ -124,4 +124,21 @@ describe('event discovery data layer', () => {
       }),
     ).rejects.toThrow()
   })
+
+  it('creates graph nodes/edges deduped on refType+refId and the edge triple', async () => {
+    const a = await prisma.graphNode.create({ data: { nodeType: 'EVENT', refType: 'event', refId: 'e1', title: 'E1' } })
+    const b = await prisma.graphNode.create({ data: { nodeType: 'SOURCE', refType: 'source', refId: 's1', title: 'S1' } })
+    await expect(
+      prisma.graphNode.create({ data: { nodeType: 'EVENT', refType: 'event', refId: 'e1', title: 'dup' } }),
+    ).rejects.toThrow()
+    await prisma.graphEdge.create({ data: { sourceNodeId: a.id, targetNodeId: b.id, edgeType: 'REPORTED_BY', label: 'reported by' } })
+    await expect(
+      prisma.graphEdge.create({ data: { sourceNodeId: a.id, targetNodeId: b.id, edgeType: 'REPORTED_BY', label: 'x' } }),
+    ).rejects.toThrow()
+    const arc = await prisma.evidenceArc.create({
+      data: { rootNodeId: a.id, title: 'Arc', summary: 's', truePotentialScore: 0.5, confidence: 0.5, originStrength: 0.5, sourceDiversity: 0.5, contradictionScore: 0, momentumScore: 0.5, chainClass: 'WEAK_SIGNAL' },
+    })
+    await prisma.evidenceArcStep.create({ data: { evidenceArcId: arc.id, degree: 1, nodeId: b.id, relationshipType: 'REPORTED_BY', explanation: 'x', confidence: 0.5, sourceCount: 1, pathWeight: 0.5 } })
+    expect(await prisma.evidenceArcStep.count()).toBe(1)
+  })
 })
