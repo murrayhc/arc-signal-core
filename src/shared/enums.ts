@@ -116,3 +116,9 @@ export const ARC_CLASSES = [
   'HIGH_POTENTIAL_LOW_CONFIDENCE',
 ] as const
 export type ArcClass = (typeof ARC_CLASSES)[number]
+
+export const QUERY_TYPES = [
+  'COMPANY','COMMODITY','INSTRUMENT','TICKER','SHARE_PRICE','SECTOR','REGION',
+  'THEME','REGULATION','PROCUREMENT','UNKNOWN',
+] as const
+export type QueryType = (typeof QUERY_TYPES)[number]
