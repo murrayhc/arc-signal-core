@@ -22,9 +22,11 @@ const EMPTY_GRAPH_EVIDENCE: MarketGraphEvidence = {
   contradictions: [],
 }
 
-/** Contradictions among a node set: any CONTRADICTS edge with both endpoints
- *  inside `nodeIds`, rendered as "A vs B" using the already-loaded `nodeById`
- *  map (falls back to a direct lookup for an endpoint not already in the map). */
+/** Contradictions reaching a node set: any CONTRADICTS edge with EITHER endpoint
+ *  inside `nodeIds` (the WHERE is an OR, one endpoint suffices — intentional, so
+ *  a contradiction against a neighbour just outside the set is still surfaced),
+ *  rendered as "A vs B" using the already-loaded `nodeById` map (falls back to a
+ *  direct lookup for an endpoint not already in the map). */
 async function contradictionsAmong(nodeIds: string[], nodeById: Map<string, { title: string }>): Promise<string[]> {
   if (nodeIds.length === 0) return []
 

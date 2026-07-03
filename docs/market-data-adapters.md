@@ -192,6 +192,60 @@ reports `configured: true`. Every safety gate in §4 — boundary validation,
 advice-language guard, delayed/currency labelling — applies identically to
 live calls; nothing about activation bypasses it.
 
+### Pre-activation gate (before registering a real adapter)
+
+Registering a real adapter (§6) makes three configured-only code paths
+reachable for the first time. None of these is a defect in the dormant build
+shipped this phase — `ADAPTER_REGISTRY` is empty, so they cannot fire today —
+but each must be closed before `MARKET_DATA_API_KEY` is set anywhere real
+traffic can reach it:
+
+**(a) Provider-error degradation on `/interrogate`.** `resolveMarketContext`
+(`src/server/interrogate/service.ts`) calls `getInstrumentContext`/
+`getCommodityContext`, which can throw once a real adapter exists — a
+`getQuote`/`getCompanyProfile`/`getCommodityContext` network or vendor-side
+failure surfaces as a rejected promise, boundary validation failure surfaces
+as `MarketDataValidationError`, and the guard-before-persist ordering (§4,
+Fix 2 of the phase-3e review) surfaces as `AdviceLanguageError`. None of these
+is caught today — an uncaught rejection out of `resolveMarketContext`
+propagates out of `interrogate()` and renders as a generic 500 on
+`/interrogate`, not an honest "market data temporarily unavailable" state.
+Before activation, wrap the provider-calling paths so any of these failures
+degrades to a clean error state on the page (consistent with the dormant
+not-configured empty state's honesty, not a stack trace).
+
+**(b) Symbol extraction for `SHARE_PRICE`/`TICKER`-shaped queries.**
+`classifyQuery` (`src/server/interrogate/classify.ts`) classifies query
+*shape* only — it does not extract an identifier. Today the full raw query
+string is passed straight through as the provider identifier: `interrogate()`
+calls `resolveMarketContext(query, queryType, provider)`, which calls
+`getInstrumentContext(query, ...)`/`getCommodityContext(query, ...)`
+unchanged (`src/server/interrogate/service.ts`), so a query like "BP share
+price" (classified `SHARE_PRICE`) is passed to
+`provider.getCompanyProfile('BP share price')`/`provider.getQuote('BP share
+price')` verbatim — not the extracted ticker `BP`. `NullProvider` never sees
+this today because it throws unconditionally, and `FakeMarketProvider` in
+tests generally echoes back whatever identifier it's given, so no test
+currently exercises a real vendor API's actual response to a
+non-ticker-shaped identifier. A real adapter needs either a symbol-extraction
+step before the provider call, or must itself tolerate a free-text query
+(vendor-dependent) — decide and implement before activation, not after a
+vendor call starts failing silently on realistic share-price phrasing.
+
+**(c) An integration test seeding fixtures then fetching live.** The
+name-collision case fixed in the phase-3e review (a configured provider
+refetching a name that collides with a seeded `isFixture: true`
+`CommodityProfile` row, since `CommodityProfile.name` is `@unique`) is
+covered by a unit test today
+(`tests/market/service.test.ts`, `'live refresh over a seeded fixture clears
+isFixture'`) using a `FakeMarketProvider`. Before activation, add an
+end-to-end integration test that runs the real seed (`runSeed`), then drives
+the actual configured code path a live deployment will take —
+`getActiveMarketProvider()` resolving a registered adapter via env vars,
+through `/api/market/search` or `/interrogate` — rather than only the service
+function called directly, so the fixture-to-live transition is proven across
+the full request path, not just the unit boundary.
+
 ## 7. Fixture reference profiles
 
 A small, clearly-labelled set of `isFixture: true` `CommodityProfile` /

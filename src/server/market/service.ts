@@ -220,12 +220,42 @@ export async function getInstrumentContext(symbol: string, opts?: ServiceOptions
 
   const metadata = provider.getProviderMetadata()
 
+  // Candidate display name — the exact value about to be written to
+  // InstrumentProfile.name (and, on the next syncMarketNodes, projected as
+  // the INSTRUMENT graph-node title rendered on /admin/market and the graph
+  // explorer, neither of which runs this guard). Computed here, BEFORE the
+  // upsert, so it can be guard-checked pre-persistence.
+  const candidateName = rawProfile?.name ?? quote.symbol
+
+  // Structured-field-only summary, built from the allowed-output list (price
+  // movement, currency, sector, graph evidence). rawProfile.description is
+  // provider free-text (company descriptions, analyst notes) — untrusted and
+  // not on the allowed list, so it is deliberately never templated into the
+  // summary, regardless of its content.
+  const sectorPart = rawProfile?.sector ? ` Sector: ${rawProfile.sector}.` : ''
+  const evidencePart =
+    graphEvidence.sectorPressureSignals.length > 0
+      ? ` Related sector signals on record: ${graphEvidence.sectorPressureSignals.join(', ')}.`
+      : ''
+  const summary =
+    `${candidateName} (${quote.symbol}) is ${pctText(quote.changePct)}, priced in ${quote.currency}` +
+    `${metadata.delayed ? ' (delayed data)' : ''}.${sectorPart}${evidencePart}`
+
+  // Guard BEFORE persistence: assert the persisted display name (mirrors
+  // searchMarket's assert-before-persist ordering) AND the full summary
+  // (which also covers rawProfile.sector via sectorPart) — only when both are
+  // clean does the upsert run, so advice-tainted provider text is never
+  // written to InstrumentProfile.name, never becomes a graph-node title, and
+  // is never rendered anywhere.
+  assertNoAdviceLanguage(candidateName, 'getInstrumentContext.name')
+  assertNoAdviceLanguage(summary, 'getInstrumentContext.summary')
+
   const upserted = await prisma.instrumentProfile.upsert({
     where: { provider_symbol: { provider: provider.name, symbol: quote.symbol } },
     create: {
       provider: provider.name,
       symbol: quote.symbol,
-      name: rawProfile?.name ?? quote.symbol,
+      name: candidateName,
       exchange: null,
       instrumentType: 'UNKNOWN',
       currency: quote.currency,
@@ -233,7 +263,7 @@ export async function getInstrumentContext(symbol: string, opts?: ServiceOptions
       lastFetchedAt: new Date(),
     },
     update: {
-      name: rawProfile?.name ?? quote.symbol,
+      name: candidateName,
       currency: quote.currency,
       delayed: quote.delayed,
       lastFetchedAt: new Date(),
@@ -250,25 +280,6 @@ export async function getInstrumentContext(symbol: string, opts?: ServiceOptions
     delayed: upserted.delayed,
     isFixture: upserted.isFixture,
   }
-
-  // Structured-field-only summary, built from the allowed-output list (price
-  // movement, currency, sector, graph evidence). rawProfile.description is
-  // provider free-text (company descriptions, analyst notes) — untrusted and
-  // not on the allowed list, so it is deliberately never templated into the
-  // summary, regardless of its content. assertNoAdviceLanguage below is the
-  // enforced belt-and-braces: even if a future edit adds a new templated
-  // field, any advice-shaped phrase anywhere in `summary` fails loudly
-  // instead of silently shipping.
-  const sectorPart = rawProfile?.sector ? ` Sector: ${rawProfile.sector}.` : ''
-  const evidencePart =
-    graphEvidence.sectorPressureSignals.length > 0
-      ? ` Related sector signals on record: ${graphEvidence.sectorPressureSignals.join(', ')}.`
-      : ''
-  const summary =
-    `${profile.name} (${profile.symbol}) is ${pctText(quote.changePct)}, priced in ${quote.currency}` +
-    `${metadata.delayed ? ' (delayed data)' : ''}.${sectorPart}${evidencePart}`
-
-  assertNoAdviceLanguage(summary, 'getInstrumentContext.summary')
 
   return { configured: true, provider: provider.name, delayed: metadata.delayed, profile, quote, summary, graphEvidence }
 }
@@ -355,6 +366,30 @@ export async function getCommodityContext(name: string, opts?: ServiceOptions): 
   const ctx = validateProviderData(CommodityContextSchema, rawContext)
   const metadata = provider.getProviderMetadata()
 
+  // Summary built from the boundary-validated `ctx` fields — the exact
+  // values about to be written to CommodityProfile (name in particular
+  // becomes the COMMODITY graph-node title on the next syncMarketNodes,
+  // rendered on /admin/market and the graph explorer, neither of which runs
+  // this guard) — computed BEFORE the upsert so it can be guard-checked
+  // pre-persistence.
+  const supply = ctx.keySupplyRegions.length > 0 ? ctx.keySupplyRegions.join(', ') : 'no key regions on record'
+  const demand = ctx.keyDemandSectors.length > 0 ? ctx.keyDemandSectors.join(', ') : 'no key sectors on record'
+  const evidencePart =
+    graphEvidence.sectorPressureSignals.length > 0
+      ? ` Related sector signals on record: ${graphEvidence.sectorPressureSignals.join(', ')}.`
+      : ''
+  const summary =
+    `${ctx.name} (${ctx.category.toLowerCase()}) supply concentrated in ${supply}; demand driven by ${demand}` +
+    `${metadata.delayed ? ' (delayed data)' : ''}.${evidencePart}`
+
+  // Guard BEFORE persistence: assert the persisted display name (mirrors
+  // searchMarket's assert-before-persist ordering) AND the full summary —
+  // only when both are clean does the upsert run, so advice-tainted
+  // provider text is never written to CommodityProfile.name, never becomes
+  // a graph-node title, and is never rendered anywhere.
+  assertNoAdviceLanguage(ctx.name, 'getCommodityContext.name')
+  assertNoAdviceLanguage(summary, 'getCommodityContext.summary')
+
   const upserted = await prisma.commodityProfile.upsert({
     where: { name: ctx.name },
     create: {
@@ -375,30 +410,19 @@ export async function getCommodityContext(name: string, opts?: ServiceOptions): 
       keyDemandSectorsJson: JSON.stringify(ctx.keyDemandSectors),
       delayed: ctx.delayed,
       lastFetchedAt: new Date(),
+      // A live fetch is by definition not fixture data — without this, a
+      // configured provider refetching a name that collides with a seeded
+      // fixture row (CommodityProfile.name is @unique) hits this UPDATE
+      // branch and would otherwise leave live provider data mislabelled
+      // isFixture:true, rendering a FixtureBadge on live data.
+      isFixture: false,
     },
   })
 
   const profile = toSerializedCommodity(upserted)
-  const supply = profile.keySupplyRegions.length > 0 ? profile.keySupplyRegions.join(', ') : 'no key regions on record'
-  const demand = profile.keyDemandSectors.length > 0 ? profile.keyDemandSectors.join(', ') : 'no key sectors on record'
-  const evidencePart =
-    graphEvidence.sectorPressureSignals.length > 0
-      ? ` Related sector signals on record: ${graphEvidence.sectorPressureSignals.join(', ')}.`
-      : ''
-  const summary =
-    `${profile.name} (${profile.category.toLowerCase()}) supply concentrated in ${supply}; demand driven by ${demand}` +
-    `${metadata.delayed ? ' (delayed data)' : ''}.${evidencePart}`
-
-  assertNoAdviceLanguage(summary, 'getCommodityContext.summary')
 
   return { configured: true, provider: provider.name, delayed: metadata.delayed, profile, summary, graphEvidence }
 }
-
-// ---------------------------------------------------------------------------
-// getMarketStatusView
-// ---------------------------------------------------------------------------
-
-export { getMarketStatus as getMarketStatusView } from './provider'
 
 // Re-exported so callers can check provider free-text before including it
 // anywhere, without a second import path.

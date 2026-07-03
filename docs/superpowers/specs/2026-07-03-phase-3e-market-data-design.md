@@ -71,7 +71,7 @@ The current behaviour — market-shaped queries (`TICKER`/`SHARE_PRICE`/`INSTRUM
 
 - `InterrogationResult` gains `marketContext: MarketContext | null` (new optional field — additive to the shared type).
 - When `getActiveMarketProvider()` is non-null AND the query is market-shaped: populate `marketContext` from `getInstrumentContext`/`getCommodityContext`, set `marketContextAvailable=true`, and swap `MARKET_DISCLAIMER` for the "public market context, not investment advice" wording (doc line 793). Live data is labelled with provider + retrievedAt + delayed.
-- When dormant: `marketContext=null`, `marketContextAvailable=false`, existing disclaimer unchanged — but matched `COMMODITY`/`INSTRUMENT` reference nodes (if any) now legitimately appear in the returned subgraph, and are FixtureBadge-labelled.
+- When dormant: `marketContext` is the fixed not-configured sentinel object (`{ configured:false, provider:null, delayed:true, instrument:null, commodity:null, quote:null, note:'market data provider not configured' }`, not `null` — the honest shape the code ships, matching the plan), `marketContextAvailable=false`, existing disclaimer unchanged — but matched `COMMODITY`/`INSTRUMENT` reference nodes (if any) now legitimately appear in the returned subgraph, and are FixtureBadge-labelled. (`marketContext` IS `null` for non-market queries — see the bullet above; only the dormant *market-shaped* case uses the sentinel.)
 - Shared-type change → verify **all** consumers: `InterrogationResults.tsx`, the `/api/interrogate` route, and interrogation tests (SR2/SR9 parity — the verdict states which were checked).
 
 ## 7. API + UI

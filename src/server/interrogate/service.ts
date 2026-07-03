@@ -67,8 +67,13 @@ function toRenderNode(node: GraphNodeData): RenderNode {
  * queries through getCommodityContext and everything else (TICKER/SHARE_PRICE/
  * INSTRUMENT all name a tradeable instrument) through getInstrumentContext,
  * both of which already run graph-evidence gathering + the advice-language guard.
- * Never throws: a missing profile/quote surfaces as configured:true with a null
- * instrument/commodity, not an error.
+ * Throw-free only in the dormant/no-adapter build shipped this phase (a missing
+ * profile/quote surfaces as configured:true with a null instrument/commodity, not
+ * an error) — a real adapter (ADAPTER_REGISTRY currently empty, see §6 of
+ * docs/market-data-adapters.md) can still reject (getQuote failure,
+ * MarketDataValidationError, AdviceLanguageError), which propagates out of this
+ * function uncaught. A real adapter must degrade gracefully rather than 500;
+ * tracked as a pre-activation gate, not solved by this function today.
  */
 async function resolveMarketContext(
   query: string,

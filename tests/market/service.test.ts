@@ -149,6 +149,21 @@ describe('getInstrumentContext', () => {
     expect(result.configured).toBe(true)
     expect(findAdviceLanguage(result.summary)).toEqual([])
   })
+
+  it('guard-before-persist: advice language in a persisted/rendered field (name) throws AND writes no InstrumentProfile row', async () => {
+    const adversarialProfile: CompanyProfile = {
+      symbol: 'ACME',
+      name: 'Strong Buy Corp',
+      sector: 'Industrials',
+      description: 'A sample manufacturer.',
+    }
+    const fake = new FakeMarketProvider({ quote: ACME_QUOTE, profile: adversarialProfile })
+
+    const before = await prisma.instrumentProfile.count()
+    await expect(getInstrumentContext('ACME', { provider: fake })).rejects.toThrow()
+    const after = await prisma.instrumentProfile.count()
+    expect(after).toBe(before)
+  })
 })
 
 describe('getCommodityContext', () => {
@@ -183,5 +198,48 @@ describe('getCommodityContext', () => {
     const profiles = await prisma.commodityProfile.findMany({ where: { name: 'Copper' } })
     expect(profiles).toHaveLength(1)
     expect(profiles[0].provider).toBe('fake')
+  })
+
+  it('live refresh over a seeded fixture clears isFixture (name-collision case): UPDATE branch must not leave live data labelled as fixture', async () => {
+    // Seed the Copper fixture row (isFixture:true) first, exactly like a real
+    // deployment that ships fixtures then later gets a real provider.
+    await runSeed({ includeLive: false })
+    const seeded = await prisma.commodityProfile.findUniqueOrThrow({ where: { name: 'Copper' } })
+    expect(seeded.isFixture).toBe(true)
+
+    const liveCommodity: CommodityContextData = {
+      name: 'Copper',
+      symbol: 'HG',
+      category: 'METAL',
+      keySupplyRegions: ['Chile', 'Peru'],
+      keyDemandSectors: ['Construction', 'EV'],
+      delayed: true,
+    }
+    const fake = new FakeMarketProvider({ commodity: liveCommodity })
+
+    const result = await getCommodityContext('Copper', { provider: fake })
+    expect(result.configured).toBe(true)
+
+    const profiles = await prisma.commodityProfile.findMany({ where: { name: 'Copper' } })
+    expect(profiles).toHaveLength(1)
+    expect(profiles[0].isFixture).toBe(false)
+    expect(profiles[0].provider).toBe('fake')
+  })
+
+  it('guard-before-persist: advice language in a persisted/rendered field (name) throws AND writes no CommodityProfile row', async () => {
+    const adversarialCommodity: CommodityContextData = {
+      name: 'Strong Buy Metal',
+      symbol: 'SBM',
+      category: 'METAL',
+      keySupplyRegions: ['Chile'],
+      keyDemandSectors: ['Construction'],
+      delayed: true,
+    }
+    const fake = new FakeMarketProvider({ commodity: adversarialCommodity })
+
+    const before = await prisma.commodityProfile.count()
+    await expect(getCommodityContext('Strong Buy Metal', { provider: fake })).rejects.toThrow()
+    const after = await prisma.commodityProfile.count()
+    expect(after).toBe(before)
   })
 })
