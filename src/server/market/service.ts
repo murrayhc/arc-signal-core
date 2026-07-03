@@ -3,7 +3,7 @@ import { assertNoAdviceLanguage, findAdviceLanguage } from '@/server/safety/advi
 import { classifyQuery } from '@/server/interrogate/classify'
 import { gatherGraphEvidence, type MarketGraphEvidence } from '@/server/market/graph-evidence'
 import type { CommodityCategory, InstrumentType, MarketResultType } from '@/shared/enums'
-import { getActiveMarketProvider } from './provider'
+import { getActiveMarketProvider, getMarketStatus } from './provider'
 import { CommodityContextSchema, InstrumentHitSchema, QuoteSchema, validateProviderData } from './validate'
 import type { CommodityContextData, MarketDataProvider, MarketQuote } from './types'
 
@@ -403,3 +403,60 @@ export { getMarketStatus as getMarketStatusView } from './provider'
 // Re-exported so callers can check provider free-text before including it
 // anywhere, without a second import path.
 export { findAdviceLanguage }
+
+// ---------------------------------------------------------------------------
+// getMarketAudit — read-only data for /admin/market (mirrors getLLMAudit)
+// ---------------------------------------------------------------------------
+
+export type MarketAuditRecentQuery = {
+  id: string
+  query: string
+  queryType: string
+  resultCount: number
+  createdAt: Date
+}
+
+export type MarketAudit = {
+  status: ReturnType<typeof getMarketStatus>
+  commodities: SerializedCommodity[]
+  instruments: SerializedInstrument[]
+  recentQueries: MarketAuditRecentQuery[]
+}
+
+/**
+ * Read-only audit data for /admin/market: provider configuration state (via
+ * getMarketStatus, which never leaks the key), every seeded fixture
+ * reference profile (commodities + instruments, each carrying isFixture for
+ * FixtureBadge rendering), and the most recent MarketSearchQuery rows. No
+ * key or secret is ever included — status carries only provider name/
+ * delayed flag, never the key itself.
+ */
+export async function getMarketAudit(limit = 30): Promise<MarketAudit> {
+  const [commodityRows, instrumentRows, queryRows] = await Promise.all([
+    prisma.commodityProfile.findMany({ orderBy: { name: 'asc' } }),
+    prisma.instrumentProfile.findMany({ orderBy: { symbol: 'asc' } }),
+    prisma.marketSearchQuery.findMany({ orderBy: { createdAt: 'desc' }, take: limit }),
+  ])
+
+  return {
+    status: getMarketStatus(),
+    commodities: commodityRows.map(toSerializedCommodity),
+    instruments: instrumentRows.map((i) => ({
+      provider: i.provider,
+      symbol: i.symbol,
+      name: i.name,
+      exchange: i.exchange,
+      instrumentType: i.instrumentType as InstrumentType,
+      currency: i.currency,
+      delayed: i.delayed,
+      isFixture: i.isFixture,
+    })),
+    recentQueries: queryRows.map((q) => ({
+      id: q.id,
+      query: q.query,
+      queryType: q.queryType,
+      resultCount: q.resultCount,
+      createdAt: q.createdAt,
+    })),
+  }
+}

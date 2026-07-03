@@ -2,6 +2,7 @@ import Link from 'next/link'
 import type { InterrogationResult } from '@/server/interrogate/service'
 import { QueryTypeChip, ClassBadge, pct } from '@/components/badges'
 import { MiniSubgraph } from '@/components/MiniSubgraph'
+import { MarketContextPanel } from '@/components/MarketContextPanel'
 
 /**
  * Renders one `interrogate(q)` result: the resolved query type + match count,
@@ -9,8 +10,13 @@ import { MiniSubgraph } from '@/components/MiniSubgraph'
  * panels for events/opportunities/contradictions/sources/positioning. When
  * `marketContextAvailable` is false (market-shaped query — TICKER, SHARE_PRICE,
  * INSTRUMENT, COMMODITY), shows a notice card plus the service's disclaimer
- * ahead of whatever graph evidence still exists. Every panel has an honest
- * empty state — nothing is invented when a list is empty.
+ * ahead of whatever graph evidence still exists — including a clear "market
+ * data provider not configured" empty state when the query is market-shaped
+ * but dormant. When a market provider is configured and `marketContext` is
+ * populated, a MarketContextPanel renders the allowed-output instrument/
+ * commodity profile, price context and linked graph evidence instead — non-
+ * advisory throughout. Every panel has an honest empty state — nothing is
+ * invented when a list is empty.
  */
 export function InterrogationResults({ result }: { result: InterrogationResult }) {
   const {
@@ -25,6 +31,7 @@ export function InterrogationResults({ result }: { result: InterrogationResult }
     subgraph,
     marketContextAvailable,
     disclaimer,
+    marketContext,
   } = result
 
   return (
@@ -41,10 +48,18 @@ export function InterrogationResults({ result }: { result: InterrogationResult }
 
       {!marketContextAvailable && (
         <div className="mt-4 rounded-md border border-amber-600/50 bg-amber-950/40 p-3 text-xs text-amber-300">
-          <p className="font-semibold">
+          <p className="font-semibold">Market data provider not configured</p>
+          <p className="mt-1 text-amber-300/90">
             Live market data is not configured. This view shows public-signal context only.
           </p>
           {disclaimer && <p className="mt-1 text-amber-400/90">{disclaimer}</p>}
+        </div>
+      )}
+
+      {marketContextAvailable && marketContext?.configured && (
+        <div className="mt-4">
+          {disclaimer && <p className="mb-2 text-xs text-slate-500">{disclaimer}</p>}
+          <MarketContextPanel marketContext={marketContext} />
         </div>
       )}
 
