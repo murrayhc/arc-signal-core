@@ -1,7 +1,20 @@
 import { prisma } from '@/server/db'
 import { getGraphForRender, getNodeNeighbourhood, type GraphEdgeData, type GraphNodeData, type RenderNode } from '@/server/services/graph'
 import { classifyQuery } from '@/server/interrogate/classify'
+import { getInstrumentContext, getCommodityContext, type SerializedCommodity, type SerializedInstrument } from '@/server/market/service'
+import { getActiveMarketProvider } from '@/server/market/provider'
+import type { MarketDataProvider, MarketQuote } from '@/server/market/types'
 import type { QueryType } from '@/shared/enums'
+
+export type MarketContext = {
+  configured: boolean
+  provider: string | null
+  delayed: boolean
+  instrument: SerializedInstrument | null
+  commodity: SerializedCommodity | null
+  quote: MarketQuote | null
+  note: string
+}
 
 export type InterrogationResult = {
   query: string
@@ -15,17 +28,78 @@ export type InterrogationResult = {
   subgraph: { nodes: RenderNode[]; edges: GraphEdgeData[] }
   marketContextAvailable: boolean
   disclaimer: string | null
+  marketContext: MarketContext | null
 }
+
+export type InterrogateOptions = { marketProvider?: MarketDataProvider | null }
 
 const MARKET_QUERY_TYPES: QueryType[] = ['TICKER', 'SHARE_PRICE', 'INSTRUMENT', 'COMMODITY']
 
-const MARKET_DISCLAIMER =
+export const MARKET_DISCLAIMER =
   'This query looks like a market/price lookup. Archlight does not provide live market data or pricing — ' +
   'this is not investment advice. Live market context is planned for a later phase; the results below are ' +
   'limited to whatever event-graph evidence already exists for this query, if any.'
 
+/** The exact non-advisory disclaimer shown once a market provider is configured
+ *  and marketContext is populated — verbatim per the phase 3e design doc §6. */
+export const CONFIGURED_MARKET_DISCLAIMER =
+  'This view provides public market context and strategic interpretation examples. It does not provide personal ' +
+  'investment advice, portfolio advice, or buy, sell or hold recommendations.'
+
+const NOT_CONFIGURED_MARKET_CONTEXT: MarketContext = {
+  configured: false,
+  provider: null,
+  delayed: true,
+  instrument: null,
+  commodity: null,
+  quote: null,
+  note: 'market data provider not configured',
+}
+
 function toRenderNode(node: GraphNodeData): RenderNode {
   return { ...node, group: node.nodeType, val: 1 + node.impactScore * 4 }
+}
+
+/**
+ * Resolve marketContext for a market-shaped query (TICKER/SHARE_PRICE/INSTRUMENT/
+ * COMMODITY). Dormant (no provider) returns the exact not-configured sentinel —
+ * byte-identical across every call, never fabricated. Configured routes COMMODITY
+ * queries through getCommodityContext and everything else (TICKER/SHARE_PRICE/
+ * INSTRUMENT all name a tradeable instrument) through getInstrumentContext,
+ * both of which already run graph-evidence gathering + the advice-language guard.
+ * Never throws: a missing profile/quote surfaces as configured:true with a null
+ * instrument/commodity, not an error.
+ */
+async function resolveMarketContext(
+  query: string,
+  queryType: QueryType,
+  provider: MarketDataProvider | null,
+): Promise<MarketContext> {
+  if (!provider) return NOT_CONFIGURED_MARKET_CONTEXT
+
+  if (queryType === 'COMMODITY') {
+    const ctx = await getCommodityContext(query, { provider })
+    return {
+      configured: ctx.configured,
+      provider: ctx.provider,
+      delayed: ctx.delayed,
+      instrument: null,
+      commodity: ctx.profile,
+      quote: null,
+      note: ctx.summary,
+    }
+  }
+
+  const ctx = await getInstrumentContext(query, { provider })
+  return {
+    configured: ctx.configured,
+    provider: ctx.provider,
+    delayed: ctx.delayed,
+    instrument: ctx.profile,
+    commodity: null,
+    quote: ctx.quote,
+    note: ctx.summary,
+  }
 }
 
 /**
@@ -43,12 +117,20 @@ async function findMatchingNodes(query: string) {
  * company names loaded from the DB, finds matching graph nodes (+1-degree neighbourhood),
  * and gathers connected events, opportunities, contradictions, sources and positioning
  * examples reachable from those EVENT nodes. Market-shaped queries (TICKER/SHARE_PRICE/
- * INSTRUMENT/COMMODITY) get `marketContextAvailable=false` and a non-advisory disclaimer —
- * real market data is a later phase — but any graph matches are still returned honestly.
+ * INSTRUMENT/COMMODITY): with no active market provider, `marketContextAvailable=false`
+ * and `disclaimer=MARKET_DISCLAIMER` — UNCHANGED dormant default, byte-identical to
+ * before this field existed — but any graph matches are still returned honestly. With
+ * an active provider (`opts.marketProvider`, default resolved via
+ * `getActiveMarketProvider()`), `marketContextAvailable=true`, `disclaimer` swaps to
+ * the public-market-context non-advisory wording, and `marketContext` is populated
+ * from the market service (which itself traverses the matched market node's graph
+ * neighbourhood for connected events/sectors/contradictions — never fabricated).
+ * Non-market queries always get `marketContext=null`, dormant or configured.
  * Never fabricates matches: no hits means empty arrays, not invented content.
  */
-export async function interrogate(q: string): Promise<InterrogationResult> {
+export async function interrogate(q: string, opts?: InterrogateOptions): Promise<InterrogationResult> {
   const query = q.trim()
+  const marketProvider = opts && 'marketProvider' in opts ? (opts.marketProvider ?? null) : getActiveMarketProvider()
 
   const [sectorRows, regionRows, entityRows] = await Promise.all([
     prisma.eventCandidate.findMany({ where: { affectedSector: { not: null } }, distinct: ['affectedSector'], select: { affectedSector: true } }),
@@ -163,8 +245,16 @@ export async function interrogate(q: string): Promise<InterrogationResult> {
     .filter((n) => n.nodeType === 'SOURCE')
     .map((n) => ({ id: n.id, name: n.title }))
 
-  const marketContextAvailable = !MARKET_QUERY_TYPES.includes(queryType)
-  const disclaimer = marketContextAvailable ? null : MARKET_DISCLAIMER
+  const isMarketQuery = MARKET_QUERY_TYPES.includes(queryType)
+  const marketContext = isMarketQuery ? await resolveMarketContext(query, queryType, marketProvider) : null
+
+  // Dormant default is byte-identical to before marketContext existed:
+  // marketContextAvailable=false + MARKET_DISCLAIMER for every market-shaped query
+  // with no provider. A configured provider flips marketContextAvailable=true and
+  // swaps in the non-advisory public-market-context disclaimer. Non-market queries
+  // are unaffected either way (marketContextAvailable=true, disclaimer=null).
+  const marketContextAvailable = !isMarketQuery || marketContext?.configured === true
+  const disclaimer = !isMarketQuery ? null : marketContext?.configured ? CONFIGURED_MARKET_DISCLAIMER : MARKET_DISCLAIMER
 
   return {
     query,
@@ -185,6 +275,7 @@ export async function interrogate(q: string): Promise<InterrogationResult> {
     },
     marketContextAvailable,
     disclaimer,
+    marketContext,
   }
 }
 

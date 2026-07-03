@@ -1,10 +1,13 @@
 import { prisma } from '@/server/db'
 import { assertNoAdviceLanguage, findAdviceLanguage } from '@/server/safety/advice-language'
 import { classifyQuery } from '@/server/interrogate/classify'
+import { gatherGraphEvidence, type MarketGraphEvidence } from '@/server/market/graph-evidence'
 import type { CommodityCategory, InstrumentType, MarketResultType } from '@/shared/enums'
 import { getActiveMarketProvider } from './provider'
 import { CommodityContextSchema, InstrumentHitSchema, QuoteSchema, validateProviderData } from './validate'
 import type { CommodityContextData, MarketDataProvider, MarketQuote } from './types'
+
+export type { MarketGraphEvidence }
 
 export type ServiceOptions = { provider?: MarketDataProvider | null }
 
@@ -28,70 +31,6 @@ export type SerializedCommodity = {
   keyDemandSectors: string[]
   delayed: boolean
   isFixture: boolean
-}
-
-/** Public event-graph context for a symbol/name, gathered from GraphNode
- *  title matches. Deliberately minimal — a correct-but-shallow lookup;
- *  Task 3's fuller interrogation/graph integration extends this. NEVER
- *  fabricates: no matches means empty arrays. */
-export type MarketGraphEvidence = {
-  relatedEventTitles: string[]
-  sectorPressureSignals: string[]
-  contradictions: string[]
-}
-
-const EMPTY_GRAPH_EVIDENCE: MarketGraphEvidence = {
-  relatedEventTitles: [],
-  sectorPressureSignals: [],
-  contradictions: [],
-}
-
-/** Minimal graph-evidence lookup: GraphNodes whose title case-insensitively
- *  contains `identifier`, split into EVENT titles vs SIGNAL-ish (sector
- *  pressure) titles by nodeType, plus any CONTRADICTS edges between matched
- *  nodes. Real but shallow by design (see MarketGraphEvidence doc) — no
- *  fabricated evidence, just what's already in the graph. */
-async function gatherGraphEvidence(identifier: string): Promise<MarketGraphEvidence> {
-  const trimmed = identifier.trim()
-  if (trimmed.length === 0) return EMPTY_GRAPH_EVIDENCE
-
-  const lower = trimmed.toLowerCase()
-  // SQLite has no case-insensitive `contains` at the query-engine level (that's
-  // a Postgres/MongoDB-only Prisma feature), so filter in JS after fetch —
-  // matches the existing convention in interrogate/service.ts's findMatchingNodes.
-  const allNodes = await prisma.graphNode.findMany()
-  const matched = allNodes.filter((n) => n.title.toLowerCase().includes(lower))
-  if (matched.length === 0) return EMPTY_GRAPH_EVIDENCE
-
-  const relatedEventTitles = matched.filter((n) => n.nodeType === 'EVENT').map((n) => n.title)
-  const sectorPressureSignals = matched.filter((n) => n.nodeType === 'SIGNAL' || n.nodeType === 'SECTOR').map((n) => n.title)
-
-  const matchedIds = matched.map((n) => n.id)
-  const contradictionEdges = await prisma.graphEdge.findMany({
-    where: {
-      edgeType: 'CONTRADICTS',
-      OR: [{ sourceNodeId: { in: matchedIds } }, { targetNodeId: { in: matchedIds } }],
-    },
-  })
-  const contradictionNodeIds = new Set<string>()
-  for (const edge of contradictionEdges) {
-    contradictionNodeIds.add(edge.sourceNodeId)
-    contradictionNodeIds.add(edge.targetNodeId)
-  }
-  const contradictionNodes =
-    contradictionNodeIds.size > 0
-      ? await prisma.graphNode.findMany({ where: { id: { in: [...contradictionNodeIds] } } })
-      : []
-  const nodeById = new Map(contradictionNodes.map((n) => [n.id, n]))
-  const contradictions = contradictionEdges
-    .map((edge) => {
-      const a = nodeById.get(edge.sourceNodeId)
-      const b = nodeById.get(edge.targetNodeId)
-      return a && b ? `${a.title} vs ${b.title}` : null
-    })
-    .filter((c): c is string => c !== null)
-
-  return { relatedEventTitles, sectorPressureSignals, contradictions }
 }
 
 /** Resolves the provider to use: explicit opts.provider (including an
@@ -254,7 +193,20 @@ export type InstrumentContextView = {
 export async function getInstrumentContext(symbol: string, opts?: ServiceOptions): Promise<InstrumentContextView> {
   const provider = resolveProvider(opts)
   const trimmedSymbol = symbol.trim()
-  const graphEvidence = await gatherGraphEvidence(trimmedSymbol)
+
+  // Resolve an already-persisted InstrumentProfile for this symbol (any provider —
+  // symbol alone isn't unique, only (provider, symbol) is, so this is a best-effort
+  // scan) so gatherGraphEvidence can walk the real projected market node's
+  // neighbourhood instead of falling back to a title-substring scan.
+  const lowerSymbol = trimmedSymbol.toLowerCase()
+  const existingInstrument =
+    trimmedSymbol.length > 0
+      ? (await prisma.instrumentProfile.findMany()).find((p) => p.symbol.toLowerCase() === lowerSymbol)
+      : undefined
+  const graphEvidence = await gatherGraphEvidence(
+    trimmedSymbol,
+    existingInstrument ? { refType: 'instrument', refId: existingInstrument.id } : undefined,
+  )
 
   if (!provider) {
     return { configured: false, provider: null, delayed: true, profile: null, quote: null, summary: '', graphEvidence }
@@ -367,7 +319,20 @@ function toSerializedCommodity(row: {
 export async function getCommodityContext(name: string, opts?: ServiceOptions): Promise<CommodityContextView> {
   const provider = resolveProvider(opts)
   const trimmedName = name.trim()
-  const graphEvidence = await gatherGraphEvidence(trimmedName)
+
+  // Resolve an already-persisted CommodityProfile for this name (case-insensitive —
+  // `name` is @unique but SQLite has no case-insensitive equality at the query-engine
+  // level) so gatherGraphEvidence can walk the real projected market node's
+  // neighbourhood instead of falling back to a title-substring scan.
+  const lowerName = trimmedName.toLowerCase()
+  const existingCommodity =
+    trimmedName.length > 0
+      ? (await prisma.commodityProfile.findMany()).find((p) => p.name.toLowerCase() === lowerName)
+      : undefined
+  const graphEvidence = await gatherGraphEvidence(
+    trimmedName,
+    existingCommodity ? { refType: 'commodity', refId: existingCommodity.id } : undefined,
+  )
 
   if (!provider) {
     // SQLite has no case-insensitive equality at the query-engine level, so

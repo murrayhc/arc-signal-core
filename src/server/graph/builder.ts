@@ -3,6 +3,7 @@ import { prisma } from '@/server/db'
 import type { PipelineError } from '@/server/pipeline/types'
 import type { GraphSyncResult } from '@/server/graph/types'
 import type { EdgeType, NodeType } from '@/shared/enums'
+import { syncMarketNodes } from '@/server/market/graph'
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000
 const RECENT_DAYS = 3
@@ -676,7 +677,14 @@ export async function syncGraphForEvents(events: EventCandidate[], now: Date = n
 
   const edgeCount = await projectEdgesForEvents(events, errors)
 
-  return { nodesUpserted: nodeCount, edgesUpserted: edgeCount, errors }
+  // COMMODITY/INSTRUMENT projection (src/server/market/graph.ts): additive-only,
+  // fires only when InstrumentProfile/CommodityProfile rows exist. Runs after the
+  // event passes so COMMODITY-AFFECTS->SECTOR / COMMODITY-SUPPLIED_BY->REGION
+  // edges can resolve against event-derived SECTOR/REGION nodes already upserted above.
+  const market = await syncMarketNodes(now)
+  errors.push(...market.errors)
+
+  return { nodesUpserted: nodeCount + market.nodeCount, edgesUpserted: edgeCount + market.edgeCount, errors }
 }
 
 /** Full node + edge projection over every EventCandidate in the database. */
