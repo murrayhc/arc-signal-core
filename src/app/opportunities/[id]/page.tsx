@@ -1,7 +1,11 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getOpportunityDetail } from '@/server/services/opportunities'
+import { getPlaybookData } from '@/server/services/playbook'
+import { generatePlaybook } from '@/server/playbook/service'
+import { getActiveProvider } from '@/server/llm/provider'
 import { OpportunityActions } from '@/components/OpportunityActions'
+import { PlaybookPanel } from '@/components/PlaybookPanel'
 import { FixtureBadge, StatusBadge, pct } from '@/components/badges'
 
 export const dynamic = 'force-dynamic'
@@ -20,6 +24,13 @@ export default async function OpportunityPage({ params }: { params: Promise<{ id
   const detail = await getOpportunityDetail(id)
   if (!detail) notFound()
   const { card, event, positioning } = detail
+
+  let playbookData = await getPlaybookData(id)
+  if (!playbookData) {
+    await generatePlaybook(id)
+    playbookData = await getPlaybookData(id)
+  }
+  const llmConfigured = (await getActiveProvider()) !== null
 
   return (
     <main className="mx-auto max-w-4xl px-6 py-8">
@@ -94,6 +105,8 @@ export default async function OpportunityPage({ params }: { params: Promise<{ id
           </ul>
         )}
       </Section>
+
+      {playbookData && <PlaybookPanel playbook={playbookData} llmConfigured={llmConfigured} />}
 
       <Section title={`Strategic positioning examples (${positioning.length})`}>
         {positioning.length === 0 ? (
