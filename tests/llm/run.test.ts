@@ -65,6 +65,9 @@ describe('runLLMTask', () => {
 
     const run = await prisma.lLMRun.findUniqueOrThrow({ where: { id: result.llmRunId } })
     expect(run.status).toBe('REJECTED_VALIDATION')
+    // The rejected (prohibited) output must NOT be retained in the audit row.
+    expect(run.outputSummary).not.toContain('buy this stock')
+    expect(run.outputSummary).toContain('redacted')
 
     const validations = await prisma.lLMOutputValidation.findMany({ where: { llmRunId: result.llmRunId } })
     expect(validations).toHaveLength(1)

@@ -107,6 +107,9 @@ export async function runLLMTask(req: LLMRequest, opts: RunLLMTaskOptions): Prom
 
   const validation = validateLLMOutput(response.text, opts.validate ?? {})
   const finalStatus: LLMRunStatus = validation.validationStatus === 'PASSED' ? 'SUCCEEDED' : 'REJECTED_VALIDATION'
+  // Rejected output may contain the very prohibited/advice content we blocked —
+  // redact it from the audit row rather than retaining the snippet verbatim.
+  const outputSummary = finalStatus === 'SUCCEEDED' ? summarize(response.text) : '[redacted: output failed validation]'
 
   const costTier = 'MEDIUM'
   const estimatedCost =
@@ -119,7 +122,7 @@ export async function runLLMTask(req: LLMRequest, opts: RunLLMTaskOptions): Prom
       model: provider.name,
       promptHash,
       inputSummary,
-      outputSummary: summarize(response.text),
+      outputSummary,
       status: finalStatus,
       tokenCountInput: response.tokensIn,
       tokenCountOutput: response.tokensOut,
