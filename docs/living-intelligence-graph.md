@@ -139,5 +139,12 @@ The graph as it stands is a read/traverse substrate: it has no visual
 renderer yet (`/graph` is a stats-and-list page; the interactive 3D view is
 Phase 3c — see `docs/evidence-arc-engine.md` §5 for the full deferred list),
 no LLM-generated summaries over graph structure (Phase 3d), and no
-market/instrument node population (`COMMODITY`/`INSTRUMENT` node types exist
-in the enum but nothing currently creates them — Phase 3e).
+market/instrument node population (Phase 3e).
+
+Node/edge types defined in the enums but NOT yet created by the Phase 3b
+builder (they await later phases or richer source data): node types
+`COMMODITY`, `INSTRUMENT`, `REGULATION`, `PROCUREMENT`, `RISK`, and standalone
+`CONTRADICTION` nodes; edge types `EXPOSES`, `AMPLIFIES`, `PRICED_BY`,
+`REGULATED_BY`, `SUPPLIED_BY`, `DEPENDS_ON`, `COMPETES_WITH`. Contradictions in
+3b are represented as a `CONTRADICTS` **edge between two EVENT nodes** (a real
+opposing sector+region pair), not as a separate `CONTRADICTION` node.

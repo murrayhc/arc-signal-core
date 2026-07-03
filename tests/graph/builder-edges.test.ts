@@ -100,4 +100,48 @@ describe('graph edge projection', () => {
     expect(result.edgesUpserted).toBeGreaterThan(0)
     expect(result.errors).toEqual([])
   })
+
+  it('derives SOURCE node confidence from SourceHealth (not the 0.5 fallback)', async () => {
+    const events = await prisma.eventCandidate.findMany()
+    await syncGraphForEvents(events, NOW)
+    // The scan set Fixture Wire health to HEALTHY (score 1.0); the SOURCE node must reflect it.
+    const healthy = await prisma.sourceHealth.findFirstOrThrow({ where: { status: 'HEALTHY' }, include: { source: true } })
+    const sourceNode = await prisma.graphNode.findFirstOrThrow({
+      where: { refType: 'source', refId: healthy.sourceId },
+    })
+    expect(sourceNode.confidence).toBe(healthy.healthScore)
+    expect(sourceNode.confidence).not.toBe(0.5)
+  })
+})
+
+describe('contradiction edge projection (positive path)', () => {
+  beforeEach(resetDb)
+
+  it('creates a CONTRADICTS edge between opposing same-sector/region events', async () => {
+    const scan = await prisma.scanRun.create({ data: {} })
+    const base = {
+      summary: 's', severity: 0.7, probability: 0.7, confidence: 0.8, affectedSector: 'technology',
+      affectedRegion: 'UK', evidenceCount: 1, sourceDiversityScore: 0.5, signalStrength: 0.7,
+      noveltyScore: 0.9, createdFromScanRunId: scan.id, isFixture: true,
+    }
+    const risk = await prisma.eventCandidate.create({
+      data: { ...base, title: 'Layoff pressure — technology (UK)', eventType: 'LAYOFF_SIGNAL', eventClass: 'RISK', riskScore: 0.7, opportunityScore: 0.15 },
+    })
+    const opp = await prisma.eventCandidate.create({
+      data: { ...base, title: 'Hiring acceleration — technology (UK)', eventType: 'HIRING_ACCELERATION', eventClass: 'OPPORTUNITY', riskScore: 0.15, opportunityScore: 0.7 },
+    })
+    await syncGraphForEvents([risk, opp], NOW)
+
+    const riskNode = await prisma.graphNode.findFirstOrThrow({ where: { refType: 'event', refId: risk.id } })
+    const oppNode = await prisma.graphNode.findFirstOrThrow({ where: { refType: 'event', refId: opp.id } })
+    const contradicts = await prisma.graphEdge.findMany({
+      where: {
+        edgeType: 'CONTRADICTS',
+        sourceNodeId: { in: [riskNode.id, oppNode.id] },
+        targetNodeId: { in: [riskNode.id, oppNode.id] },
+      },
+    })
+    expect(contradicts.length).toBeGreaterThanOrEqual(1)
+    expect(contradicts[0].label.length).toBeGreaterThan(0)
+  })
 })

@@ -135,7 +135,7 @@ const EVENT_INCLUDE = {
         include: {
           signal: {
             include: {
-              claim: { include: { document: { include: { source: true } } } },
+              claim: { include: { document: { include: { source: { include: { health: true } } } } } },
             },
           },
         },
@@ -256,7 +256,8 @@ async function projectEventNodes(event: EventWithEvidence, now: Date, errors: Pi
       nodeType: 'SECTOR',
       title: event.affectedSector,
       isFixture: event.isFixture,
-      metadata: { eventCandidateIds: [event.id] },
+      // A sector node is shared by many events; metadata records only the most recent to touch it.
+      metadata: { lastEventCandidateId: event.id },
     })
     count++
   }
@@ -265,7 +266,8 @@ async function projectEventNodes(event: EventWithEvidence, now: Date, errors: Pi
       nodeType: 'REGION',
       title: event.affectedRegion,
       isFixture: event.isFixture,
-      metadata: { eventCandidateIds: [event.id] },
+      // A region node is shared by many events; metadata records only the most recent to touch it.
+      metadata: { lastEventCandidateId: event.id },
     })
     count++
   }
@@ -560,8 +562,8 @@ async function projectEventEdges(event: EventWithEvidence, errors: PipelineError
  * Contradiction pass: for pairs of events sharing sector+region with opposing dominant
  * direction (RISK vs OPPORTUNITY per eventClass), add a canonical-direction CONTRADICTS
  * edge between their EVENT nodes. Only creates an edge when a real opposing pair exists —
- * never fabricated. Runs over the full candidate set so cross-event pairs are found even
- * when syncing a subset of events.
+ * never fabricated. Runs only over the events passed in; an opposing pair split
+ * across separate scans is detected on the next `rebuildGraph`, not incrementally.
  */
 async function projectContradictionEdges(events: EventWithEvidence[], errors: PipelineError[]): Promise<number> {
   let count = 0
