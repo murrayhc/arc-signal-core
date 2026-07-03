@@ -247,6 +247,8 @@ function renderCardText(
   assertNoAdviceLanguage(fields.opportunityLogic, 'OpportunityCard.opportunityLogic')
   assertNoAdviceLanguage(fields.riskLogic, 'OpportunityCard.riskLogic')
   assertNoAdviceLanguage(fields.nextBestAction, 'OpportunityCard.nextBestAction')
+  // likelyBuyers is a persisted, UI-rendered text surface too — guard it (spec §5).
+  assertNoAdviceLanguage(template.likelyBuyers.join(' '), 'OpportunityCard.likelyBuyers')
 
   return fields
 }

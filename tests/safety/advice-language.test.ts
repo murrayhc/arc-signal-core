@@ -34,6 +34,8 @@ describe('findAdviceLanguage', () => {
       'Short this name before earnings.',
       'Load up on shares now.',
       'This stock is going to the moon.',
+      'We issue a hold recommendation on this name.',
+      'Analysts have a strong hold rating.',
     ]) {
       expect(findAdviceLanguage(bad).length).toBeGreaterThan(0)
     }

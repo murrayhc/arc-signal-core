@@ -95,8 +95,10 @@ duplicate an existing model.
 Note on `RiskOpportunity` vs `OpportunityCard`: `RiskOpportunity` already holds
 risk/opportunity *logic* per event. `OpportunityCard` is a richer COMMERCIAL
 projection (buyer pain, likely buyers, suggested offer, value/urgency/
-actionability scores). We EXTEND the concept via a new `OpportunityCard` that
-links to the existing `RiskOpportunity` rather than duplicating it.
+actionability scores). We EXTEND the concept via a new `OpportunityCard`. As
+built in Phase 3a, the card links to its `EventCandidate` (the shared source of
+truth for both records) rather than to `RiskOpportunity` directly — both are
+event-derived, so the event FK is the cleaner join.
 
 ## 6. Preservation guarantees (what the upgrade must NOT do)
 

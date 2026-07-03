@@ -71,7 +71,8 @@ describe('generateOpportunities (persistence)', () => {
     expect(card.eventCandidateId).toBe(event.id)
     expect(card.opportunityType).toBe('TALENT_ACQUISITION')
     expect(card.isFixture).toBe(true)
-    for (const field of [card.title, card.summary, card.buyerPain, card.suggestedOffer, card.opportunityLogic, card.riskLogic, card.nextBestAction]) {
+    const likelyBuyers = JSON.parse(card.likelyBuyersJson) as string[]
+    for (const field of [card.title, card.summary, card.buyerPain, card.suggestedOffer, card.opportunityLogic, card.riskLogic, card.nextBestAction, ...likelyBuyers]) {
       expect(findAdviceLanguage(field)).toEqual([])
     }
   })

@@ -11,7 +11,7 @@ export class AdviceLanguageError extends Error {
 const PROHIBITED_ADVICE_PATTERNS: RegExp[] = [
   /\b(should|must|need to)\s+(buy|sell|hold|short|long)\b/i,
   /\b(buy|sell|hold)\s+(this|the|these|that)\s+(stock|share|shares|instrument|position|asset)\b/i,
-  /\b(buy|sell)\s+(recommendation|rating|signal)\b/i,
+  /\b(buy|sell|hold)\s+(recommendation|rating|signal)\b/i,
   /\btarget\s+price\b/i,
   /\b(expected|projected|guaranteed)\s+(return|returns|profit|gains?)\b/i,
   /\bguarantee[ds]?\s+(profit|returns?|gains?)\b/i,
@@ -23,7 +23,7 @@ const PROHIBITED_ADVICE_PATTERNS: RegExp[] = [
   /\bfinancial\s+advice\b/i,
   // Strengthened after an adversarial false-negative probe (Phase 3a Task 2 review):
   /\brate[sd]?\s+(this|it|them)\s+(a\s+)?(strong\s+)?(buy|sell|hold)\b/i, // "rate this a strong buy"
-  /\b(strong|outright)\s+(buy|sell)\b/i, // analyst-register ratings
+  /\b(strong|outright)\s+(buy|sell|hold)\b/i, // analyst-register ratings
   /\bprice\s+target\b/i, // reverse order of "target price"
   /\breturns?\s+of\s+\d/i, // "returns of 20%"
   /\b\d+\s?%\s+(returns?|gains?|profit)\b/i, // "20% returns"
