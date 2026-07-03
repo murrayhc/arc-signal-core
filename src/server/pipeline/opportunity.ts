@@ -2,6 +2,7 @@ import type { EventCandidate, OpportunityCard, RevenueLens } from '@prisma/clien
 import { prisma } from '@/server/db'
 import type { OpportunityType } from '@/shared/enums'
 import { assertNoAdviceLanguage } from '@/server/safety/advice-language'
+import { lensValueSignal } from '@/server/lens/service'
 import type { PipelineError } from './types'
 
 const round2 = (n: number) => Math.round(n * 100) / 100
@@ -61,9 +62,9 @@ export function scoreOpportunity(event: EventCandidate, lens: RevenueLens | null
   const evidenceScore = round2(clamp01(event.sourceDiversityScore * (0.6 + 0.1 * Math.min(event.evidenceCount, 4))))
   const confidence = round2(clamp01(event.confidence * lensFitFactor(event, lens)))
   const urgencyScore = round2(clamp01(0.4 * event.probability + 0.4 * event.severity + 0.2 * event.noveltyScore))
-  const lensValueSignal = 0.5 // averageDealSize bucket placeholder (default lens)
+  const valueSignal = lensValueSignal(lens)
   const commercialValueScore = round2(
-    clamp01(0.5 * Math.max(event.riskScore, event.opportunityScore) + 0.3 * lensValueSignal + 0.2 * urgencyScore),
+    clamp01(0.5 * Math.max(event.riskScore, event.opportunityScore) + 0.3 * valueSignal + 0.2 * urgencyScore),
   )
   const actionabilityScore = round2(
     clamp01(0.5 * confidence + 0.3 * evidenceScore + 0.2 * (event.primaryEntityId ? 1 : 0.5)),

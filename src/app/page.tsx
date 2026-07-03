@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { getDashboardData } from '@/server/services/dashboard'
 import { getLiveGraph } from '@/server/services/graph'
+import { listWatchMarkets } from '@/server/watch/service'
 import { EventCard } from '@/components/EventCard'
 import { OpportunityCard } from '@/components/OpportunityCard'
 import { InboxList } from '@/components/InboxList'
@@ -11,8 +12,15 @@ import { FixtureBadge } from '@/components/badges'
 export const dynamic = 'force-dynamic'
 
 export default async function DashboardPage() {
-  const [data, liveGraph] = await Promise.all([getDashboardData(), getLiveGraph()])
+  const [data, liveGraph, watchMarkets] = await Promise.all([
+    getDashboardData(),
+    getLiveGraph(),
+    listWatchMarkets(),
+  ])
   const hasEvents = data.inbox.length > 0
+  // "Open graph replay" jumps straight to the most recently updated event's replay panel — the
+  // most useful default target when there's no single event already selected on the dashboard.
+  const replayTarget = data.inbox[0] ? `/events/${data.inbox[0].eventId}#graph-replay` : '/graph'
 
   return (
     <main className="mx-auto max-w-7xl px-6 py-8">
@@ -29,7 +37,27 @@ export default async function DashboardPage() {
             <p className="mt-1 text-sm text-slate-400">No scans yet.</p>
           )}
         </div>
-        <RunScanButton />
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <Link
+            href="/lenses"
+            className="rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-xs font-semibold text-slate-300 hover:border-slate-500"
+          >
+            Create revenue lens
+          </Link>
+          <Link
+            href="/watch"
+            className="rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-xs font-semibold text-slate-300 hover:border-slate-500"
+          >
+            Create watch market
+          </Link>
+          <Link
+            href={replayTarget}
+            className="rounded-md border border-sky-700/60 bg-sky-950/40 px-3 py-2 text-xs font-semibold text-sky-300 hover:bg-sky-900/40"
+          >
+            Open graph replay
+          </Link>
+          <RunScanButton />
+        </div>
       </header>
 
       {data.lastScan && data.lastScan.errors.length > 0 && (
@@ -131,6 +159,34 @@ export default async function DashboardPage() {
           </section>
         </>
       )}
+
+      <section className="mt-10">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold">Watch Markets</h2>
+          <Link href="/watch" className="text-xs text-slate-400 underline hover:text-slate-200">
+            Manage watch markets →
+          </Link>
+        </div>
+        {watchMarkets.length === 0 ? (
+          <p className="mt-2 text-sm text-slate-500">
+            No watch markets yet. Create one to track a sector, region or theme ahead of a
+            fully-formed opportunity.
+          </p>
+        ) : (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {watchMarkets.map((m) => (
+              <Link
+                key={m.id}
+                href="/watch"
+                className="flex items-center gap-2 rounded-md border border-amber-800/60 bg-amber-950/20 px-3 py-1.5 text-xs text-amber-200 hover:border-amber-600"
+              >
+                {m.name}
+                {!m.active && <span className="text-amber-500">(inactive)</span>}
+              </Link>
+            ))}
+          </div>
+        )}
+      </section>
 
       <section className="mt-10">
         <div className="flex items-center justify-between">

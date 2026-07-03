@@ -6,6 +6,7 @@ import { getOpportunitiesForEvent } from '@/server/services/opportunities'
 import { getEventArc } from '@/server/services/graph'
 import { EventActions } from '@/components/EventActions'
 import { EvidenceArc } from '@/components/EvidenceArc'
+import { ReplayPanel } from '@/components/ReplayPanel'
 import { ClassBadge, FixtureBadge, StatusBadge, pct } from '@/components/badges'
 
 export const dynamic = 'force-dynamic'
@@ -29,9 +30,9 @@ function EvidenceRow({ item }: { item: EvidenceItem }) {
   )
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ title, children, id }: { title: string; children: React.ReactNode; id?: string }) {
   return (
-    <section className="mt-8">
+    <section id={id} className="mt-8 scroll-mt-8">
       <h2 className="text-base font-semibold text-slate-200">{title}</h2>
       <div className="mt-2">{children}</div>
     </section>
@@ -88,6 +89,10 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
 
       <Section title="Evidence arc">
         <EvidenceArc arc={arcResult?.arc ?? null} steps={arcResult?.steps ?? []} />
+      </Section>
+
+      <Section id="graph-replay" title="Graph replay">
+        <ReplayPanel eventCandidateId={event.id} />
       </Section>
 
       {detail.riskOpportunities.map((ro, i) => (

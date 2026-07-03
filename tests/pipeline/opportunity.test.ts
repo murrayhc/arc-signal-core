@@ -36,6 +36,45 @@ describe('scoreOpportunity (pure)', () => {
     expect(s.confidence).toBeLessThanOrEqual(0.8)
     for (const v of Object.values(s)) { expect(v).toBeGreaterThanOrEqual(0); expect(v).toBeLessThanOrEqual(1) }
   })
+
+  it('byte-compatible: a null lens produces the same commercialValueScore as the pre-3f-4 hardcoded 0.5', () => {
+    // lensValueSignal(null) must be 0.5 — the exact prior hardcoded placeholder — so this
+    // score is unchanged from before the averageDealSize weighting was wired in.
+    const event = fakeEvent()
+    const s = scoreOpportunity(event, null)
+    const expected = Math.round(
+      Math.max(0, Math.min(1, 0.5 * Math.max(event.riskScore, event.opportunityScore) + 0.3 * 0.5 + 0.2 * s.urgencyScore)) * 100,
+    ) / 100
+    expect(s.commercialValueScore).toBe(expected)
+  })
+
+  it('byte-compatible: a default lens (isDefault, no averageDealSize) scores identically to a null lens', () => {
+    const event = fakeEvent()
+    const nullScore = scoreOpportunity(event, null)
+    const defaultLens = { isDefault: true, averageDealSize: null } as RevenueLens
+    const defaultScore = scoreOpportunity(event, defaultLens)
+    expect(defaultScore.commercialValueScore).toBe(nullScore.commercialValueScore)
+  })
+
+  it('a lens with a large averageDealSize raises commercialValueScore above the default-lens score', () => {
+    const event = fakeEvent()
+    const defaultLens = { isDefault: true, averageDealSize: null } as RevenueLens
+    const bigDealLens = { isDefault: false, averageDealSize: '£2m' } as RevenueLens
+
+    const defaultScore = scoreOpportunity(event, defaultLens)
+    const bigDealScore = scoreOpportunity(event, bigDealLens)
+    expect(bigDealScore.commercialValueScore).toBeGreaterThan(defaultScore.commercialValueScore)
+  })
+
+  it('a lens with a small averageDealSize lowers commercialValueScore below the default-lens score', () => {
+    const event = fakeEvent()
+    const defaultLens = { isDefault: true, averageDealSize: null } as RevenueLens
+    const smallDealLens = { isDefault: false, averageDealSize: '£5k' } as RevenueLens
+
+    const defaultScore = scoreOpportunity(event, defaultLens)
+    const smallDealScore = scoreOpportunity(event, smallDealLens)
+    expect(smallDealScore.commercialValueScore).toBeLessThan(defaultScore.commercialValueScore)
+  })
 })
 
 describe('isEligible (pure)', () => {

@@ -5,6 +5,7 @@ import { getPlaybookData } from '@/server/services/playbook'
 import { generatePlaybook } from '@/server/playbook/service'
 import { getActiveProvider } from '@/server/llm/provider'
 import { OpportunityActions } from '@/components/OpportunityActions'
+import { SaveToPortfolioButton } from '@/components/SaveToPortfolioButton'
 import { PlaybookPanel } from '@/components/PlaybookPanel'
 import { FixtureBadge, StatusBadge, pct } from '@/components/badges'
 
@@ -50,10 +51,17 @@ export default async function OpportunityPage({ params }: { params: Promise<{ id
             {card.affectedRegions.length > 0 ? ` · ${card.affectedRegions.join(', ')}` : ''} · from{' '}
             <Link href={`/events/${event.id}`} className="underline hover:text-slate-200">
               {event.title}
+            </Link>{' '}
+            ·{' '}
+            <Link href={`/events/${event.id}#graph-replay`} className="text-sky-400 underline hover:text-sky-300">
+              Open graph replay
             </Link>
           </p>
         </div>
-        <OpportunityActions opportunityId={card.id} />
+        <div className="flex flex-col items-end gap-2">
+          <OpportunityActions opportunityId={card.id} />
+          <SaveToPortfolioButton opportunityCardId={card.id} />
+        </div>
       </header>
 
       <section className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-5">
