@@ -55,4 +55,47 @@ describe('runSeed', () => {
     expect(fastModel).toBeDefined()
     expect(reasoningModel).toBeDefined()
   })
+
+  it('seeds fixture CommodityProfile and InstrumentProfile records with isFixture=true and provider set', async () => {
+    await runSeed({ includeLive: false })
+
+    const commodities = await prisma.commodityProfile.findMany({
+      where: { isFixture: true },
+    })
+    expect(commodities.length).toBeGreaterThanOrEqual(1)
+    for (const commodity of commodities) {
+      expect(commodity.isFixture).toBe(true)
+      expect(commodity.provider).toBe('FIXTURE')
+    }
+
+    // Verify at least the seeded commodities exist
+    const copper = commodities.find((c) => c.name === 'Copper')
+    const oil = commodities.find((c) => c.name === 'Brent Crude Oil')
+    const wheat = commodities.find((c) => c.name === 'Wheat')
+    const lithium = commodities.find((c) => c.name === 'Lithium')
+    expect(copper).toBeDefined()
+    expect(oil).toBeDefined()
+    expect(wheat).toBeDefined()
+    expect(lithium).toBeDefined()
+
+    const instruments = await prisma.instrumentProfile.findMany({
+      where: { isFixture: true },
+    })
+    expect(instruments.length).toBeGreaterThanOrEqual(1)
+    for (const instrument of instruments) {
+      expect(instrument.isFixture).toBe(true)
+      expect(instrument.provider).toBe('FIXTURE')
+    }
+
+    // Verify at least the seeded instruments exist
+    const acme = instruments.find((i) => i.symbol === 'ACME')
+    const smplEtf = instruments.find((i) => i.symbol === 'SMPL-ETF')
+    expect(acme).toBeDefined()
+    expect(smplEtf).toBeDefined()
+
+    // Confirm that no price-related fields exist (reference-only)
+    // Both commodity and instrument models have no price/quote columns by design
+    expect(copper?.metadataJson).toBe('{}')
+    expect(acme?.metadataJson).toBe('{}')
+  })
 })

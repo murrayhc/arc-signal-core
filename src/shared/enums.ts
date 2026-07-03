@@ -140,3 +140,15 @@ export type ValidationStatus = (typeof VALIDATION_STATUSES)[number]
 
 export const PLAYBOOK_GENERATORS = ['DETERMINISTIC','LLM'] as const
 export type PlaybookGenerator = (typeof PLAYBOOK_GENERATORS)[number]
+
+export const MARKET_RESULT_TYPES = ['INSTRUMENT','COMMODITY','COMPANY','NONE'] as const
+export type MarketResultType = (typeof MARKET_RESULT_TYPES)[number]
+
+export const INSTRUMENT_TYPES = ['EQUITY','ETF','INDEX','FX','FUTURE','BOND','CRYPTO','UNKNOWN'] as const
+export type InstrumentType = (typeof INSTRUMENT_TYPES)[number]
+
+export const COMMODITY_CATEGORIES = ['METAL','ENERGY','AGRICULTURE','LIVESTOCK','INDUSTRIAL','OTHER'] as const
+export type CommodityCategory = (typeof COMMODITY_CATEGORIES)[number]
+
+export const MARKET_PROVIDER_STATUSES = ['CONFIGURED','NOT_CONFIGURED'] as const
+export type MarketProviderStatus = (typeof MARKET_PROVIDER_STATUSES)[number]

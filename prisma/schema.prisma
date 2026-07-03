@@ -532,3 +532,60 @@ model OpportunityPlaybook {
   createdAt             DateTime        @default(now())
   updatedAt             DateTime        @updatedAt
 }
+
+model MarketSearchQuery {
+  id          String               @id @default(cuid())
+  query       String
+  queryType   String
+  resultCount Int                  @default(0)
+  createdAt   DateTime             @default(now())
+  results     MarketSearchResult[]
+}
+
+model MarketSearchResult {
+  id              String            @id @default(cuid())
+  queryId         String
+  query           MarketSearchQuery @relation(fields: [queryId], references: [id])
+  resultType      String
+  title           String
+  summary         String
+  confidence      Float             @default(0)
+  refType         String            @default("")
+  refId           String?
+  graphSnapshotId String?
+  createdAt       DateTime          @default(now())
+}
+
+model InstrumentProfile {
+  id             String   @id @default(cuid())
+  provider       String
+  symbol         String
+  name           String
+  exchange       String?
+  instrumentType String   @default("UNKNOWN")
+  currency       String   @default("USD")
+  delayed        Boolean  @default(true)
+  metadataJson   String   @default("{}")
+  lastFetchedAt  DateTime @default(now())
+  isFixture      Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([provider, symbol])
+}
+
+model CommodityProfile {
+  id                   String    @id @default(cuid())
+  provider             String?
+  name                 String    @unique
+  symbol               String?
+  category             String    @default("OTHER")
+  keySupplyRegionsJson String    @default("[]")
+  keyDemandSectorsJson String    @default("[]")
+  delayed              Boolean   @default(true)
+  metadataJson         String    @default("{}")
+  lastFetchedAt        DateTime?
+  isFixture            Boolean   @default(false)
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+}

@@ -27,9 +27,13 @@ export async function resetDb() {
     prisma.parsedDocument.deleteMany(),
     prisma.document.deleteMany(),
     prisma.scanRun.deleteMany(),
+    prisma.marketSearchResult.deleteMany(),
+    prisma.marketSearchQuery.deleteMany(),
     prisma.sourceHealth.deleteMany(),
     prisma.entity.deleteMany(),
     prisma.revenueLens.deleteMany(),
     prisma.source.deleteMany(),
+    prisma.instrumentProfile.deleteMany(),
+    prisma.commodityProfile.deleteMany(),
   ])
 }

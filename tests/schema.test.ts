@@ -244,4 +244,95 @@ describe('event discovery data layer', () => {
       }),
     ).rejects.toThrow()
   })
+
+  it('creates MarketSearchQuery + MarketSearchResult with proper relation loading', async () => {
+    const query = await prisma.marketSearchQuery.create({
+      data: {
+        query: 'copper supply risks',
+        queryType: 'COMMODITY',
+        resultCount: 2,
+      },
+    })
+    const result1 = await prisma.marketSearchResult.create({
+      data: {
+        queryId: query.id,
+        resultType: 'COMMODITY',
+        title: 'Copper supply chain',
+        summary: 'Analysis of copper supply',
+        confidence: 0.85,
+        refType: 'commodity',
+        refId: 'copper-fixture',
+      },
+    })
+    const result2 = await prisma.marketSearchResult.create({
+      data: {
+        queryId: query.id,
+        resultType: 'INSTRUMENT',
+        title: 'Copper futures',
+        summary: 'Trading analysis',
+        confidence: 0.72,
+        refType: 'instrument',
+        refId: 'copper-future-fixture',
+      },
+    })
+
+    const loaded = await prisma.marketSearchQuery.findUniqueOrThrow({
+      where: { id: query.id },
+      include: { results: true },
+    })
+    expect(loaded.query).toBe('copper supply risks')
+    expect(loaded.results).toHaveLength(2)
+    expect(loaded.results[0].id).toBe(result1.id)
+    expect(loaded.results[1].id).toBe(result2.id)
+  })
+
+  it('enforces InstrumentProfile unique constraint on (provider, symbol)', async () => {
+    const provider = 'FIXTURE'
+    const symbol = 'TEST-EQUITY'
+    await prisma.instrumentProfile.create({
+      data: {
+        provider,
+        symbol,
+        name: 'Test Equity',
+        exchange: 'LSE',
+        instrumentType: 'EQUITY',
+        currency: 'GBP',
+        isFixture: true,
+      },
+    })
+    await expect(
+      prisma.instrumentProfile.create({
+        data: {
+          provider,
+          symbol,
+          name: 'Duplicate Equity',
+          exchange: 'NYSE',
+          instrumentType: 'EQUITY',
+          currency: 'USD',
+          isFixture: false,
+        },
+      }),
+    ).rejects.toThrow()
+  })
+
+  it('enforces CommodityProfile unique constraint on name', async () => {
+    await prisma.commodityProfile.create({
+      data: {
+        name: 'Test Commodity',
+        category: 'METAL',
+        provider: 'FIXTURE',
+        isFixture: true,
+      },
+    })
+    await expect(
+      prisma.commodityProfile.create({
+        data: {
+          name: 'Test Commodity',
+          category: 'ENERGY',
+          provider: 'FIXTURE',
+          isFixture: true,
+        },
+      }),
+    ).rejects.toThrow()
+  })
 })

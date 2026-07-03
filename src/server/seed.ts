@@ -154,5 +154,91 @@ export async function runSeed(options: { includeLive?: boolean } = {}) {
     })
   }
 
+  // Seed fixture commodity profiles — factual reference context, no prices
+  const commodities = [
+    {
+      name: 'Copper',
+      category: 'METAL',
+      keySupplyRegions: ['Chile', 'Peru', 'China'],
+      keyDemandSectors: ['Construction', 'Electronics', 'EV'],
+    },
+    {
+      name: 'Brent Crude Oil',
+      category: 'ENERGY',
+      keySupplyRegions: ['Middle East', 'North Sea'],
+      keyDemandSectors: ['Transport', 'Energy', 'Chemicals'],
+    },
+    {
+      name: 'Wheat',
+      category: 'AGRICULTURE',
+      keySupplyRegions: ['Russia', 'United States', 'EU'],
+      keyDemandSectors: ['Food', 'Livestock'],
+    },
+    {
+      name: 'Lithium',
+      category: 'INDUSTRIAL',
+      keySupplyRegions: ['Australia', 'Chile'],
+      keyDemandSectors: ['EV', 'Battery Storage'],
+    },
+  ]
+
+  for (const commodity of commodities) {
+    await prisma.commodityProfile.upsert({
+      where: { name: commodity.name },
+      create: {
+        name: commodity.name,
+        category: commodity.category,
+        keySupplyRegionsJson: JSON.stringify(commodity.keySupplyRegions),
+        keyDemandSectorsJson: JSON.stringify(commodity.keyDemandSectors),
+        provider: 'FIXTURE',
+        isFixture: true,
+      },
+      update: {
+        category: commodity.category,
+        keySupplyRegionsJson: JSON.stringify(commodity.keySupplyRegions),
+        keyDemandSectorsJson: JSON.stringify(commodity.keyDemandSectors),
+        provider: 'FIXTURE',
+        isFixture: true,
+      },
+    })
+  }
+
+  // Seed fixture instrument profiles — sample reference data, no prices
+  const instruments = [
+    {
+      provider: 'FIXTURE',
+      symbol: 'ACME',
+      name: 'Acme Industrials (sample)',
+      exchange: 'LSE',
+      instrumentType: 'EQUITY',
+      currency: 'GBP',
+    },
+    {
+      provider: 'FIXTURE',
+      symbol: 'SMPL-ETF',
+      name: 'Sample Sector ETF',
+      exchange: 'LSE',
+      instrumentType: 'ETF',
+      currency: 'GBP',
+    },
+  ]
+
+  for (const instrument of instruments) {
+    await prisma.instrumentProfile.upsert({
+      where: { provider_symbol: { provider: instrument.provider, symbol: instrument.symbol } },
+      create: {
+        ...instrument,
+        isFixture: true,
+      },
+      update: {
+        name: instrument.name,
+        exchange: instrument.exchange,
+        instrumentType: instrument.instrumentType,
+        currency: instrument.currency,
+        isFixture: true,
+      },
+    })
+  }
+
   return { sourcesSeeded: sources.length }
 }
