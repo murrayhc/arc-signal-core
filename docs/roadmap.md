@@ -1,7 +1,8 @@
 # Archlight Roadmap
 
 Last updated: 2026-07-03 · Current state: spine + Phase 2a + the full
-intelligence-radar upgrade (Phases 3a–3f) shipped, 342/342 tests green.
+intelligence-radar upgrade (Phases 3a–3f) + the homepage command-centre
+redesign shipped, 351/351 tests green.
 Source of truth for phase history: `.superpowers/sdd/progress.md` (local
 ledger) and `docs/superpowers/specs/`/`docs/superpowers/plans/` (design
 docs). This file is a short current-state summary, not the durable record.
@@ -42,8 +43,15 @@ docs). This file is a short current-state summary, not the durable record.
   saved watch markets, an opportunity portfolio with status tracking,
   graph-event timeline recording with momentum/confidence-decay scoring,
   event replay, and configurable revenue lenses.
+- **Homepage command-centre redesign (2026-07-03)** — `/` rebuilt as a dark,
+  graph-first intelligence command centre: Intelligence Brain force-graph hero
+  (node selection opens an evidence detail panel), ranked Active
+  Opportunities / Top Risks rails, operational panels driven by real pipeline
+  counters and SignalCluster aggregates, global pulse ticker with honest
+  provider placeholders. All prior routes, actions and card feeds preserved
+  (secondary drawers). Independently reviewed (fable) + fix wave applied.
 
-Current test count: **342**, all green
+Current test count: **351**, all green
 (`.superpowers/sdd/progress.md` has the per-phase task-by-task ledger; each
 phase's detailed design lives in `docs/superpowers/specs/` and
 `docs/superpowers/plans/`).
@@ -70,6 +78,12 @@ phase's detailed design lives in `docs/superpowers/specs/` and
 - **Postgres migration.** SQLite was chosen for a zero-setup local radar;
   schema uses string-enum columns specifically to make this mechanical
   whenever it's actually needed.
+- **Command-centre follow-ups** (from the redesign's independent review; all
+  non-blocking): keyboard-accessible node selection for the Intelligence
+  Brain; gate the LIVE indicator on scan recency; scope the three Google
+  fonts to `/` only; fix the pre-existing `ForceGraph.tsx` paused mode on
+  `/graph` (`d3VelocityDecay: 1` freezes the layout at the initial spiral
+  instead of laying out statically — same class as the redesign's I-2 fix).
 - **3a–3f minor rollups** tracked in `.superpowers/sdd/progress.md` — small,
   scoped items surfaced by each phase's whole-phase review. DONE (`acb1d99`):
   a P2002 sweep on duplicate-name POST/PATCH for `/watch` and `/lenses`
