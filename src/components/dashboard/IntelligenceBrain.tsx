@@ -1,8 +1,10 @@
 'use client'
 
 import Link from 'next/link'
+import { useMemo } from 'react'
 import type { GraphEdgeData, RenderNode } from '@/server/services/graph'
-import { BrainGraph, brainColor } from './BrainGraph'
+import { BrainGraph } from './BrainGraph'
+import { CENTRAL_COLORS, brainColor, pickCentralNodes } from './brain-model'
 import { CornerBrackets, Eyebrow, pct } from './chrome'
 import { useSelection } from './SelectionProvider'
 
@@ -45,6 +47,11 @@ export function IntelligenceBrain({
   const { select, clear } = useSelection()
   const empty = nodes.length === 0
   const legendGroups = LEGEND_ORDER.filter((g) => (byType[g] ?? 0) > 0)
+  // Central-core legend entries appear only for kinds actually present.
+  const centralKinds = useMemo(() => {
+    const kinds = new Set(pickCentralNodes(nodes).map((c) => c.kind))
+    return (['RISK', 'OPPORTUNITY'] as const).filter((k) => kinds.has(k))
+  }, [nodes])
 
   return (
     <div className="relative flex h-full min-h-[26rem] flex-col overflow-hidden border border-line bg-abyss/40">
@@ -112,6 +119,20 @@ export function IntelligenceBrain({
       {/* Legend — only classes actually present in the projection */}
       {legendGroups.length > 0 && (
         <div className="relative z-10 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-line/70 px-3 py-1.5">
+          {centralKinds.map((kind) => (
+            <span
+              key={kind}
+              className="flex items-center gap-1 text-[9px] font-semibold uppercase tracking-wider"
+              style={{ color: CENTRAL_COLORS[kind] }}
+            >
+              <span
+                aria-hidden
+                className="cc-live rounded-full"
+                style={{ width: 7, height: 7, backgroundColor: CENTRAL_COLORS[kind] }}
+              />
+              {kind === 'RISK' ? 'High-risk core' : 'High-opportunity core'}
+            </span>
+          ))}
           {legendGroups.map((group) => (
             <span key={group} className="flex items-center gap-1 text-[9px] uppercase tracking-wider text-ink-faint">
               <span

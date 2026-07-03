@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import type { GraphEdgeData, GraphNodeData } from '@/server/services/graph'
 import type { EventDetail } from '@/server/services/events'
-import { brainColor } from './BrainGraph'
+import { brainColor } from './brain-model'
 import { Eyebrow, Meter, pct } from './chrome'
 import { useSelection } from './SelectionProvider'
 
