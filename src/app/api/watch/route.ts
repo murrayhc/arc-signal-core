@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { Prisma } from '@prisma/client'
 import { createWatchMarket, listWatchMarkets } from '@/server/watch/service'
 
 const PostSchema = z.object({
@@ -26,6 +27,14 @@ export async function POST(req: Request) {
   if (!parsed.success) {
     return Response.json({ error: 'Invalid watch market', issues: parsed.error.issues }, { status: 400 })
   }
-  const created = await createWatchMarket(parsed.data)
-  return Response.json(created, { status: 201 })
+
+  try {
+    const created = await createWatchMarket(parsed.data)
+    return Response.json(created, { status: 201 })
+  } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+      return Response.json({ error: 'A watch market with this name already exists' }, { status: 409 })
+    }
+    throw err
+  }
 }

@@ -122,7 +122,7 @@ describe('recordGraphEvents — two-scan sequence (integration)', () => {
     expect(rows).toHaveLength(1) // still just the FIRST_DETECTED row — no speculative/empty-diff row
   })
 
-  it('a second scan that raises confidence and adds a source records CONFIDENCE_ROSE + NEW_SOURCE', async () => {
+  it('a second scan that raises confidence and adds a source records CONFIDENCE_ROSE + NEW_SOURCE + CLAIM_REPEATED', async () => {
     const { event } = await seedEventWithEvidence({ confidence: 0.5 })
     await syncGraphForEvents([event], NOW)
     await recordGraphEvents([event], NOW)
@@ -164,19 +164,23 @@ describe('recordGraphEvents — two-scan sequence (integration)', () => {
     const later = new Date(NOW.getTime() + 60 * 60 * 1000)
     const result = await recordGraphEvents([updatedEvent], later)
     expect(result.errors).toEqual([])
-    expect(result.recorded).toBe(2)
+    // 3, not 2: the second scan's setup links a second, distinct claim (claim2) alongside the
+    // second source, so claimCount rises 1 -> 2 and CLAIM_REPEATED now correctly also fires
+    // (Task-3 Fix 4: diffState tracks claimCount, previously untracked/never emitted).
+    expect(result.recorded).toBe(3)
 
     const graphNode = await prisma.graphNode.findUniqueOrThrow({ where: { refType_refId: { refType: 'event', refId: event.id } } })
     const rows = await prisma.graphEvent.findMany({ where: { graphNodeId: graphNode.id }, orderBy: { occurredAt: 'asc' } })
-    expect(rows).toHaveLength(3) // FIRST_DETECTED + CONFIDENCE_ROSE + NEW_SOURCE
+    expect(rows).toHaveLength(4) // FIRST_DETECTED + CONFIDENCE_ROSE + NEW_SOURCE + CLAIM_REPEATED
     const types = rows.map((r) => r.eventType).sort()
-    expect(types).toEqual(['CONFIDENCE_ROSE', 'FIRST_DETECTED', 'NEW_SOURCE'])
+    expect(types).toEqual(['CLAIM_REPEATED', 'CONFIDENCE_ROSE', 'FIRST_DETECTED', 'NEW_SOURCE'])
 
     const latestRows = rows.filter((r) => r.eventType !== 'FIRST_DETECTED')
     for (const row of latestRows) {
       const meta = JSON.parse(row.metadataJson)
       expect(meta.confidence).toBe(0.7)
       expect(meta.sourceCount).toBe(2)
+      expect(meta.claimCount).toBe(2)
     }
   })
 
@@ -197,6 +201,70 @@ describe('recordGraphEvents — two-scan sequence (integration)', () => {
 
     const snapshots = await prisma.graphSnapshot.findMany({ where: { rootNodeId: graphNode.id, snapshotType: 'CURRENT_STATE' } })
     expect(snapshots).toHaveLength(1)
+  })
+
+  it('a second scan that adds a distinct claim (no new source) records CLAIM_REPEATED', async () => {
+    const { event, source, document } = await seedEventWithEvidence()
+    await syncGraphForEvents([event], NOW)
+    await recordGraphEvents([event], NOW)
+
+    // A second, corroborating claim on the SAME source/document (no new independent source) —
+    // isolates CLAIM_REPEATED from NEW_SOURCE.
+    const claim2 = await prisma.claim.create({
+      data: {
+        documentId: document.id, claimType: 'LAYOFF_MENTION', claimText: 'Corroborating claim.',
+        extractionMethod: 'rule:v1:TEST', extractionConfidence: 0.8, credibilityScore: 0.7, isFixture: true,
+      },
+    })
+    const signal2 = await prisma.signal.create({
+      data: {
+        claimId: claim2.id, documentId: document.id, sourceId: source.id, signalType: 'LAYOFF_SIGNAL',
+        signalDate: NOW, confidence: 0.8, strength: 0.7, direction: 'NEGATIVE', explanation: 'Repeated signal.', isFixture: true,
+      },
+    })
+    const cluster2 = await prisma.signalCluster.create({
+      data: {
+        title: 'Repeat cluster', clusterType: 'RISK', strength: 0.7, confidence: 0.7, novelty: 0.5,
+        explanation: 'e2', isFixture: true, eventCandidateId: event.id,
+      },
+    })
+    await prisma.signalClusterSignal.create({ data: { clusterId: cluster2.id, signalId: signal2.id } })
+
+    await syncGraphForEvents([event], NOW)
+    const later = new Date(NOW.getTime() + 60 * 60 * 1000)
+    const result = await recordGraphEvents([event], later)
+    expect(result.errors).toEqual([])
+    expect(result.recorded).toBe(1)
+
+    const graphNode = await prisma.graphNode.findUniqueOrThrow({ where: { refType_refId: { refType: 'event', refId: event.id } } })
+    const rows = await prisma.graphEvent.findMany({ where: { graphNodeId: graphNode.id }, orderBy: { occurredAt: 'asc' } })
+    expect(rows).toHaveLength(2) // FIRST_DETECTED + CLAIM_REPEATED
+    expect(rows[1].eventType).toBe('CLAIM_REPEATED')
+    const meta = JSON.parse(rows[1].metadataJson)
+    expect(meta.claimCount).toBe(2)
+    expect(meta.sourceCount).toBe(1) // same source — proves this isn't a NEW_SOURCE side effect
+  })
+
+  it('a second scan that strengthens the max signal strength records SIGNAL_STRENGTHENED', async () => {
+    const { event, signal } = await seedEventWithEvidence()
+    await syncGraphForEvents([event], NOW)
+    await recordGraphEvents([event], NOW)
+    expect(signal.strength).toBe(0.7) // baseline from seedEventWithEvidence
+
+    await prisma.signal.update({ where: { id: signal.id }, data: { strength: 0.95 } })
+
+    await syncGraphForEvents([event], NOW)
+    const later = new Date(NOW.getTime() + 60 * 60 * 1000)
+    const result = await recordGraphEvents([event], later)
+    expect(result.errors).toEqual([])
+    expect(result.recorded).toBe(1)
+
+    const graphNode = await prisma.graphNode.findUniqueOrThrow({ where: { refType_refId: { refType: 'event', refId: event.id } } })
+    const rows = await prisma.graphEvent.findMany({ where: { graphNodeId: graphNode.id }, orderBy: { occurredAt: 'asc' } })
+    expect(rows).toHaveLength(2) // FIRST_DETECTED + SIGNAL_STRENGTHENED
+    expect(rows[1].eventType).toBe('SIGNAL_STRENGTHENED')
+    const meta = JSON.parse(rows[1].metadataJson)
+    expect(meta.maxSignalStrength).toBeCloseTo(0.95, 5)
   })
 
   it('never records a synthetic/unknown eventType — every row is one of the 10 GRAPH_EVENT_TYPES', async () => {
@@ -280,5 +348,78 @@ describe('getEventReplay', () => {
 
   it('returns null for an unknown eventCandidateId', async () => {
     expect(await getEventReplay('does-not-exist')).toBeNull()
+  })
+
+  it('a fresh CONTRADICTION_DETECTED after old supporting evidence does NOT reset freshness (decay stays high)', async () => {
+    const { event } = await seedEventWithEvidence()
+    await syncGraphForEvents([event], NOW)
+
+    const graphNode = await prisma.graphNode.findUniqueOrThrow({
+      where: { refType_refId: { refType: 'event', refId: event.id } },
+    })
+
+    // Old supporting evidence (CONFIDENCE_ROSE is in momentum's POSITIVE/SUPPORTING set),
+    // 45 days before "now" — i.e. stale on its own.
+    const oldSupportingAt = new Date(NOW.getTime() - 45 * 24 * 60 * 60 * 1000)
+    await prisma.graphEvent.create({
+      data: {
+        graphNodeId: graphNode.id,
+        eventCandidateId: event.id,
+        eventType: 'FIRST_DETECTED',
+        description: 'first',
+        occurredAt: oldSupportingAt,
+        metadataJson: '{}',
+      },
+    })
+    await prisma.graphEvent.create({
+      data: {
+        graphNodeId: graphNode.id,
+        eventCandidateId: event.id,
+        eventType: 'CONFIDENCE_ROSE',
+        description: 'confidence rose',
+        occurredAt: oldSupportingAt,
+        metadataJson: '{}',
+      },
+    })
+
+    // A FRESH contradiction (today) — negative evidence, not supporting. Must not refresh
+    // confidenceDecay/freshness.
+    await prisma.graphEvent.create({
+      data: {
+        graphNodeId: graphNode.id,
+        eventCandidateId: event.id,
+        eventType: 'CONTRADICTION_DETECTED',
+        description: 'fresh contradiction',
+        occurredAt: NOW,
+        metadataJson: '{}',
+      },
+    })
+
+    const replay = await getEventReplay(event.id, NOW)
+    expect(replay).not.toBeNull()
+    // The last row chronologically IS the fresh contradiction — proving the assertion below
+    // exercises the "reference last SUPPORTING event, not last event of any polarity" fix.
+    expect(replay!.timeline[replay!.timeline.length - 1].eventType).toBe('CONTRADICTION_DETECTED')
+
+    // Freshness must reflect the OLD supporting evidence (45 days stale), not the fresh
+    // contradiction (which would otherwise wrongly read freshness ~1 / decay ~0).
+    expect(replay!.freshness).toBeCloseTo(0.1, 5) // floor freshness at >=30 days stale
+    expect(replay!.confidenceDecay).toBeCloseTo(0.9, 5) // 1 - 0.1
+  })
+
+  it('freshness/decay reference FIRST_DETECTED as supporting when it is the only event', async () => {
+    const { event } = await seedEventWithEvidence()
+    await syncGraphForEvents([event], NOW)
+    await recordGraphEvents([event], NOW)
+
+    const later = new Date(NOW.getTime() + 5 * 24 * 60 * 60 * 1000)
+    const replay = await getEventReplay(event.id, later)
+    expect(replay).not.toBeNull()
+    expect(replay!.timeline).toHaveLength(1)
+    expect(replay!.timeline[0].eventType).toBe('FIRST_DETECTED')
+    // FIRST_DETECTED counts as supporting — freshness is computed from it, not "no supporting
+    // event found" (which would fall back to the null-date default).
+    expect(replay!.freshness).toBeLessThan(1) // 5 days old, past RECENT_DAYS=3, so decaying
+    expect(replay!.freshness).toBeGreaterThan(0.1)
   })
 })

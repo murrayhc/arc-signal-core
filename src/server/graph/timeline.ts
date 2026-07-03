@@ -1,13 +1,23 @@
 import type { EventCandidate, GraphEvent, GraphSnapshot } from '@prisma/client'
 import { prisma } from '@/server/db'
 import { getNodeNeighbourhood } from '@/server/services/graph'
-import { momentumScore, confidenceDecay } from '@/server/graph/momentum'
+import { momentumScore, confidenceDecay, POSITIVE } from '@/server/graph/momentum'
 import { freshness } from '@/server/graph/builder'
 import type { GraphEventType } from '@/shared/enums'
 import type { PipelineError } from '@/server/pipeline/types'
 
+/**
+ * GraphEventTypes that count as "supporting evidence" for freshness/confidenceDecay purposes:
+ * momentum's POSITIVE set plus FIRST_DETECTED (neutral for momentum, but it IS the original
+ * supporting detection of the event). CONTRADICTION_DETECTED/CONFIDENCE_FELL/EVENT_COOLED are
+ * deliberately excluded — a fresh contradiction must not read as "fresh supporting evidence".
+ */
+const SUPPORTING_EVENT_TYPES: readonly GraphEventType[] = [...POSITIVE, 'FIRST_DETECTED']
+
 /** Minimum absolute confidence delta to count as a real rise/fall (avoids float-noise rows). */
 const CONFIDENCE_EPSILON = 0.01
+/** Minimum absolute max-signal-strength delta to count as a real strengthening (avoids float-noise rows). */
+const SIGNAL_STRENGTH_EPSILON = 0.01
 
 type CurrentState = {
   confidence: number
@@ -15,30 +25,55 @@ type CurrentState = {
   sourceCount: number
   contradictionCount: number
   opportunityCount: number
+  claimCount: number
+  maxSignalStrength: number
+}
+
+type EvidenceChainSummary = {
+  /** Distinct source ids across the evidence chain. */
+  sourceCount: number
+  /** Distinct claim ids across the evidence chain (drives CLAIM_REPEATED). */
+  claimCount: number
+  /** Max Signal.strength across the evidence chain, or 0 if there's no evidence yet
+   *  (drives SIGNAL_STRENGTHENED). */
+  maxSignalStrength: number
 }
 
 /**
- * Distinct source ids across the event's evidence chain (clusters -> signals -> claim ->
- * document -> source). SOURCE is several edges from the EVENT node in the graph (via
- * SIGNAL/CLAIM/DOCUMENT), so this reads the evidence chain directly via Prisma relations
- * rather than the 1-degree graph neighbourhood.
+ * Summarises the event's evidence chain (clusters -> signals -> claim -> document -> source)
+ * in one query: distinct source/claim counts and the max signal strength. SOURCE/CLAIM/SIGNAL
+ * are several edges from the EVENT node in the graph, so this reads the evidence chain directly
+ * via Prisma relations rather than the 1-degree graph neighbourhood.
  */
-async function evidenceChainSourceCount(eventId: string): Promise<number> {
+async function evidenceChainSummary(eventId: string): Promise<EvidenceChainSummary> {
   const withEvidence = await prisma.eventCandidate.findUnique({
     where: { id: eventId },
     select: {
       clusters: {
-        select: { signals: { select: { signal: { select: { claim: { select: { document: { select: { sourceId: true } } } } } } } } },
+        select: {
+          signals: {
+            select: {
+              signal: {
+                select: { claimId: true, strength: true, claim: { select: { document: { select: { sourceId: true } } } } },
+              },
+            },
+          },
+        },
       },
     },
   })
+
   const sourceIds = new Set<string>()
+  const claimIds = new Set<string>()
+  let maxSignalStrength = 0
   for (const cluster of withEvidence?.clusters ?? []) {
     for (const link of cluster.signals) {
       sourceIds.add(link.signal.claim.document.sourceId)
+      claimIds.add(link.signal.claimId)
+      if (link.signal.strength > maxSignalStrength) maxSignalStrength = link.signal.strength
     }
   }
-  return sourceIds.size
+  return { sourceCount: sourceIds.size, claimCount: claimIds.size, maxSignalStrength }
 }
 
 /** Diff-input state for one event, computed from the currently-persisted DB rows (never invented). */
@@ -47,7 +82,7 @@ async function computeCurrentState(event: EventCandidate, graphNodeId: string): 
   // CONTRADICTS edges land directly on the EVENT node (builder.ts projectContradictionEdges),
   // so the 1-degree neighbourhood is the right source for these.
   const contradictionCount = neighbourhood?.edges.filter((e) => e.edgeType === 'CONTRADICTS').length ?? 0
-  const sourceCount = await evidenceChainSourceCount(event.id)
+  const { sourceCount, claimCount, maxSignalStrength } = await evidenceChainSummary(event.id)
   const opportunityCount = await prisma.opportunityCard.count({ where: { eventCandidateId: event.id } })
 
   return {
@@ -56,6 +91,8 @@ async function computeCurrentState(event: EventCandidate, graphNodeId: string): 
     sourceCount,
     contradictionCount,
     opportunityCount,
+    claimCount,
+    maxSignalStrength,
   }
 }
 
@@ -75,6 +112,8 @@ function diffState(prior: CurrentState | null, current: CurrentState): GraphEven
   if (current.sourceCount > prior.sourceCount) changes.push('NEW_SOURCE')
   if (current.contradictionCount > prior.contradictionCount) changes.push('CONTRADICTION_DETECTED')
   if (current.opportunityCount > prior.opportunityCount) changes.push('OPPORTUNITY_GENERATED')
+  if (current.claimCount > prior.claimCount) changes.push('CLAIM_REPEATED')
+  if (current.maxSignalStrength - prior.maxSignalStrength > SIGNAL_STRENGTH_EPSILON) changes.push('SIGNAL_STRENGTHENED')
 
   const statusChanged = current.status !== prior.status
   if (statusChanged && ESCALATED_STATUSES.includes(current.status)) changes.push('EVENT_ESCALATED')
@@ -97,6 +136,10 @@ function describeChange(eventType: GraphEventType, event: EventCandidate, state:
       return `"${event.title}" gained a new contradiction (now ${state.contradictionCount}).`
     case 'OPPORTUNITY_GENERATED':
       return `"${event.title}" generated a new opportunity card (now ${state.opportunityCount}).`
+    case 'CLAIM_REPEATED':
+      return `"${event.title}" gained a repeated/corroborating claim (now ${state.claimCount} distinct claims).`
+    case 'SIGNAL_STRENGTHENED':
+      return `"${event.title}" signal strength increased (now ${state.maxSignalStrength.toFixed(2)}).`
     case 'EVENT_ESCALATED':
       return `"${event.title}" escalated to ${state.status}.`
     case 'EVENT_COOLED':
@@ -196,8 +239,10 @@ export type EventReplay = {
 
 /**
  * The full replay for an event: its ordered GraphEvent timeline, any captured GraphSnapshots,
- * and the computed momentum/confidenceDecay/freshness scores (as of now). Returns null if the
- * event has no EVENT GraphNode (never synced) or no recorded timeline yet.
+ * and the computed momentum/confidenceDecay/freshness scores (as of now). confidenceDecay and
+ * freshness are computed from the time since the last SUPPORTING GraphEvent (SUPPORTING_EVENT_TYPES),
+ * not the last event of any polarity — so a fresh contradiction never resets freshness. Returns
+ * null if the event has no EVENT GraphNode (never synced) or no recorded timeline yet.
  */
 export async function getEventReplay(eventCandidateId: string, now: Date = new Date()): Promise<EventReplay | null> {
   const graphNode = await prisma.graphNode.findUnique({
@@ -220,9 +265,17 @@ export async function getEventReplay(eventCandidateId: string, now: Date = new D
     timeline.map((e) => ({ eventType: e.eventType, occurredAt: e.occurredAt })),
     now,
   )
-  const lastEvent = timeline[timeline.length - 1]
-  const decay = confidenceDecay(lastEvent.occurredAt, now)
-  const fresh = freshness(lastEvent.occurredAt, now)
+
+  // confidenceDecay/freshness must reflect time since the last SUPPORTING evidence, not the
+  // last GraphEvent of any polarity — otherwise a fresh CONTRADICTION_DETECTED would wrongly
+  // reset freshness to "fresh". Falls back to null (-> momentum's NULL_DATE_FRESHNESS default)
+  // in the unexpected case a timeline has no supporting row at all.
+  const supportingEvents = timeline.filter((e) => SUPPORTING_EVENT_TYPES.includes(e.eventType as GraphEventType))
+  const lastSupportingEvent = supportingEvents[supportingEvents.length - 1]
+  const lastSupportingAt = lastSupportingEvent ? lastSupportingEvent.occurredAt : null
+
+  const decay = confidenceDecay(lastSupportingAt, now)
+  const fresh = freshness(lastSupportingAt, now)
 
   return { timeline, snapshots, momentum, confidenceDecay: decay, freshness: fresh }
 }

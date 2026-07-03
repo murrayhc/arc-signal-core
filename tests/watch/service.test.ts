@@ -150,4 +150,44 @@ describe('watch market service', () => {
   it('resolveWatchMarket returns null for an unknown market id', async () => {
     expect(await resolveWatchMarket('does-not-exist')).toBeNull()
   })
+
+  it('resolveWatchMarket treats a whitespace-only queryTerm as empty — no spurious substring match', async () => {
+    // A " " term would otherwise substring-match almost any multi-word title/summary via
+    // `haystack.includes(term)`. Trimming + dropping empties must stop that.
+    await seedEventWithSector({
+      affectedSector: 'Technology',
+      affectedRegion: 'UK',
+      title: 'Cobalt refining bottleneck emerges in supply chain',
+    })
+    const market = await createWatchMarket({
+      name: 'Whitespace-term market',
+      sectors: [],
+      regions: [],
+      themes: [],
+      queryTerms: [' '],
+    })
+
+    const resolved = await resolveWatchMarket(market.id)
+    expect(resolved).not.toBeNull()
+    expect(resolved!.events).toEqual([])
+    expect(resolved!.opportunities).toEqual([])
+  })
+
+  it('resolveWatchMarket still matches on a term with surrounding whitespace, trimmed', async () => {
+    const event = await seedEventWithSector({
+      affectedSector: 'Technology',
+      affectedRegion: 'UK',
+      title: 'Cobalt refining bottleneck emerges in supply chain',
+    })
+    const market = await createWatchMarket({
+      name: 'Padded term market',
+      sectors: [],
+      regions: [],
+      themes: [],
+      queryTerms: ['  cobalt  '],
+    })
+
+    const resolved = await resolveWatchMarket(market.id)
+    expect(resolved!.events.map((e) => e.id)).toContain(event.id)
+  })
 })

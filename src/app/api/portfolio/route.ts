@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { Prisma } from '@prisma/client'
 import { prisma } from '@/server/db'
 import { addToPortfolio, listPortfolio, PortfolioCardNotFoundError } from '@/server/portfolio/service'
 
@@ -31,6 +32,14 @@ export async function POST(req: Request) {
   } catch (err) {
     if (err instanceof PortfolioCardNotFoundError) {
       return Response.json({ error: 'Opportunity card not found' }, { status: 404 })
+    }
+    // P2002 race: another request created the item between the existence check above and
+    // this route's own create (via addToPortfolio). Re-calling addToPortfolio now takes its
+    // own already-exists early-return path, so the response is properly serialized and never
+    // an unhandled 500.
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+      const existing = await addToPortfolio(opportunityCardId)
+      return Response.json(existing, { status: 200 })
     }
     throw err
   }

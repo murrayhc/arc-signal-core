@@ -136,6 +136,8 @@ export type ResolvedWatchMarket = {
  * "contains" shape the interrogation classifier/service already use for
  * theme/company matching. Themes are matched the same way as query terms
  * (there's no dedicated theme column on EventCandidate to compare against).
+ * Terms are trimmed before matching and empty/whitespace-only terms are
+ * dropped, so a stray " " queryTerm can't substring-match every haystack.
  * An empty scope (no sectors/regions/themes/queryTerms) never fabricates a
  * match — it returns empty arrays, even if events exist in the DB.
  */
@@ -152,7 +154,11 @@ export async function resolveWatchMarket(id: string): Promise<ResolvedWatchMarke
 
   const sectorsLower = market.sectors.map((s) => s.toLowerCase())
   const regionsLower = market.regions.map((r) => r.toLowerCase())
-  const termsLower = [...market.themes, ...market.queryTerms].map((t) => t.toLowerCase())
+  // Trim + drop empties: a whitespace-only term (e.g. " ") would otherwise pass the
+  // `term.length > 0` guard below and substring-match almost any multi-word haystack.
+  const termsLower = [...market.themes, ...market.queryTerms]
+    .map((t) => t.trim().toLowerCase())
+    .filter((t) => t.length > 0)
 
   const allEvents = await prisma.eventCandidate.findMany({ include: { opportunityCards: true } })
 
@@ -160,7 +166,7 @@ export async function resolveWatchMarket(id: string): Promise<ResolvedWatchMarke
     const sectorMatch = e.affectedSector !== null && sectorsLower.includes(e.affectedSector.toLowerCase())
     const regionMatch = e.affectedRegion !== null && regionsLower.includes(e.affectedRegion.toLowerCase())
     const haystack = `${e.title} ${e.summary}`.toLowerCase()
-    const termMatch = termsLower.some((term) => term.length > 0 && haystack.includes(term))
+    const termMatch = termsLower.some((term) => haystack.includes(term))
     return sectorMatch || regionMatch || termMatch
   })
 

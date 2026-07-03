@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { Prisma } from '@prisma/client'
 import { createLens, listLenses, InvalidLensFieldError } from '@/server/lens/service'
 
 const PostSchema = z.object({
@@ -39,6 +40,9 @@ export async function POST(req: Request) {
   } catch (err) {
     if (err instanceof InvalidLensFieldError) {
       return Response.json({ error: err.message }, { status: 400 })
+    }
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+      return Response.json({ error: 'A lens with this name already exists' }, { status: 409 })
     }
     throw err
   }

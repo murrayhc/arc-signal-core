@@ -8,8 +8,10 @@ export const MOMENTUM_SCALE = 4
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000
 
-/** GraphEventTypes that raise momentum when recent. */
-const POSITIVE: readonly GraphEventType[] = [
+/** GraphEventTypes that raise momentum when recent. Exported so callers (e.g. the
+ *  replay's "last supporting evidence" reference in timeline.ts) can build the wider
+ *  SUPPORTING set (POSITIVE ∪ FIRST_DETECTED) without duplicating/drifting from this list. */
+export const POSITIVE: readonly GraphEventType[] = [
   'NEW_SOURCE',
   'SIGNAL_STRENGTHENED',
   'CONFIDENCE_ROSE',

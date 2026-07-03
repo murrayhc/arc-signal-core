@@ -45,6 +45,14 @@ describe('lens API', () => {
     expect(res.status).toBe(400)
   })
 
+  it('POST with a duplicate name returns 409 (not an unhandled 500)', async () => {
+    await postLens(jsonReq('http://test.local/api/lenses', 'POST', { name: 'Recruiter lens' }))
+    const res = await postLens(jsonReq('http://test.local/api/lenses', 'POST', { name: 'Recruiter lens' }))
+    expect(res.status).toBe(409)
+    const body = await res.json()
+    expect(typeof body.error).toBe('string')
+  })
+
   it('GET /api/lenses/[id] returns 404 for an unknown id', async () => {
     const res = await getLensOne(getReq('http://test.local/api/lenses/nope'), { params: Promise.resolve({ id: 'nope' }) })
     expect(res.status).toBe(404)
@@ -79,6 +87,20 @@ describe('lens API', () => {
       { params: Promise.resolve({ id: 'nope' }) },
     )
     expect(res.status).toBe(404)
+  })
+
+  it('PATCH /api/lenses/[id] to a name already used by another lens returns 409', async () => {
+    await postLens(jsonReq('http://test.local/api/lenses', 'POST', { name: 'Taken name' }))
+    const createRes = await postLens(jsonReq('http://test.local/api/lenses', 'POST', { name: 'To rename' }))
+    const created = await createRes.json()
+
+    const res = await patchLens(
+      jsonReq(`http://test.local/api/lenses/${created.id}`, 'PATCH', { name: 'Taken name' }),
+      { params: Promise.resolve({ id: created.id }) },
+    )
+    expect(res.status).toBe(409)
+    const body = await res.json()
+    expect(typeof body.error).toBe('string')
   })
 
   it('PATCH /api/lenses/[id] with an invalid userType returns 400', async () => {

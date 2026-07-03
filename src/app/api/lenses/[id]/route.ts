@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { Prisma } from '@prisma/client'
 import {
   getLens,
   updateLens,
@@ -50,6 +51,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   } catch (err) {
     if (err instanceof InvalidLensFieldError) {
       return Response.json({ error: err.message }, { status: 400 })
+    }
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+      return Response.json({ error: 'A lens with this name already exists' }, { status: 409 })
     }
     throw err
   }

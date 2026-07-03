@@ -1,6 +1,8 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { Prisma } from '@prisma/client'
 import { prisma } from '@/server/db'
 import { resetDb } from '../helpers'
+import * as portfolioService from '@/server/portfolio/service'
 import { GET as getWatchList, POST as postWatch } from '@/app/api/watch/route'
 import { GET as getWatchOne, PATCH as patchWatch, DELETE as deleteWatch } from '@/app/api/watch/[id]/route'
 import { GET as getPortfolioList, POST as postPortfolio } from '@/app/api/portfolio/route'
@@ -78,6 +80,28 @@ describe('watch + portfolio API', () => {
     it('POST with missing name returns 400', async () => {
       const res = await postWatch(jsonReq('http://test.local/api/watch', 'POST', { sectors: [] }))
       expect(res.status).toBe(400)
+    })
+
+    it('POST with a duplicate name returns 409 (not an unhandled 500)', async () => {
+      await postWatch(jsonReq('http://test.local/api/watch', 'POST', { name: 'Lithium supply chain' }))
+      const res = await postWatch(jsonReq('http://test.local/api/watch', 'POST', { name: 'Lithium supply chain' }))
+      expect(res.status).toBe(409)
+      const body = await res.json()
+      expect(typeof body.error).toBe('string')
+    })
+
+    it('PATCH /api/watch/[id] to a name already used by another market returns 409', async () => {
+      await postWatch(jsonReq('http://test.local/api/watch', 'POST', { name: 'Existing name' }))
+      const createRes = await postWatch(jsonReq('http://test.local/api/watch', 'POST', { name: 'To rename' }))
+      const created = await createRes.json()
+
+      const res = await patchWatch(
+        jsonReq(`http://test.local/api/watch/${created.id}`, 'PATCH', { name: 'Existing name' }),
+        { params: Promise.resolve({ id: created.id }) },
+      )
+      expect(res.status).toBe(409)
+      const body = await res.json()
+      expect(typeof body.error).toBe('string')
     })
 
     it('GET /api/watch/[id] returns 404 for an unknown id', async () => {
@@ -192,6 +216,38 @@ describe('watch + portfolio API', () => {
 
       const listRes = await getPortfolioList(getReq('http://test.local/api/portfolio'))
       expect(await listRes.json()).toHaveLength(1)
+    })
+
+    it('POST re-add race (P2002 on opportunityCardId) returns the existing item, 200 (not an unhandled 500)', async () => {
+      const card = await seedCard()
+      const firstRes = await postPortfolio(jsonReq('http://test.local/api/portfolio', 'POST', { opportunityCardId: card.id }))
+      const first = await firstRes.json()
+
+      // Simulate the TOCTOU race: another request creates the row directly between this
+      // route's existence-check and its own `addToPortfolio` call, so the route's call
+      // hits P2002 rather than taking the already-exists early-return path. Spying on the
+      // service module (a plain ES module namespace) rather than the raw Prisma client
+      // proxy — `vi.spyOn().mockRestore()` does not safely reinstate Prisma's proxied
+      // model methods (verified: it leaves them non-callable for later tests).
+      const p2002 = new Prisma.PrismaClientKnownRequestError('Unique constraint failed on the fields: (`opportunityCardId`)', {
+        code: 'P2002',
+        clientVersion: '6.10.0',
+      })
+      const spy = vi.spyOn(portfolioService, 'addToPortfolio').mockRejectedValueOnce(p2002)
+
+      try {
+        const res = await postPortfolio(jsonReq('http://test.local/api/portfolio', 'POST', { opportunityCardId: card.id }))
+        expect(res.status).toBe(200)
+        const body = await res.json()
+        expect(body.id).toBe(first.id)
+        expect(body.opportunityCardId).toBe(card.id)
+      } finally {
+        spy.mockRestore()
+      }
+
+      // The mock is fully restored — the client stays usable for subsequent tests.
+      const afterRes = await postPortfolio(jsonReq('http://test.local/api/portfolio', 'POST', { opportunityCardId: card.id }))
+      expect(afterRes.status).toBe(200)
     })
 
     it('GET lists all portfolio items', async () => {
