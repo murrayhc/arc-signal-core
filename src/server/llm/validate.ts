@@ -6,6 +6,13 @@ export type ValidateOptions = {
   schema?: ZodSchema<unknown>
   evidenceIds?: string[]
   requireGrounding?: boolean
+  /** Additional caller-supplied prohibited-language checkers, run over the raw
+   *  text alongside the base advice-language guard. Each checker returns the
+   *  list of matched phrases (empty = clean). A non-empty result from ANY
+   *  checker fails validation and folds into prohibitedLanguageDetected/notes —
+   *  this is the single centralised rejection point, so callers never need a
+   *  post-hoc check after runLLMTask has already returned SUCCEEDED. */
+  extraCheckers?: Array<(raw: string) => string[]>
 }
 
 export type ValidationResult = {
@@ -23,7 +30,7 @@ export type ValidationResult = {
  *  (nothing to fail), but grounding, when required, must be demonstrated —
  *  never assumed. */
 export function validateLLMOutput(raw: string, opts: ValidateOptions): ValidationResult {
-  const { schema, evidenceIds = [], requireGrounding = false } = opts
+  const { schema, evidenceIds = [], requireGrounding = false, extraCheckers = [] } = opts
   const notes: string[] = []
 
   let schemaValid = true
@@ -39,8 +46,10 @@ export function validateLLMOutput(raw: string, opts: ValidateOptions): Validatio
   }
 
   const adviceMatches = findAdviceLanguage(raw)
-  const prohibitedLanguageDetected = adviceMatches.length > 0
-  if (prohibitedLanguageDetected) notes.push(`Prohibited language detected: ${adviceMatches.join('; ')}`)
+  const extraMatches = extraCheckers.flatMap((check) => check(raw))
+  const prohibitedLanguageDetected = adviceMatches.length > 0 || extraMatches.length > 0
+  if (adviceMatches.length > 0) notes.push(`Prohibited language detected: ${adviceMatches.join('; ')}`)
+  if (extraMatches.length > 0) notes.push(`Prohibited language detected: ${extraMatches.join('; ')}`)
 
   const evidenceGrounded = !requireGrounding || evidenceIds.some((id) => raw.includes(id))
   const unsupportedClaimsDetected = requireGrounding && !evidenceGrounded

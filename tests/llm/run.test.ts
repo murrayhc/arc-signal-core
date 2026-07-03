@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { prisma } from '@/server/db'
 import { resetDb } from '../helpers'
+import { runSeed } from '@/server/seed'
 import { runLLMTask } from '@/server/llm/run'
 import { getActiveProvider } from '@/server/llm/provider'
 import type { LLMProvider, LLMRequest, LLMResponse } from '@/server/llm/types'
@@ -125,5 +126,75 @@ describe('runLLMTask', () => {
     } finally {
       delete process.env.ANTHROPIC_API_KEY
     }
+  })
+
+  it('extraCheckers: a caller-supplied checker can fail validation for text the base advice-language guard misses', async () => {
+    // "guaranteed conversion" is NOT matched by findAdviceLanguage's patterns (only
+    // "guaranteed returns/profit/gains" and "guaranteed win") — this proves a
+    // caller-supplied extraChecker centralises rejection for such phrases via the
+    // normal REJECTED_VALIDATION + redaction path, rather than a post-hoc check.
+    const provider = new FakeProvider(() => ({
+      text: 'This campaign has a guaranteed conversion rate.',
+      tokensIn: 8,
+      tokensOut: 12,
+    }))
+    const guaranteedOutcomeChecker = (raw: string): string[] => {
+      const m = raw.match(/\bguaranteed\s+conversion\b/i)
+      return m ? [m[0]] : []
+    }
+    const result = await runLLMTask(baseRequest, {
+      provider,
+      validate: { extraCheckers: [guaranteedOutcomeChecker] },
+    })
+
+    expect(result.status).toBe('REJECTED_VALIDATION')
+    expect(result.text).toBeUndefined()
+    expect(result.validation).not.toBeNull()
+    expect(result.validation!.validationStatus).toBe('FAILED')
+    expect(result.validation!.prohibitedLanguageDetected).toBe(true)
+    expect(result.validation!.notes).toContain('guaranteed conversion')
+
+    const run = await prisma.lLMRun.findUniqueOrThrow({ where: { id: result.llmRunId } })
+    expect(run.status).toBe('REJECTED_VALIDATION')
+    // Redacted — the same audit-safety path as the base advice-language guard.
+    expect(run.outputSummary).not.toContain('guaranteed conversion')
+    expect(run.outputSummary).toContain('redacted')
+  })
+})
+
+describe('runLLMTask — model routing', () => {
+  beforeEach(async () => {
+    await resetDb()
+    await runSeed({ includeLive: false })
+  })
+
+  it('logs the ROUTED model name on LLMRun.model for a task the seeded configs support, not the provider name', async () => {
+    const req: LLMRequest = {
+      taskType: 'OPPORTUNITY_PLAYBOOK_GENERATION',
+      system: 'You produce structured playbooks.',
+      prompt: 'Draft a playbook.',
+    }
+    const result = await runLLMTask(req, { provider: new FakeProvider() })
+    expect(result.status).toBe('SUCCEEDED')
+
+    const run = await prisma.lLMRun.findUniqueOrThrow({ where: { id: result.llmRunId } })
+    // The seeded creative config (router.test.ts confirms routeTask picks this
+    // for OPPORTUNITY_PLAYBOOK_GENERATION) — NOT 'fake-provider', the provider name.
+    expect(run.model).toBe('claude-creative')
+    expect(run.model).not.toBe('fake-provider')
+  })
+
+  it('when no seeded config supports the task, logs honestly rather than fabricating a model name', async () => {
+    const req: LLMRequest = {
+      taskType: 'TRANSLATION', // router.test.ts confirms no seeded config supports this
+      system: 'Translate this.',
+      prompt: 'Bonjour.',
+    }
+    const result = await runLLMTask(req, { provider: new FakeProvider() })
+    expect(result.status).toBe('SUCCEEDED')
+
+    const run = await prisma.lLMRun.findUniqueOrThrow({ where: { id: result.llmRunId } })
+    // Not the (wrong) provider name masquerading as a model, and not a fabricated model id.
+    expect(run.model).not.toBe('fake-provider')
   })
 })

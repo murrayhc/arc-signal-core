@@ -184,6 +184,40 @@ describe('generatePlaybook (deterministic)', () => {
     expect(playbook.generatedBy).toBe('DETERMINISTIC')
   })
 
+  it('with a FakeProvider returning "guaranteed conversion" (grounded, schema-valid), the run is REJECTED_VALIDATION, the LLMRun is redacted, and the playbook stays DETERMINISTIC', async () => {
+    const { card, claimId } = await seedCardWithEvidence()
+    // "guaranteed conversion" is NOT caught by findAdviceLanguage's patterns (only
+    // "guaranteed returns/profit/gains" and "guaranteed win") — this proves the
+    // guaranteed-outcome check is now centralised inside runLLMTask's validation
+    // (via extraCheckers), not applied post-hoc after SUCCEEDED.
+    const provider = new FakeProvider(() => ({
+      text: JSON.stringify({
+        targetBuyer: 'Recruiters',
+        commercialHypothesis: `Evidence ${claimId}: this outreach has a guaranteed conversion rate.`,
+        painStatement: 'Organisations may face disruption releasing experienced staff.',
+        offerAngle: 'A recruiter could prepare a shortlist of available candidates.',
+        discoveryQuestions: ['What is the current headcount trend?'],
+        outreachAngle: 'A tailored note referencing the recent workforce pattern.',
+        likelyObjections: ['We already have a recruiter relationship.'],
+        proofPoints: [`Grounded in claim ${claimId}.`],
+        firstAction: 'Draft a shortlist and confirm the buyer contact.',
+      }),
+      tokensIn: 50,
+      tokensOut: 80,
+    }))
+    const playbook = await generatePlaybook(card.id, { provider })
+
+    expect(playbook.generatedBy).toBe('DETERMINISTIC')
+
+    const run = await prisma.lLMRun.findFirstOrThrow({
+      where: { taskType: 'OPPORTUNITY_PLAYBOOK_GENERATION' },
+      orderBy: { createdAt: 'desc' },
+    })
+    expect(run.status).toBe('REJECTED_VALIDATION')
+    expect(run.outputSummary).not.toContain('guaranteed conversion')
+    expect(run.outputSummary).toContain('redacted')
+  })
+
   it('with a card that has no evidence, an ungrounded LLM playbook is rejected (stays DETERMINISTIC)', async () => {
     const { card } = await seedCard() // no evidence chain → evidenceClaimIds() empty
     const provider = new FakeProvider(() => ({

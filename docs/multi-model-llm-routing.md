@@ -45,11 +45,31 @@ configs whose `taskTypesJson` includes that task, prefers `enabled` configs,
 and breaks ties by `modelName` ascending. It returns `null` when no config
 supports the task — routing never throws, it degrades to "nothing routed."
 
+`routeTask` is **wired into the run path**: `runLLMTask` (`run.ts`) calls
+`routeTask(taskType, await loadRouterConfigs())` before invoking the provider,
+and uses the routed `modelName`/`costTier` for both the `LLMRequest.model`
+threaded to the provider and the `LLMRun.model`/cost-estimate columns logged
+to the audit trail. If no config supports the requested task type, the audit
+row logs `model: 'unrouted'` — an honest marker, never a fabricated model id
+and never the provider name.
+
 `LLMProviderConfig` carries only routing metadata — provider name, model
 name, supported task types, cost/latency tier, enabled flag, an optional
 fallback pointer. **It has no API-key column.** Keys live only in
 `process.env.ANTHROPIC_API_KEY`, read once at call time and never persisted
 or logged.
+
+**Seeded `modelName` values are PLACEHOLDERS.** The shipped seed
+(`src/server/seed.ts`) populates `LLMProviderConfig.modelName` with
+descriptive slugs (`claude-fast`, `claude-reasoning`, `claude-longcontext`,
+`claude-creative`) rather than real Anthropic model ids — these exist to
+prove the routing logic end-to-end in tests, not as activation-ready values.
+Before enabling a config in production, the owner must update its
+`modelName` to a real, current Anthropic model id (see §7). The Anthropic
+adapter's own fallback (used only when a request reaches it with no routed
+`req.model`) is a separate, clearly-named constant,
+`DEFAULT_ANTHROPIC_MODEL` in `provider.ts` — not the seeded placeholder and
+not the retired `claude-3-5-sonnet-latest` id.
 
 ## 3. The dormancy model
 
@@ -84,8 +104,12 @@ ever actually called. It:
    `null` to force dormant — otherwise `getActiveProvider()`).
 2. If no provider: logs an `LLMRun` row with `status: 'SKIPPED_NO_PROVIDER'`
    and returns immediately. **No network call.**
-3. If a provider exists: calls `provider.generate(req)`. A thrown error logs
-   `status: 'FAILED'` and returns no text.
+3. If a provider exists: resolves the route (`routeTask` — see §2) and calls
+   `provider.generate(req)` with the routed model threaded in. A thrown
+   `NoProviderConfiguredError` (key set but the SDK failed to load — its
+   documented "dormant" meaning) logs `status: 'SKIPPED_NO_PROVIDER'`; any
+   other thrown error logs `status: 'FAILED'`. Either way, no text is
+   returned.
 4. On a successful call, runs `validateLLMOutput(text, opts.validate)`
    (`src/server/llm/validate.ts`), which checks, in order:
    - **Schema** — if a Zod schema was supplied, the raw text must parse as
@@ -163,11 +187,23 @@ their validation outcome.
 Orchestration ships dormant. To turn it on:
 
 1. Set `ANTHROPIC_API_KEY` in the environment.
-2. Install the optional peer dependency: `npm i @anthropic-ai/sdk`. The
-   import in `provider.ts` is lazy and guarded — without the key set, the
-   package is never imported at all; without the package installed, calls
-   degrade to `NoProviderConfiguredError` instead of crashing.
-3. Enable at least one `LLMProviderConfig` row for the task type(s) you want
+2. Install the optional peer dependency: `npm i @anthropic-ai/sdk`. The SDK
+   is declared as a `serverExternalPackages` entry in `next.config.ts`, so
+   once installed Next.js resolves it via native Node module resolution at
+   runtime rather than bundling it. The dynamic `import()` in `provider.ts`
+   also carries `webpackIgnore`/`turbopackIgnore` magic comments — since the
+   import specifier is a variable (not a string literal) so the package never
+   needs to be present to compile, these comments tell each bundler to skip
+   static analysis of that expression, which is what actually keeps
+   `npm run build` clean (no "Critical dependency" warning) with the package
+   absent. The import is additionally lazy and guarded at runtime — without
+   the key set, the package is never imported at all; without the package
+   installed, calls degrade to `NoProviderConfiguredError` (logged as
+   `SKIPPED_NO_PROVIDER`, not `FAILED` — see §4) instead of crashing.
+3. Update the `modelName` on the `LLMProviderConfig` row(s) you intend to
+   enable from its seeded placeholder (e.g. `claude-creative`) to a real,
+   current Anthropic model id.
+4. Enable at least one `LLMProviderConfig` row for the task type(s) you want
    live (e.g. flip `enabled: true` on a config whose `taskTypesJson` includes
    `"OPPORTUNITY_PLAYBOOK_GENERATION"`).
 
@@ -203,5 +239,14 @@ bypasses validation.
 - **Market-context synthesis** (`MARKET_CONTEXT_SYNTHESIS`,
   `RISK_OPPORTUNITY_SYNTHESIS`) is routed but not yet wired to a generating
   service — tracked for Phase 3e.
-- **Portfolio-level "save"/comparison workflows** across multiple playbooks
-  are tracked for Phase 3f, not this phase.
+- **`renderExecutiveBrief`/`renderOutreachDraft`** (`src/server/playbook/service.ts`)
+  are implemented and tested (deterministic, guard-clean renderings derived
+  from a persisted playbook) but not yet called from any API route or UI
+  component — not surfaced to a user-facing surface yet.
+- **Positioning/brief LLM-enrichment task types**
+  (`STRATEGIC_POSITIONING_GENERATION`, `EXECUTIVE_BRIEF_GENERATION`) are
+  seeded in `LLMProviderConfig` and resolvable by `routeTask`, but no service
+  calls `runLLMTask` with either task type yet — routed, not wired to a
+  generating surface.
+- **"Save to portfolio"** across multiple playbooks is a Phase 3f stub, not
+  this phase — portfolio-level "save"/comparison workflows are tracked there.

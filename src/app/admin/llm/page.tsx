@@ -92,7 +92,7 @@ export default async function LLMAuditPage() {
                   <td className="py-2 pr-4 text-xs text-slate-400">
                     {r.tokenCountInput} / {r.tokenCountOutput}
                   </td>
-                  <td className="py-2 pr-4 text-xs text-slate-400">${r.estimatedCost.toFixed(4)}</td>
+                  <td className="py-2 pr-4 text-xs text-slate-400">£{r.estimatedCost.toFixed(4)}</td>
                   <td className="py-2 pr-4 text-xs text-slate-400">{r.latencyMs}ms</td>
                   <td className="py-2 pr-4 text-xs text-slate-400">
                     {r.validation ? (

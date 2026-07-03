@@ -1,6 +1,15 @@
 import { prisma } from '@/server/db'
 import { NoProviderConfiguredError, type LLMProvider, type LLMRequest, type LLMResponse } from './types'
 
+/** Fallback model id used ONLY when a request reaches the Anthropic adapter
+ *  with no routed req.model (e.g. routeTask found no config for the task
+ *  type). Seeded LLMProviderConfig.modelName values (claude-fast,
+ *  claude-creative, etc.) are PLACEHOLDERS — the owner sets real Anthropic
+ *  model ids when enabling a config on activation (see
+ *  docs/multi-model-llm-routing.md). This constant is a clearly-named current
+ *  default, not the retired 'claude-3-5-sonnet-latest' id. */
+export const DEFAULT_ANTHROPIC_MODEL = 'claude-sonnet-5'
+
 /** Always-dormant provider. Used as an explicit fallback; generate() always
  *  throws NoProviderConfiguredError so callers degrade the same way whether
  *  they hold a NullProvider or got null from getActiveProvider(). */
@@ -28,14 +37,27 @@ export function createAnthropicProvider(): LLMProvider | null {
       // it stays an optional peer dependency. Degrades to
       // NoProviderConfiguredError (dormant) if the package isn't installed;
       // never crashes the build or the request.
+      //
+      // The webpackIgnore/turbopackIgnore magic comments tell each bundler's
+      // parser to skip static analysis of this import() entirely — since the
+      // specifier is a variable (not a string literal), the parser can never
+      // resolve a request string anyway, and without these comments it emits
+      // "Critical dependency: the request of a dependency is an expression"
+      // while walking the AST. serverExternalPackages in next.config.ts
+      // (which controls how an already-resolved import is bundled at runtime)
+      // does not reach this — it operates one phase later than the parser
+      // warning this suppresses. Both comments are needed: webpackIgnore for
+      // `next build`'s current webpack default, turbopackIgnore for Turbopack.
       const sdkModuleName = '@anthropic-ai/sdk'
-      const sdk: unknown = await import(sdkModuleName).catch(() => null)
+      const sdk: unknown = await import(/* webpackIgnore: true */ /* turbopackIgnore: true */ sdkModuleName).catch(
+        () => null,
+      )
       if (!sdk) throw new NoProviderConfiguredError('@anthropic-ai/sdk is not installed — orchestration is dormant.')
 
       const AnthropicCtor = (sdk as { default: new (opts: { apiKey: string }) => AnthropicClient }).default
       const client = new AnthropicCtor({ apiKey })
       const response = await client.messages.create({
-        model: 'claude-3-5-sonnet-latest',
+        model: req.model ?? DEFAULT_ANTHROPIC_MODEL,
         max_tokens: req.maxTokens ?? 1024,
         system: req.system,
         messages: [{ role: 'user', content: req.prompt }],

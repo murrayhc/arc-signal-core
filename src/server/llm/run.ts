@@ -2,8 +2,13 @@ import { createHash } from 'node:crypto'
 import { prisma } from '@/server/db'
 import type { LLMRunStatus } from '@/shared/enums'
 import { getActiveProvider } from './provider'
-import type { LLMProvider, LLMRequest } from './types'
+import { loadRouterConfigs, routeTask } from './router'
+import { NoProviderConfiguredError, type LLMProvider, type LLMRequest } from './types'
 import { validateLLMOutput, type ValidateOptions, type ValidationResult } from './validate'
+
+/** Logged in LLMRun.model when routeTask found no config supporting the task
+ *  type — an honest "nothing was routed" marker, never a fabricated model id. */
+const UNROUTED_MODEL = 'unrouted'
 
 export type RunLLMTaskOptions = {
   /** Injectable provider for tests/dormant callers. Pass null explicitly to
@@ -79,21 +84,34 @@ export async function runLLMTask(req: LLMRequest, opts: RunLLMTaskOptions): Prom
     return { status: 'SKIPPED_NO_PROVIDER', llmRunId: run.id, validation: null }
   }
 
+  // Resolve which model this task routes to BEFORE calling the provider, so both
+  // the audit row and the request sent to the provider agree on the same model —
+  // routeTask is pure/DB-read-only, never a network call, so this stays dormant-safe.
+  const routed = routeTask(req.taskType, await loadRouterConfigs())
+  const routedModel = routed?.modelName ?? UNROUTED_MODEL
+  const routedCostTier = routed?.costTier ?? 'MEDIUM'
+  const routedReq: LLMRequest = routed ? { ...req, model: routed.modelName } : req
+
   const startedAt = Date.now()
   let response
   try {
-    response = await provider.generate(req)
+    response = await provider.generate(routedReq)
   } catch (err) {
     const latencyMs = Date.now() - startedAt
+    // A key was set (so getActiveProvider() returned a live-looking provider) but the
+    // provider itself couldn't actually run — e.g. @anthropic-ai/sdk isn't installed.
+    // This is the documented "dormant" meaning, not a genuine call failure — log it
+    // as SKIPPED_NO_PROVIDER so it doesn't read as a broken integration.
+    const isNoProvider = err instanceof NoProviderConfiguredError
     const run = await prisma.lLMRun.create({
       data: {
         taskType: req.taskType,
         provider: provider.name,
-        model: provider.name,
+        model: routedModel,
         promptHash,
         inputSummary,
         outputSummary: '',
-        status: 'FAILED' satisfies LLMRunStatus,
+        status: (isNoProvider ? 'SKIPPED_NO_PROVIDER' : 'FAILED') satisfies LLMRunStatus,
         tokenCountInput: 0,
         tokenCountOutput: 0,
         estimatedCost: 0,
@@ -101,7 +119,11 @@ export async function runLLMTask(req: LLMRequest, opts: RunLLMTaskOptions): Prom
         errorMessage: err instanceof Error ? err.message : 'Unknown provider error',
       },
     })
-    return { status: 'FAILED', llmRunId: run.id, validation: null }
+    return {
+      status: isNoProvider ? 'SKIPPED_NO_PROVIDER' : 'FAILED',
+      llmRunId: run.id,
+      validation: null,
+    }
   }
   const latencyMs = Date.now() - startedAt
 
@@ -111,15 +133,15 @@ export async function runLLMTask(req: LLMRequest, opts: RunLLMTaskOptions): Prom
   // redact it from the audit row rather than retaining the snippet verbatim.
   const outputSummary = finalStatus === 'SUCCEEDED' ? summarize(response.text) : '[redacted: output failed validation]'
 
-  const costTier = 'MEDIUM'
   const estimatedCost =
-    (response.tokensIn + response.tokensOut) * (COST_PER_TOKEN_BY_TIER[costTier] ?? COST_PER_TOKEN_BY_TIER.MEDIUM)
+    (response.tokensIn + response.tokensOut) *
+    (COST_PER_TOKEN_BY_TIER[routedCostTier] ?? COST_PER_TOKEN_BY_TIER.MEDIUM)
 
   const run = await prisma.lLMRun.create({
     data: {
       taskType: req.taskType,
       provider: provider.name,
-      model: provider.name,
+      model: routedModel,
       promptHash,
       inputSummary,
       outputSummary,
