@@ -1,14 +1,15 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import dynamic from 'next/dynamic'
 import type { GraphEdgeData, RenderNode } from '@/server/services/graph'
 
-// react-force-graph wraps Three.js/WebGL — client-only. Both variants are named
-// exports of the same bundled `react-force-graph` package, so we load one module
-// and pick the named export per mode, still gated behind ssr:false.
-const ForceGraph3D = dynamic(() => import('react-force-graph').then((m) => m.ForceGraph3D), { ssr: false })
-const ForceGraph2D = dynamic(() => import('react-force-graph').then((m) => m.ForceGraph2D), { ssr: false })
+// Three.js/WebGL + Canvas — client-only, loaded via ssr:false. We import the
+// STANDALONE `react-force-graph-2d`/`-3d` packages (default exports), NOT the
+// umbrella `react-force-graph`, because the umbrella also bundles the VR/AR
+// variants which reference a global `AFRAME` at module load and crash the app.
+const ForceGraph3D = dynamic(() => import('react-force-graph-3d'), { ssr: false })
+const ForceGraph2D = dynamic(() => import('react-force-graph-2d'), { ssr: false })
 
 export type RenderEdge = GraphEdgeData
 
@@ -53,12 +54,25 @@ export function ForceGraph({
   paused: boolean
   onSelect: (nodeId: string) => void
 }) {
+  // Mount gate: the server and the FIRST client render must produce identical
+  // HTML, so both show the placeholder; only after mount does the client swap in
+  // the WebGL/canvas graph. Branching on `typeof window` here instead would make
+  // server and client HTML differ → hydration mismatch crash (which is exactly
+  // what happened when this component was rendered directly during SSR).
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
+
   const graphData = useMemo(() => {
-    const links: GraphLink[] = edges.map((edge) => ({
-      source: edge.sourceNodeId,
-      target: edge.targetNodeId,
-      edge,
-    }))
+    // react-force-graph throws ("node not found") if a link references an id
+    // absent from the node set — drop any dangling edge before handing it over.
+    const nodeIds = new Set(nodes.map((n) => n.id))
+    const links: GraphLink[] = edges
+      .filter((edge) => nodeIds.has(edge.sourceNodeId) && nodeIds.has(edge.targetNodeId))
+      .map((edge) => ({
+        source: edge.sourceNodeId,
+        target: edge.targetNodeId,
+        edge,
+      }))
     return { nodes, links }
   }, [nodes, edges])
 
@@ -70,8 +84,8 @@ export function ForceGraph({
     )
   }
 
-  // Guard for SSR: the browser-only WebGL/canvas globals aren't available on the server.
-  if (typeof window === 'undefined') {
+  // Until mounted on the client, render the same placeholder the server did.
+  if (!mounted) {
     return (
       <div className="flex h-full min-h-[24rem] items-center justify-center rounded-lg border border-slate-800 bg-slate-950 text-sm text-slate-500">
         Loading graph…
@@ -90,10 +104,13 @@ export function ForceGraph({
     linkSource: 'source',
     linkTarget: 'target',
     onNodeClick: (node: SimNode) => onSelect(node.id),
-    // paused: stop the force simulation from ticking so the layout holds still (reduced motion).
+    // paused (reduced motion): run warmup ticks UP FRONT so nodes get laid out
+    // before the first paint, then do zero cooldown ticks so there is no ongoing
+    // animation. warmupTicks:0 here would leave nodes un-positioned and crash the
+    // renderer ("cannot read x of undefined") when it draws links.
+    warmupTicks: paused ? 80 : undefined,
     cooldownTicks: paused ? 0 : undefined,
     d3VelocityDecay: paused ? 1 : undefined,
-    warmupTicks: paused ? 0 : undefined,
   }
 
   return (

@@ -177,7 +177,11 @@ export async function interrogate(q: string): Promise<InterrogationResult> {
     positioning,
     subgraph: {
       nodes: [...subgraphNodeById.values()].map(toRenderNode),
-      edges: [...subgraphEdgeById.values()],
+      // Only edges whose BOTH endpoints are in the subgraph node set — a dangling
+      // edge would crash the force-graph renderer ("node not found").
+      edges: [...subgraphEdgeById.values()].filter(
+        (e) => subgraphNodeById.has(e.sourceNodeId) && subgraphNodeById.has(e.targetNodeId),
+      ),
     },
     marketContextAvailable,
     disclaimer,
