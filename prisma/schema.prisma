@@ -8,19 +8,19 @@ datasource db {
 }
 
 model Source {
-  id              String     @id @default(cuid())
-  name            String     @unique
+  id              String        @id @default(cuid())
+  name            String        @unique
   category        String
   accessMethod    String
   url             String?
-  isActive        Boolean    @default(true)
-  isFixture       Boolean    @default(false)
-  collectorStatus String     @default("UNSUPPORTED")
+  isActive        Boolean       @default(true)
+  isFixture       Boolean       @default(false)
+  collectorStatus String        @default("UNSUPPORTED")
   lastRunStatus   String?
   lastRunAt       DateTime?
   notes           String?
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @updatedAt
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
   documents       Document[]
   signals         Signal[]
   health          SourceHealth?
@@ -66,21 +66,21 @@ model Document {
 }
 
 model ParsedDocument {
-  id                     String    @id @default(cuid())
-  documentId             String    @unique
-  document               Document  @relation(fields: [documentId], references: [id])
-  title                  String
-  bodyText               String
-  publishedAt            DateTime?
-  authorsJson            String    @default("[]")
-  language               String    @default("en")
-  linksJson              String    @default("[]")
-  entitiesMentionedJson  String    @default("[]")
-  parserName             String
-  parserConfidence       Float
-  status                 String    @default("PARSED")
-  createdAt              DateTime  @default(now())
-  updatedAt              DateTime  @updatedAt
+  id                    String    @id @default(cuid())
+  documentId            String    @unique
+  document              Document  @relation(fields: [documentId], references: [id])
+  title                 String
+  bodyText              String
+  publishedAt           DateTime?
+  authorsJson           String    @default("[]")
+  language              String    @default("en")
+  linksJson             String    @default("[]")
+  entitiesMentionedJson String    @default("[]")
+  parserName            String
+  parserConfidence      Float
+  status                String    @default("PARSED")
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 }
 
 model Claim {
@@ -172,21 +172,21 @@ model SignalClusterEntity {
 }
 
 model EventCandidate {
-  id                   String                 @id @default(cuid())
+  id                   String                        @id @default(cuid())
   title                String
   eventType            String
   eventClass           String
   summary              String
-  status               String                 @default("NEW")
+  status               String                        @default("NEW")
   severity             Float
   probability          Float
   confidence           Float
   timeWindowStart      DateTime?
   timeWindowEnd        DateTime?
-  firstDetectedAt      DateTime               @default(now())
-  lastUpdatedAt        DateTime               @updatedAt
+  firstDetectedAt      DateTime                      @default(now())
+  lastUpdatedAt        DateTime                      @updatedAt
   primaryEntityId      String?
-  primaryEntity        Entity?                @relation("PrimaryEntity", fields: [primaryEntityId], references: [id])
+  primaryEntity        Entity?                       @relation("PrimaryEntity", fields: [primaryEntityId], references: [id])
   affectedSector       String?
   affectedRegion       String?
   evidenceCount        Int
@@ -196,9 +196,9 @@ model EventCandidate {
   opportunityScore     Float
   riskScore            Float
   createdFromScanRunId String
-  createdFromScanRun   ScanRun                @relation(fields: [createdFromScanRunId], references: [id])
-  isFixture            Boolean                @default(false)
-  createdAt            DateTime               @default(now())
+  createdFromScanRun   ScanRun                       @relation(fields: [createdFromScanRunId], references: [id])
+  isFixture            Boolean                       @default(false)
+  createdAt            DateTime                      @default(now())
   clusters             SignalCluster[]
   riskOpportunities    RiskOpportunity[]
   feedItems            DashboardFeedItem[]
@@ -247,30 +247,36 @@ model DashboardFeedItem {
 }
 
 model ScanRun {
-  id                        String           @id @default(cuid())
-  scanType                  String           @default("FULL")
-  status                    String           @default("RUNNING")
-  startedAt                 DateTime         @default(now())
-  completedAt               DateTime?
-  sourcesScanned            Int              @default(0)
-  sourcesSkipped            Int              @default(0)
-  documentsFetched          Int              @default(0)
-  claimsExtracted           Int              @default(0)
-  signalsCreated            Int              @default(0)
-  clustersCreated           Int              @default(0)
-  eventCandidatesCreated    Int              @default(0)
-  eventCandidatesUpdated    Int              @default(0)
-  dashboardFeedItemsCreated Int              @default(0)
-  opportunityCardsCreated   Int              @default(0)
-  opportunityCardsUpdated   Int              @default(0)
-  positioningExamplesCreated Int             @default(0)
-  graphNodesUpserted        Int              @default(0)
-  graphEdgesUpserted        Int              @default(0)
-  errorsJson                String           @default("[]")
-  warningsJson              String           @default("[]")
-  createdAt                 DateTime         @default(now())
-  updatedAt                 DateTime         @updatedAt
-  events                    EventCandidate[]
+  id                            String           @id @default(cuid())
+  scanType                      String           @default("FULL")
+  status                        String           @default("RUNNING")
+  startedAt                     DateTime         @default(now())
+  completedAt                   DateTime?
+  sourcesScanned                Int              @default(0)
+  sourcesSkipped                Int              @default(0)
+  documentsFetched              Int              @default(0)
+  claimsExtracted               Int              @default(0)
+  signalsCreated                Int              @default(0)
+  clustersCreated               Int              @default(0)
+  eventCandidatesCreated        Int              @default(0)
+  eventCandidatesUpdated        Int              @default(0)
+  dashboardFeedItemsCreated     Int              @default(0)
+  opportunityCardsCreated       Int              @default(0)
+  opportunityCardsUpdated       Int              @default(0)
+  positioningExamplesCreated    Int              @default(0)
+  graphNodesUpserted            Int              @default(0)
+  graphEdgesUpserted            Int              @default(0)
+  atomicClaimsExtracted         Int              @default(0)
+  canonicalClaimsCreated        Int              @default(0)
+  canonicalClaimsUpdated        Int              @default(0)
+  claimClustersUpserted         Int              @default(0)
+  lineageRecordsCreated         Int              @default(0)
+  investigationQueriesGenerated Int              @default(0)
+  errorsJson                    String           @default("[]")
+  warningsJson                  String           @default("[]")
+  createdAt                     DateTime         @default(now())
+  updatedAt                     DateTime         @updatedAt
+  events                        EventCandidate[]
 }
 
 model DataGap {
@@ -314,23 +320,23 @@ model SourceHealth {
 }
 
 model RevenueLens {
-  id                 String              @id @default(cuid())
-  name               String              @unique
-  description        String?
-  userType           String              @default("GENERAL")
-  targetSectorsJson  String              @default("[]")
-  targetRegionsJson  String              @default("[]")
-  offerTypesJson     String              @default("[]")
-  buyerPersonasJson  String              @default("[]")
-  averageDealSize    String?
-  salesCycle         String?
-  excludedSectorsJson String             @default("[]")
-  riskAppetite       String              @default("MEDIUM")
-  active             Boolean             @default(true)
-  isDefault          Boolean             @default(false)
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
-  opportunityCards   OpportunityCard[]
+  id                  String                        @id @default(cuid())
+  name                String                        @unique
+  description         String?
+  userType            String                        @default("GENERAL")
+  targetSectorsJson   String                        @default("[]")
+  targetRegionsJson   String                        @default("[]")
+  offerTypesJson      String                        @default("[]")
+  buyerPersonasJson   String                        @default("[]")
+  averageDealSize     String?
+  salesCycle          String?
+  excludedSectorsJson String                        @default("[]")
+  riskAppetite        String                        @default("MEDIUM")
+  active              Boolean                       @default(true)
+  isDefault           Boolean                       @default(false)
+  createdAt           DateTime                      @default(now())
+  updatedAt           DateTime                      @updatedAt
+  opportunityCards    OpportunityCard[]
   positioningExamples StrategicPositioningExample[]
 }
 
@@ -390,23 +396,23 @@ model StrategicPositioningExample {
 }
 
 model GraphNode {
-  id               String      @id @default(cuid())
+  id               String            @id @default(cuid())
   nodeType         String
   refType          String
   refId            String
   title            String
-  summary          String      @default("")
-  confidence       Float       @default(0)
-  riskScore        Float       @default(0)
-  opportunityScore Float       @default(0)
-  impactScore      Float       @default(0)
-  freshnessScore   Float       @default(0)
-  isFixture        Boolean     @default(false)
-  metadataJson     String      @default("{}")
-  createdAt        DateTime    @default(now())
-  updatedAt        DateTime    @updatedAt
-  outEdges         GraphEdge[] @relation("SourceNode")
-  inEdges          GraphEdge[] @relation("TargetNode")
+  summary          String            @default("")
+  confidence       Float             @default(0)
+  riskScore        Float             @default(0)
+  opportunityScore Float             @default(0)
+  impactScore      Float             @default(0)
+  freshnessScore   Float             @default(0)
+  isFixture        Boolean           @default(false)
+  metadataJson     String            @default("{}")
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  outEdges         GraphEdge[]       @relation("SourceNode")
+  inEdges          GraphEdge[]       @relation("TargetNode")
   arcSteps         EvidenceArcStep[]
 
   @@unique([refType, refId])
@@ -467,71 +473,71 @@ model EvidenceArcStep {
 }
 
 model LLMProviderConfig {
-  id               String   @id @default(cuid())
-  providerName     String
-  modelName        String   @unique
-  taskTypesJson    String   @default("[]")
-  maxContextTokens Int      @default(0)
-  costTier         String   @default("MEDIUM")
-  latencyTier      String   @default("MEDIUM")
-  strengthsJson    String   @default("[]")
-  weaknessesJson   String   @default("[]")
-  enabled          Boolean  @default(false)
+  id                 String   @id @default(cuid())
+  providerName       String
+  modelName          String   @unique
+  taskTypesJson      String   @default("[]")
+  maxContextTokens   Int      @default(0)
+  costTier           String   @default("MEDIUM")
+  latencyTier        String   @default("MEDIUM")
+  strengthsJson      String   @default("[]")
+  weaknessesJson     String   @default("[]")
+  enabled            Boolean  @default(false)
   fallbackProviderId String?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 }
 
 model LLMRun {
-  id               String              @id @default(cuid())
+  id               String                @id @default(cuid())
   taskType         String
   provider         String
   model            String
   promptHash       String
-  inputSummary     String              @default("")
-  outputSummary    String              @default("")
+  inputSummary     String                @default("")
+  outputSummary    String                @default("")
   status           String
-  tokenCountInput  Int                 @default(0)
-  tokenCountOutput Int                 @default(0)
-  estimatedCost    Float               @default(0)
-  latencyMs        Int                 @default(0)
+  tokenCountInput  Int                   @default(0)
+  tokenCountOutput Int                   @default(0)
+  estimatedCost    Float                 @default(0)
+  latencyMs        Int                   @default(0)
   errorMessage     String?
-  createdAt        DateTime            @default(now())
+  createdAt        DateTime              @default(now())
   validations      LLMOutputValidation[]
 }
 
 model LLMOutputValidation {
-  id                        String   @id @default(cuid())
-  llmRunId                  String
-  llmRun                    LLMRun   @relation(fields: [llmRunId], references: [id])
-  validationStatus          String
-  schemaValid               Boolean  @default(false)
-  evidenceGrounded          Boolean  @default(false)
-  prohibitedLanguageDetected Boolean @default(false)
-  unsupportedClaimsDetected Boolean  @default(false)
-  reviewNotes               String   @default("")
-  createdAt                 DateTime @default(now())
+  id                         String   @id @default(cuid())
+  llmRunId                   String
+  llmRun                     LLMRun   @relation(fields: [llmRunId], references: [id])
+  validationStatus           String
+  schemaValid                Boolean  @default(false)
+  evidenceGrounded           Boolean  @default(false)
+  prohibitedLanguageDetected Boolean  @default(false)
+  unsupportedClaimsDetected  Boolean  @default(false)
+  reviewNotes                String   @default("")
+  createdAt                  DateTime @default(now())
 }
 
 model OpportunityPlaybook {
-  id                    String          @id @default(cuid())
-  opportunityCardId     String          @unique
-  opportunityCard       OpportunityCard @relation(fields: [opportunityCardId], references: [id])
-  title                 String
-  targetBuyer           String
-  commercialHypothesis  String
-  painStatement         String
-  offerAngle            String
-  discoveryQuestionsJson String         @default("[]")
-  outreachAngle         String
-  likelyObjectionsJson  String          @default("[]")
-  proofPointsJson       String          @default("[]")
-  firstAction           String
-  confidence            Float
-  generatedBy           String          @default("DETERMINISTIC")
-  isFixture             Boolean         @default(false)
-  createdAt             DateTime        @default(now())
-  updatedAt             DateTime        @updatedAt
+  id                     String          @id @default(cuid())
+  opportunityCardId      String          @unique
+  opportunityCard        OpportunityCard @relation(fields: [opportunityCardId], references: [id])
+  title                  String
+  targetBuyer            String
+  commercialHypothesis   String
+  painStatement          String
+  offerAngle             String
+  discoveryQuestionsJson String          @default("[]")
+  outreachAngle          String
+  likelyObjectionsJson   String          @default("[]")
+  proofPointsJson        String          @default("[]")
+  firstAction            String
+  confidence             Float
+  generatedBy            String          @default("DETERMINISTIC")
+  isFixture              Boolean         @default(false)
+  createdAt              DateTime        @default(now())
+  updatedAt              DateTime        @updatedAt
 }
 
 model MarketSearchQuery {
@@ -592,16 +598,16 @@ model CommodityProfile {
 }
 
 model WatchMarket {
-  id            String   @id @default(cuid())
-  name          String   @unique
-  description   String?
-  sectorsJson   String   @default("[]")
-  regionsJson   String   @default("[]")
-  themesJson    String   @default("[]")
-  queryTermsJson String  @default("[]")
-  active        Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id             String   @id @default(cuid())
+  name           String   @unique
+  description    String?
+  sectorsJson    String   @default("[]")
+  regionsJson    String   @default("[]")
+  themesJson     String   @default("[]")
+  queryTermsJson String   @default("[]")
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }
 
 model OpportunityPortfolioItem {
@@ -639,4 +645,113 @@ model GraphEvent {
   metadataJson     String   @default("{}")
 
   @@index([graphNodeId, occurredAt])
+}
+
+// ── Evidence Depth Engine (Pass 2) ─────────────────────────────────────────
+// Additive layer. Cross-references to existing tables (documentId, sourceId,
+// entityId, eventCandidateId) are plain indexed String fields — no relation to
+// existing models, which stay frozen. Relations exist only among these models.
+
+model AtomicClaim {
+  id                   String          @id @default(cuid())
+  documentId           String
+  sourceId             String
+  canonicalClaimId     String?
+  canonicalClaim       CanonicalClaim? @relation(fields: [canonicalClaimId], references: [id])
+  claimText            String
+  claimType            String
+  entitiesJson         String          @default("[]")
+  sectorsJson          String          @default("[]")
+  regionsJson          String          @default("[]")
+  commoditiesJson      String          @default("[]")
+  instrumentsJson      String          @default("[]")
+  eventDate            DateTime?
+  extractionMethod     String
+  extractionConfidence Float
+  specificityScore     Float
+  factualityLabel      String
+  metadataJson         String          @default("{}")
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+
+  @@index([documentId])
+  @@index([sourceId])
+  @@index([canonicalClaimId])
+}
+
+model CanonicalClaim {
+  id                     String               @id @default(cuid())
+  claimText              String
+  normalisedClaimText    String
+  claimType              String
+  firstSeenAt            DateTime?
+  firstSeenSourceId      String?
+  originCandidateUrl     String?
+  independentSourceCount Int                  @default(0)
+  repeatCount            Int                  @default(0)
+  contradictionCount     Int                  @default(0)
+  supportScore           Float                @default(0)
+  reliabilityScore       Float                @default(0)
+  status                 String               @default("ACTIVE")
+  createdAt              DateTime             @default(now())
+  updatedAt              DateTime             @updatedAt
+  atomicClaims           AtomicClaim[]
+  cluster                ClaimCluster?
+  lineage                ClaimLineage[]
+  investigationQueries   InvestigationQuery[]
+
+  @@index([normalisedClaimText])
+  @@index([claimType])
+}
+
+model ClaimCluster {
+  id                     String         @id @default(cuid())
+  canonicalClaimId       String         @unique
+  canonicalClaim         CanonicalClaim @relation(fields: [canonicalClaimId], references: [id])
+  title                  String
+  summary                String
+  sourceCount            Int            @default(0)
+  independentSourceCount Int            @default(0)
+  copiedSourceCount      Int            @default(0)
+  contradictionCount     Int            @default(0)
+  reliabilityScore       Float          @default(0)
+  momentumScore          Float          @default(0)
+  createdAt              DateTime       @default(now())
+  updatedAt              DateTime       @updatedAt
+}
+
+model ClaimLineage {
+  id               String         @id @default(cuid())
+  canonicalClaimId String
+  canonicalClaim   CanonicalClaim @relation(fields: [canonicalClaimId], references: [id])
+  sourceId         String
+  documentId       String
+  url              String
+  publishedAt      DateTime?
+  firstSeenAt      DateTime?
+  relationToOrigin String
+  isLikelyCopy     Boolean        @default(false)
+  originConfidence Float          @default(0)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@unique([canonicalClaimId, documentId])
+  @@index([canonicalClaimId])
+}
+
+model InvestigationQuery {
+  id               String          @id @default(cuid())
+  canonicalClaimId String?
+  canonicalClaim   CanonicalClaim? @relation(fields: [canonicalClaimId], references: [id])
+  eventCandidateId String?
+  queryText        String
+  queryClass       String
+  status           String          @default("GENERATED")
+  resultCount      Int             @default(0)
+  metadataJson     String          @default("{}")
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  @@index([canonicalClaimId])
+  @@index([eventCandidateId])
 }
