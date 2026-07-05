@@ -4,8 +4,10 @@ import { getEventDetail } from '@/server/services/events'
 import type { EvidenceItem } from '@/server/services/events'
 import { getOpportunitiesForEvent } from '@/server/services/opportunities'
 import { getEventArc } from '@/server/services/graph'
+import { getEventEvidenceDepth } from '@/server/services/evidence-depth'
 import { EventActions } from '@/components/EventActions'
 import { EvidenceArc } from '@/components/EvidenceArc'
+import { EvidenceDepthPanel } from '@/components/EvidenceDepthPanel'
 import { ReplayPanel } from '@/components/ReplayPanel'
 import { ClassBadge, FixtureBadge, StatusBadge, pct } from '@/components/badges'
 
@@ -46,6 +48,7 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
   const { event } = detail
   const opportunities = await getOpportunitiesForEvent(event.id)
   const arcResult = await getEventArc(event.id)
+  const evidenceDepth = await getEventEvidenceDepth(event.id)
 
   return (
     <main className="mx-auto max-w-4xl px-6 py-8">
@@ -89,6 +92,10 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
 
       <Section title="Evidence arc">
         <EvidenceArc arc={arcResult?.arc ?? null} steps={arcResult?.steps ?? []} />
+      </Section>
+
+      <Section id="evidence-depth" title="Evidence depth">
+        <EvidenceDepthPanel depth={evidenceDepth} eventId={event.id} />
       </Section>
 
       <Section id="graph-replay" title="Graph replay">
