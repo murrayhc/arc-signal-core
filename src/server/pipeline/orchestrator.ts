@@ -12,6 +12,7 @@ import { generatePositioning } from './positioning'
 import { updateSourceHealth } from './health'
 import { syncGraphForEvents } from '@/server/graph/builder'
 import { recordGraphEvents } from '@/server/graph/timeline'
+import { runEvidenceDepth } from '@/server/evidence/depth-pipeline'
 import type { PipelineError } from './types'
 
 export type ScanSummary = {
@@ -35,6 +36,12 @@ export type ScanSummary = {
     positioningExamplesCreated: number
     graphNodesUpserted: number
     graphEdgesUpserted: number
+    atomicClaimsExtracted: number
+    canonicalClaimsCreated: number
+    canonicalClaimsUpdated: number
+    claimClustersUpserted: number
+    lineageRecordsCreated: number
+    investigationQueriesGenerated: number
   }
   errors: PipelineError[]
   warnings: PipelineError[]
@@ -62,6 +69,12 @@ export async function runFullScan(options: { scanType?: string } = {}): Promise<
     positioningExamplesCreated: 0,
     graphNodesUpserted: 0,
     graphEdgesUpserted: 0,
+    atomicClaimsExtracted: 0,
+    canonicalClaimsCreated: 0,
+    canonicalClaimsUpdated: 0,
+    claimClustersUpserted: 0,
+    lineageRecordsCreated: 0,
+    investigationQueriesGenerated: 0,
   }
 
   try {
@@ -84,6 +97,24 @@ export async function runFullScan(options: { scanType?: string } = {}): Promise<
     // 5. Parse.
     const parsed = await parseDocuments(collected.documents)
     errors.push(...parsed.errors)
+
+    // 5b. Evidence Depth Engine (additive, non-fatal): atomic claims →
+    // canonical clustering → lineage → reliability → capped in-scan follow-up
+    // queries. Runs alongside the legacy claim→signal spine (which is unchanged)
+    // over the same parsed documents. A failure here never fails the scan.
+    try {
+      const sourcesById = new Map(sources.map((s) => [s.id, s]))
+      const depth = await runEvidenceDepth(parsed.parsed, docsById, sourcesById)
+      errors.push(...depth.errors)
+      counts.atomicClaimsExtracted = depth.counts.atomicClaimsExtracted
+      counts.canonicalClaimsCreated = depth.counts.canonicalClaimsCreated
+      counts.canonicalClaimsUpdated = depth.counts.canonicalClaimsUpdated
+      counts.claimClustersUpserted = depth.counts.claimClustersUpserted
+      counts.lineageRecordsCreated = depth.counts.lineageRecordsCreated
+      counts.investigationQueriesGenerated = depth.counts.investigationQueriesGenerated
+    } catch (err) {
+      errors.push({ stage: 'evidence-depth', message: err instanceof Error ? err.message : String(err) })
+    }
 
     // 6. Extract claims.
     const claims = await extractClaims(parsed.parsed, docsById)
