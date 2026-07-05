@@ -92,7 +92,7 @@ export async function runSeed(options: { includeLive?: boolean } = {}) {
     {
       providerName: 'Anthropic',
       modelName: 'claude-fast',
-      taskTypesJson: JSON.stringify(['FAST_CLASSIFICATION', 'SIGNAL_CLASSIFICATION_ASSIST', 'CLAIM_EXTRACTION_ASSIST']),
+      taskTypesJson: JSON.stringify(['FAST_CLASSIFICATION', 'SIGNAL_CLASSIFICATION_ASSIST', 'CLAIM_EXTRACTION_ASSIST', 'CLAIM_NORMALISATION', 'JSON_REPAIR']),
       costTier: 'LOW',
       latencyTier: 'FAST',
       strengthsJson: JSON.stringify(['Speed', 'Cost-effective']),
@@ -101,7 +101,7 @@ export async function runSeed(options: { includeLive?: boolean } = {}) {
     {
       providerName: 'Anthropic',
       modelName: 'claude-reasoning',
-      taskTypesJson: JSON.stringify(['CONTRADICTION_ANALYSIS', 'EVIDENCE_ARC_SUMMARY', 'RISK_OPPORTUNITY_SYNTHESIS']),
+      taskTypesJson: JSON.stringify(['CONTRADICTION_ANALYSIS', 'EVIDENCE_ARC_SUMMARY', 'RISK_OPPORTUNITY_SYNTHESIS', 'SOURCE_COMPARISON', 'COMPANY_IMPACT_ANALYSIS', 'FUTURE_SCENARIOS']),
       costTier: 'HIGH',
       latencyTier: 'SLOW',
       strengthsJson: JSON.stringify(['Deep reasoning', 'Complex analysis']),
@@ -120,7 +120,7 @@ export async function runSeed(options: { includeLive?: boolean } = {}) {
     {
       providerName: 'Anthropic',
       modelName: 'claude-creative',
-      taskTypesJson: JSON.stringify(['OPPORTUNITY_PLAYBOOK_GENERATION', 'STRATEGIC_POSITIONING_GENERATION', 'EXECUTIVE_BRIEF_GENERATION', 'OUTREACH_DRAFT_GENERATION', 'GRAPH_NODE_SUMMARY', 'GRAPH_EDGE_EXPLANATION']),
+      taskTypesJson: JSON.stringify(['OPPORTUNITY_PLAYBOOK_GENERATION', 'STRATEGIC_POSITIONING_GENERATION', 'EXECUTIVE_BRIEF_GENERATION', 'OUTREACH_DRAFT_GENERATION', 'GRAPH_NODE_SUMMARY', 'GRAPH_EDGE_EXPLANATION', 'STRATEGIC_POSITIONING', 'REPORT_SYNTHESIS', 'HISTORIC_CONTEXT', 'PRESENT_CONTEXT']),
       costTier: 'MEDIUM',
       latencyTier: 'MEDIUM',
       strengthsJson: JSON.stringify(['Creative generation', 'Content quality']),

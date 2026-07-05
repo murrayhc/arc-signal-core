@@ -143,6 +143,7 @@ export async function runLLMTask(req: LLMRequest, opts: RunLLMTaskOptions): Prom
       provider: provider.name,
       model: routedModel,
       promptHash,
+      outputHash: createHash('sha256').update(response.text).digest('hex'),
       inputSummary,
       outputSummary,
       status: finalStatus,
