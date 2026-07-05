@@ -272,6 +272,9 @@ model ScanRun {
   claimClustersUpserted         Int              @default(0)
   lineageRecordsCreated         Int              @default(0)
   investigationQueriesGenerated Int              @default(0)
+  companyImpactsCreated         Int              @default(0)
+  contextSynthesesCreated       Int              @default(0)
+  futureScenariosCreated        Int              @default(0)
   errorsJson                    String           @default("[]")
   warningsJson                  String           @default("[]")
   createdAt                     DateTime         @default(now())
@@ -380,6 +383,7 @@ model StrategicPositioningExample {
   opportunityCardId String?
   opportunityCard   OpportunityCard? @relation(fields: [opportunityCardId], references: [id])
   evidenceArcId     String?
+  companyImpactId   String?
   revenueLensId     String?
   revenueLens       RevenueLens?     @relation(fields: [revenueLensId], references: [id])
   title             String
@@ -494,6 +498,7 @@ model LLMRun {
   provider         String
   model            String
   promptHash       String
+  outputHash       String?
   inputSummary     String                @default("")
   outputSummary    String                @default("")
   status           String
@@ -753,5 +758,61 @@ model InvestigationQuery {
   updatedAt        DateTime        @updatedAt
 
   @@index([canonicalClaimId])
+  @@index([eventCandidateId])
+}
+
+// ── Commercial Consequence Engine (Pass 3) ─────────────────────────────────
+// Additive. Cross-references to existing tables (eventCandidateId, claimClusterId,
+// entityId, companyImpactId) are plain indexed String fields — existing models
+// stay frozen.
+
+model CompanyImpact {
+  id               String   @id @default(cuid())
+  eventCandidateId String?
+  claimClusterId   String?
+  entityId         String?
+  companyName      String
+  impactType       String
+  impactPathway    String
+  confidence       Float
+  evidenceIdsJson  String   @default("[]")
+  riskScore        Float    @default(0)
+  opportunityScore Float    @default(0)
+  watchSignalsJson String   @default("[]")
+  metadataJson     String   @default("{}")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([eventCandidateId])
+  @@index([entityId])
+}
+
+model EventContextSynthesis {
+  id               String   @id @default(cuid())
+  eventCandidateId String   @unique
+  historicContext  String
+  presentContext   String
+  futureContext    String
+  confidence       Float
+  evidenceIdsJson  String   @default("[]")
+  metadataJson     String   @default("{}")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model FutureScenario {
+  id                      String   @id @default(cuid())
+  eventCandidateId        String
+  scenarioType            String
+  title                   String
+  summary                 String
+  confirmingSignalsJson   String   @default("[]")
+  weakeningSignalsJson    String   @default("[]")
+  likelyBeneficiariesJson String   @default("[]")
+  likelyHarmedPartiesJson String   @default("[]")
+  confidence              Float
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
   @@index([eventCandidateId])
 }

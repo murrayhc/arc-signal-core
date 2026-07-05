@@ -41,6 +41,17 @@ describe('findAdviceLanguage', () => {
     }
   })
 
+  it('catches the Pass 3 forbidden phrases', () => {
+    for (const bad of [
+      'This offers a certain return for buyers.',
+      'A guaranteed profit awaits.',
+      'Adjust your portfolio allocation accordingly.',
+      'This is our investment recommendation.',
+    ]) {
+      expect(findAdviceLanguage(bad).length).toBeGreaterThan(0)
+    }
+  })
+
   it('does not false-positive on the strategic vocabulary the templates use', () => {
     for (const ok of [
       'Strong buyer demand may be forming in this sector.',

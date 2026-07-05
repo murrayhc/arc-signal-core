@@ -135,6 +135,7 @@ function renderExample(
     eventCandidateId: card.eventCandidateId,
     opportunityCardId: card.id,
     evidenceArcId: null,
+    companyImpactId: null,
     revenueLensId: card.revenueLensId ?? lens?.id ?? null,
     title,
     userType,

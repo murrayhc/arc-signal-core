@@ -31,6 +31,10 @@ const PROHIBITED_ADVICE_PATTERNS: RegExp[] = [
   /\b(short|long)\s+(this|the|these|that)\s+(stock|share|shares|name|ticker|position|instrument|holding)\b/i, // "short this name" (asset noun required — avoids "cut short the meeting")
   /\bload\s+up\s+on\b/i, // "load up on shares"
   /\b(going|headed|heading)\s+to\s+the\s+moon\b/i, // slang overconfidence
+  // Pass 3 (Commercial Consequence) additions:
+  /\b(certain|guaranteed)\s+(return|returns|profit|gains?)\b/i, // "certain return"
+  /\bportfolio\s+allocation\b/i,
+  /\binvestment\s+recommendation\b/i,
 ]
 
 export function findAdviceLanguage(text: string): string[] {
