@@ -73,6 +73,24 @@ export async function makeClaim(
   })
 }
 
+export async function makeAtomicClaim(
+  overrides: Partial<Prisma.AtomicClaimUncheckedCreateInput> = {},
+) {
+  return prisma.atomicClaim.create({
+    data: {
+      documentId: randomUUID(),
+      sourceId: randomUUID(),
+      claimText: 'The company is cutting 100 jobs at its site.',
+      claimType: 'LAYOFF_SIGNAL',
+      extractionMethod: 'rule:v2:LAYOFF_SIGNAL',
+      extractionConfidence: 0.7,
+      specificityScore: 0.5,
+      factualityLabel: 'UNVERIFIED',
+      ...overrides,
+    },
+  })
+}
+
 export async function makeSignal(
   claimId: string,
   documentId: string,
