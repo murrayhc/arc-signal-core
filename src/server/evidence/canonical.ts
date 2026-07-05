@@ -7,6 +7,12 @@ import type { EvidenceError } from './types'
  *  even if the wording matches. */
 const MAX_DATE_GAP_DAYS = 45
 
+/** When two same-type claims share a named entity, a LOWER text-similarity bar
+ *  is enough to treat them as the same claim — this is how an independently
+ *  worded report of the same event still groups with the origin. Without a
+ *  shared entity we fall back to the stricter MATCH_THRESHOLD. */
+const ENTITY_MATCH_THRESHOLD = 0.2
+
 function parseJsonArray(json: string): string[] {
   try {
     const j = JSON.parse(json)
@@ -65,12 +71,15 @@ export async function assignCanonicalClaims(atomicClaims: AtomicClaim[]): Promis
 
       let best: { canonical: CanonicalClaim; sim: number } | null = null
       for (const cand of candidates) {
-        const sim = blendedSimilarity(norm, normalise(cand.claimText))
-        if (sim < MATCH_THRESHOLD) continue
         const candAtomics = await prisma.atomicClaim.findMany({ where: { canonicalClaimId: cand.id } })
         const candEntities = lowerSet(candAtomics.flatMap((c) => parseJsonArray(c.entitiesJson)))
+        const bothHaveEntities = entities.size > 0 && candEntities.size > 0
+        const entityOverlap = bothHaveEntities && shareAny(entities, candEntities)
         // Different named entities ⇒ different claim, never merge.
-        if (entities.size > 0 && candEntities.size > 0 && !shareAny(entities, candEntities)) continue
+        if (bothHaveEntities && !entityOverlap) continue
+        const sim = blendedSimilarity(norm, normalise(cand.claimText))
+        // Shared entity ⇒ a lower text bar suffices (groups independent wording).
+        if (sim < (entityOverlap ? ENTITY_MATCH_THRESHOLD : MATCH_THRESHOLD)) continue
         // Different dates ⇒ different event unless close together.
         const gap = dayGap(atomic.eventDate, cand.firstSeenAt)
         if (gap !== null && gap > MAX_DATE_GAP_DAYS) continue

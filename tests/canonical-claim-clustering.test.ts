@@ -27,6 +27,23 @@ describe('assignCanonicalClaims', () => {
     expect(linked).toHaveLength(2)
   })
 
+  it('merges an independently worded report of the same event about the same entity', async () => {
+    const a1 = await makeAtomicClaim({
+      claimText: 'Voltcore will cut 400 jobs at its Manchester plant',
+      entitiesJson: JSON.stringify(['Voltcore']),
+      eventDate: new Date('2026-06-20T09:00:00Z'),
+    })
+    const a2 = await makeAtomicClaim({
+      claimText: 'Manchester battery maker Voltcore is shedding 400 roles',
+      entitiesJson: JSON.stringify(['Voltcore']),
+      eventDate: new Date('2026-06-21T09:00:00Z'),
+    })
+    const { created } = await assignCanonicalClaims([a1, a2])
+    expect(created).toHaveLength(1)
+    const canonical = await prisma.canonicalClaim.findFirstOrThrow()
+    expect(canonical.repeatCount).toBe(2)
+  })
+
   it('never merges claims about different named entities', async () => {
     const a1 = await makeAtomicClaim({ claimText: 'Voltcore will cut 400 jobs', entitiesJson: JSON.stringify(['Voltcore']) })
     const a2 = await makeAtomicClaim({ claimText: 'Globex will cut 400 jobs', entitiesJson: JSON.stringify(['Globex']) })
