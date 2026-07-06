@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import type { OpportunityCardData } from '@/server/services/opportunities'
+import type { EventConsequenceSummary } from '@/server/services/consequence'
 import { Eyebrow, Meter, Panel, pct } from './chrome'
+import { ConsequenceIndicators } from './ConsequenceIndicators'
 
 function potentialTag(score: number): { label: string; className: string } {
   if (score >= 0.7) return { label: 'High potential', className: 'border-gold/60 text-gold' }
@@ -12,7 +14,7 @@ function potentialTag(score: number): { label: string; className: string } {
  * Ranked commercial-opportunity feed (left column). Ordering and every figure
  * come straight from the opportunity engine's persisted, guard-cleaned cards.
  */
-export function ActiveOpportunities({ cards }: { cards: OpportunityCardData[] }) {
+export function ActiveOpportunities({ cards, summaries }: { cards: OpportunityCardData[]; summaries?: Record<string, EventConsequenceSummary> }) {
   return (
     <Panel id="active-opportunities" className="flex h-full flex-col">
       <div className="border-b border-line/70 px-3 py-2">
@@ -62,6 +64,7 @@ export function ActiveOpportunities({ cards }: { cards: OpportunityCardData[] })
                       <span className="border border-warn/60 px-1.5 py-0.5 font-semibold text-warn">Fixture</span>
                     )}
                   </div>
+                  <ConsequenceIndicators s={summaries?.[card.eventId]} />
                 </Link>
               </li>
             )

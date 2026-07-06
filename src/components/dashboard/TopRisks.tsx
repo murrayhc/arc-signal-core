@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import type { FeedCardData } from '@/server/services/dashboard'
+import type { EventConsequenceSummary } from '@/server/services/consequence'
 import { Eyebrow, Meter, Panel, pct, timeUk } from './chrome'
+import { ConsequenceIndicators } from './ConsequenceIndicators'
 
 function severityTag(severity: number): { label: string; className: string } {
   if (severity >= 0.7) return { label: 'Severe', className: 'border-risk/60 text-risk' }
@@ -12,7 +14,7 @@ function severityTag(severity: number): { label: string; className: string } {
  * Ranked risk pressure feed (right column). Fed by the existing RISK_RADAR
  * dashboard feed — severity, probability and scores are real event fields.
  */
-export function TopRisks({ risks }: { risks: FeedCardData[] }) {
+export function TopRisks({ risks, summaries }: { risks: FeedCardData[]; summaries?: Record<string, EventConsequenceSummary> }) {
   return (
     // #top-risks anchor lives on the page-level wrapper (survives detail swap)
     <Panel className="flex h-full flex-col">
@@ -60,6 +62,7 @@ export function TopRisks({ risks }: { risks: FeedCardData[] }) {
                     )}
                   </div>
                   <p className="mt-1 text-[9px] text-ink-faint">updated {timeUk(risk.lastUpdatedAt)}</p>
+                  <ConsequenceIndicators s={summaries?.[risk.eventId]} />
                 </Link>
               </li>
             )

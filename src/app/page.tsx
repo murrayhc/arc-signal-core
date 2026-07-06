@@ -7,6 +7,7 @@ import {
   getRegionalPressure,
   getTrendSignals,
 } from '@/server/services/command-centre'
+import { getConsequenceSummariesForEvents } from '@/server/services/consequence'
 import { listWatchMarkets } from '@/server/watch/service'
 import { getActiveProvider } from '@/server/llm/provider'
 import { getMarketStatus } from '@/server/market/provider'
@@ -71,6 +72,9 @@ export default async function DashboardPage() {
   // routes MIXED events into this feed, and the feed respects dismissals —
   // merging from the status-unfiltered inbox would resurrect dismissed events.
   const risks = data.riskRadar
+  const consequenceSummaries = await getConsequenceSummariesForEvents([
+    ...new Set([...risks, ...data.opportunityRadar].map((c) => c.eventId)),
+  ])
   const replayTarget = data.inbox[0] ? `/events/${data.inbox[0].eventId}#graph-replay` : '/graph'
 
   const ticker: TickerItem[] = [
@@ -160,7 +164,7 @@ export default async function DashboardPage() {
             <SelectionProvider>
               <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(15rem,18rem)_minmax(0,1fr)] xl:grid-cols-[minmax(15rem,18rem)_minmax(0,1fr)_minmax(17rem,20rem)] xl:auto-rows-[minmax(28rem,calc(100dvh-21rem))]">
                 <div className="order-2 min-h-80 lg:order-1">
-                  <ActiveOpportunities cards={data.opportunityRadar} />
+                  <ActiveOpportunities cards={data.opportunityRadar} summaries={consequenceSummaries} />
                 </div>
                 <div className="order-1 lg:order-2">
                   <IntelligenceBrain
@@ -176,7 +180,7 @@ export default async function DashboardPage() {
                     the panel swapping to node detail */}
                 <div id="top-risks" className="order-3 min-h-80 lg:col-span-2 xl:col-span-1">
                   <NodeDetailPanel>
-                    <TopRisks risks={risks} />
+                    <TopRisks risks={risks} summaries={consequenceSummaries} />
                   </NodeDetailPanel>
                 </div>
               </div>
