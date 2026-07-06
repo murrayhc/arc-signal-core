@@ -8,7 +8,7 @@ export type ConsequenceCounts = {
 
 /** Outcome of an on-demand AI enrichment pass over one event. */
 export type EnrichmentResult = {
-  status: 'ENRICHED' | 'DORMANT'
+  status: 'ENRICHED' | 'DORMANT' | 'COOLDOWN'
   impactsEnriched: number
   contextEnriched: boolean
   skipped: number

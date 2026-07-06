@@ -47,6 +47,13 @@ export async function enrichEventConsequence(
   const event = await prisma.eventCandidate.findUnique({ where: { id: eventCandidateId } })
   if (!event) return { status: 'DORMANT', impactsEnriched: 0, contextEnriched: false, skipped: 0 }
 
+  // Per-event cooldown: skip a re-spend if this event was enriched recently.
+  const cooldownMin = Number(process.env.ENRICH_COOLDOWN_MINUTES ?? 60)
+  const priorCtx = await prisma.eventContextSynthesis.findUnique({ where: { eventCandidateId } })
+  if (priorCtx?.enrichedByLLMRunId && Date.now() - priorCtx.updatedAt.getTime() < cooldownMin * 60_000) {
+    return { status: 'COOLDOWN', impactsEnriched: 0, contextEnriched: false, skipped: 0 }
+  }
+
   let impactsEnriched = 0
   let skipped = 0
 

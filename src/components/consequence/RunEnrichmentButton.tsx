@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 type Result = {
-  status: 'ENRICHED' | 'DORMANT'
+  status: 'ENRICHED' | 'DORMANT' | 'COOLDOWN'
   impactsEnriched: number
   contextEnriched: boolean
   skipped: number
@@ -41,6 +41,9 @@ export function RunEnrichmentButton({ eventId }: { eventId: string }) {
         <p className="mt-2 text-xs text-slate-400">
           AI is off — set an API key and enable a model config to enable enrichment.
         </p>
+      )}
+      {state === 'done' && result?.status === 'COOLDOWN' && (
+        <p className="mt-2 text-xs text-slate-400">Already enhanced recently — try again later.</p>
       )}
       {state === 'done' && result?.status === 'ENRICHED' && (
         <p className="mt-2 text-xs text-slate-400">
