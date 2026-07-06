@@ -780,6 +780,8 @@ model CompanyImpact {
   opportunityScore Float    @default(0)
   watchSignalsJson String   @default("[]")
   metadataJson     String   @default("{}")
+  llmRationale       String?
+  enrichedByLLMRunId String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
@@ -796,6 +798,8 @@ model EventContextSynthesis {
   confidence       Float
   evidenceIdsJson  String   @default("[]")
   metadataJson     String   @default("{}")
+  llmNarrativeJson   String?
+  enrichedByLLMRunId String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 }
