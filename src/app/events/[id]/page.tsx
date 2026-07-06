@@ -15,6 +15,7 @@ import { CompaniesPanel } from '@/components/consequence/CompaniesPanel'
 import { ScenariosPanel } from '@/components/consequence/ScenariosPanel'
 import { PositioningPanel } from '@/components/consequence/PositioningPanel'
 import { WatchSignalsPanel } from '@/components/consequence/WatchSignalsPanel'
+import { RunEnrichmentButton } from '@/components/consequence/RunEnrichmentButton'
 import { ClassBadge, FixtureBadge, StatusBadge, pct } from '@/components/badges'
 
 export const dynamic = 'force-dynamic'
@@ -223,7 +224,16 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
           { key: 'overview', label: 'Overview', node: overviewNode },
           { key: 'evidence', label: 'Evidence', node: evidenceNode },
           { key: 'lineage', label: 'Lineage', node: lineageNode },
-          { key: 'companies', label: 'Companies', node: <CompaniesPanel beneficiaries={deep.beneficiaries} harmed={deep.harmed} companies={deep.companies} /> },
+          {
+            key: 'companies',
+            label: 'Companies',
+            node: (
+              <div className="space-y-4">
+                <RunEnrichmentButton eventId={event.id} />
+                <CompaniesPanel beneficiaries={deep.beneficiaries} harmed={deep.harmed} companies={deep.companies} />
+              </div>
+            ),
+          },
           { key: 'scenarios', label: 'Scenarios', node: <ScenariosPanel context={deep.context} scenarios={deep.scenarios} /> },
           { key: 'positioning', label: 'Positioning', node: <PositioningPanel positioning={deep.positioning} /> },
           {
