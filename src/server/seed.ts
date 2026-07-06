@@ -87,12 +87,22 @@ export async function runSeed(options: { includeLive?: boolean } = {}) {
     update: { active: true, isDefault: true },
   })
 
-  // Seed Claude-native provider configs (all enabled: false — dormant until owner activates)
+  // Retire the old placeholder-named configs (one-time cleanup; no-op on a fresh DB).
+  await prisma.lLMProviderConfig.deleteMany({
+    where: { modelName: { in: ['claude-fast', 'claude-reasoning', 'claude-longcontext', 'claude-creative', 'claude-safety'] } },
+  })
+
+  // Seed 3 real-model provider configs (Balanced tier). All enabled:false —
+  // dormant until the owner activates (see docs/ai-activation.md). modelName is
+  // both the routing key and the model id sent to the Anthropic SDK, so Balanced
+  // collapses to the 3 distinct models it uses; every LLM task type routes to
+  // exactly one config. The upsert loop's `update` never touches `enabled`, so
+  // re-seeding preserves an owner's activated state.
   const providerConfigs = [
     {
       providerName: 'Anthropic',
-      modelName: 'claude-fast',
-      taskTypesJson: JSON.stringify(['FAST_CLASSIFICATION', 'SIGNAL_CLASSIFICATION_ASSIST', 'CLAIM_EXTRACTION_ASSIST', 'CLAIM_NORMALISATION', 'JSON_REPAIR']),
+      modelName: 'claude-haiku-4-5',
+      taskTypesJson: JSON.stringify(['FAST_CLASSIFICATION', 'SIGNAL_CLASSIFICATION_ASSIST', 'CLAIM_EXTRACTION_ASSIST', 'CLAIM_NORMALISATION', 'JSON_REPAIR', 'SAFETY_REVIEW']),
       costTier: 'LOW',
       latencyTier: 'FAST',
       strengthsJson: JSON.stringify(['Speed', 'Cost-effective']),
@@ -100,7 +110,7 @@ export async function runSeed(options: { includeLive?: boolean } = {}) {
     },
     {
       providerName: 'Anthropic',
-      modelName: 'claude-reasoning',
+      modelName: 'claude-opus-4-8',
       taskTypesJson: JSON.stringify(['CONTRADICTION_ANALYSIS', 'EVIDENCE_ARC_SUMMARY', 'RISK_OPPORTUNITY_SYNTHESIS', 'SOURCE_COMPARISON', 'COMPANY_IMPACT_ANALYSIS', 'FUTURE_SCENARIOS']),
       costTier: 'HIGH',
       latencyTier: 'SLOW',
@@ -109,31 +119,13 @@ export async function runSeed(options: { includeLive?: boolean } = {}) {
     },
     {
       providerName: 'Anthropic',
-      modelName: 'claude-longcontext',
-      taskTypesJson: JSON.stringify(['LONG_CONTEXT_REVIEW', 'MARKET_CONTEXT_SYNTHESIS']),
-      maxContextTokens: 100000,
+      modelName: 'claude-sonnet-5',
+      taskTypesJson: JSON.stringify(['LONG_CONTEXT_REVIEW', 'MARKET_CONTEXT_SYNTHESIS', 'OPPORTUNITY_PLAYBOOK_GENERATION', 'STRATEGIC_POSITIONING_GENERATION', 'EXECUTIVE_BRIEF_GENERATION', 'OUTREACH_DRAFT_GENERATION', 'GRAPH_NODE_SUMMARY', 'GRAPH_EDGE_EXPLANATION', 'STRATEGIC_POSITIONING', 'REPORT_SYNTHESIS', 'HISTORIC_CONTEXT', 'PRESENT_CONTEXT']),
+      maxContextTokens: 200000,
       costTier: 'MEDIUM',
       latencyTier: 'MEDIUM',
-      strengthsJson: JSON.stringify(['Large context window']),
-      weaknessesJson: JSON.stringify(['Context cost trade-offs']),
-    },
-    {
-      providerName: 'Anthropic',
-      modelName: 'claude-creative',
-      taskTypesJson: JSON.stringify(['OPPORTUNITY_PLAYBOOK_GENERATION', 'STRATEGIC_POSITIONING_GENERATION', 'EXECUTIVE_BRIEF_GENERATION', 'OUTREACH_DRAFT_GENERATION', 'GRAPH_NODE_SUMMARY', 'GRAPH_EDGE_EXPLANATION', 'STRATEGIC_POSITIONING', 'REPORT_SYNTHESIS', 'HISTORIC_CONTEXT', 'PRESENT_CONTEXT']),
-      costTier: 'MEDIUM',
-      latencyTier: 'MEDIUM',
-      strengthsJson: JSON.stringify(['Creative generation', 'Content quality']),
-      weaknessesJson: JSON.stringify(['Variable output quality']),
-    },
-    {
-      providerName: 'Anthropic',
-      modelName: 'claude-safety',
-      taskTypesJson: JSON.stringify(['SAFETY_REVIEW']),
-      costTier: 'MEDIUM',
-      latencyTier: 'MEDIUM',
-      strengthsJson: JSON.stringify(['Safety detection']),
-      weaknessesJson: JSON.stringify(['Specialized use only']),
+      strengthsJson: JSON.stringify(['Balanced reasoning + writing', 'Large context']),
+      weaknessesJson: JSON.stringify(['Mid-cost']),
     },
   ]
 

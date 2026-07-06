@@ -178,9 +178,9 @@ describe('runLLMTask — model routing', () => {
     expect(result.status).toBe('SUCCEEDED')
 
     const run = await prisma.lLMRun.findUniqueOrThrow({ where: { id: result.llmRunId } })
-    // The seeded creative config (router.test.ts confirms routeTask picks this
+    // The seeded Sonnet config (router.test.ts confirms routeTask picks this
     // for OPPORTUNITY_PLAYBOOK_GENERATION) — NOT 'fake-provider', the provider name.
-    expect(run.model).toBe('claude-creative')
+    expect(run.model).toBe('claude-sonnet-5')
     expect(run.model).not.toBe('fake-provider')
   })
 

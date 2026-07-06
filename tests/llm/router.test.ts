@@ -14,21 +14,21 @@ describe('routeTask', () => {
     const configs = await loadRouterConfigs()
     const picked = routeTask('OPPORTUNITY_PLAYBOOK_GENERATION', configs)
     expect(picked).not.toBeNull()
-    expect(picked!.modelName).toBe('claude-creative')
+    expect(picked!.modelName).toBe('claude-sonnet-5')
   })
 
   it('returns the fast model for FAST_CLASSIFICATION', async () => {
     const configs = await loadRouterConfigs()
     const picked = routeTask('FAST_CLASSIFICATION', configs)
     expect(picked).not.toBeNull()
-    expect(picked!.modelName).toBe('claude-fast')
+    expect(picked!.modelName).toBe('claude-haiku-4-5')
   })
 
   it('returns the reasoning model for CONTRADICTION_ANALYSIS', async () => {
     const configs = await loadRouterConfigs()
     const picked = routeTask('CONTRADICTION_ANALYSIS', configs)
     expect(picked).not.toBeNull()
-    expect(picked!.modelName).toBe('claude-reasoning')
+    expect(picked!.modelName).toBe('claude-opus-4-8')
   })
 
   it('returns null for a task no seeded config supports', async () => {

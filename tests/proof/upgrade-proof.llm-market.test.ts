@@ -140,15 +140,15 @@ describe('Stage 14 upgrade proof 15: multi-model router selects the expected mod
 
     const creative = routeTask('OPPORTUNITY_PLAYBOOK_GENERATION', configs)
     expect(creative).not.toBeNull()
-    expect(creative!.modelName).toBe('claude-creative')
+    expect(creative!.modelName).toBe('claude-sonnet-5')
 
     const fast = routeTask('FAST_CLASSIFICATION', configs)
     expect(fast).not.toBeNull()
-    expect(fast!.modelName).toBe('claude-fast')
+    expect(fast!.modelName).toBe('claude-haiku-4-5')
 
     const reasoning = routeTask('CONTRADICTION_ANALYSIS', configs)
     expect(reasoning).not.toBeNull()
-    expect(reasoning!.modelName).toBe('claude-reasoning')
+    expect(reasoning!.modelName).toBe('claude-opus-4-8')
 
     // End-to-end: runLLMTask (with an injected FakeProvider, no key/network) logs
     // the ROUTED model name on LLMRun.model, proving the router is actually wired
@@ -159,7 +159,7 @@ describe('Stage 14 upgrade proof 15: multi-model router selects the expected mod
     )
     expect(result.status).toBe('SUCCEEDED')
     const run = await prisma.lLMRun.findUniqueOrThrow({ where: { id: result.llmRunId } })
-    expect(run.model).toBe('claude-creative')
+    expect(run.model).toBe('claude-sonnet-5')
     expect(run.model).not.toBe('fake-provider')
   })
 })

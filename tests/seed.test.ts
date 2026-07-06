@@ -49,9 +49,9 @@ describe('runSeed', () => {
       expect(config.enabled).toBe(false)
       expect(config.providerName).toBe('Anthropic')
     }
-    // Verify at least one fast and one reasoning model exist
-    const fastModel = configs.find((c) => c.modelName === 'claude-fast')
-    const reasoningModel = configs.find((c) => c.modelName === 'claude-reasoning')
+    // Verify the fast (Haiku) and reasoning (Opus) real-model configs exist
+    const fastModel = configs.find((c) => c.modelName === 'claude-haiku-4-5')
+    const reasoningModel = configs.find((c) => c.modelName === 'claude-opus-4-8')
     expect(fastModel).toBeDefined()
     expect(reasoningModel).toBeDefined()
   })

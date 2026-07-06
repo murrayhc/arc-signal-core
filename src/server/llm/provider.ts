@@ -3,11 +3,11 @@ import { NoProviderConfiguredError, type LLMProvider, type LLMRequest, type LLMR
 
 /** Fallback model id used ONLY when a request reaches the Anthropic adapter
  *  with no routed req.model (e.g. routeTask found no config for the task
- *  type). Seeded LLMProviderConfig.modelName values (claude-fast,
- *  claude-creative, etc.) are PLACEHOLDERS — the owner sets real Anthropic
- *  model ids when enabling a config on activation (see
- *  docs/multi-model-llm-routing.md). This constant is a clearly-named current
- *  default, not the retired 'claude-3-5-sonnet-latest' id. */
+ *  type). Seeded LLMProviderConfig.modelName values are now real Anthropic
+ *  model ids (claude-haiku-4-5 / claude-opus-4-8 / claude-sonnet-5 — see
+ *  src/server/seed.ts and docs/ai-activation.md), so a routed model passes
+ *  straight to the SDK. This constant is a clearly-named current default, not
+ *  the retired 'claude-3-5-sonnet-latest' id. */
 export const DEFAULT_ANTHROPIC_MODEL = 'claude-sonnet-5'
 
 /** Always-dormant provider. Used as an explicit fallback; generate() always
