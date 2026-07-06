@@ -16,11 +16,13 @@ import { BrainGraph3D } from './BrainGraph3D'
 export function BrainGraph({
   nodes,
   edges,
+  selectedId,
   onSelect,
   onClear,
 }: {
   nodes: RenderNode[]
   edges: GraphEdgeData[]
+  selectedId: string | null
   onSelect: (nodeId: string) => void
   onClear: () => void
 }) {
@@ -60,6 +62,7 @@ export function BrainGraph({
           edges={edges}
           centrals={centrals}
           depths={depths}
+          selectedId={selectedId}
           onSelect={onSelect}
           onClear={onClear}
         />
@@ -68,6 +71,7 @@ export function BrainGraph({
           nodes={nodes}
           edges={edges}
           centrals={centrals}
+          selectedId={selectedId}
           onSelect={onSelect}
           onClear={onClear}
         />

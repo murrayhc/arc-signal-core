@@ -258,8 +258,9 @@ export function GraphExplorer({
           {loading && <p className="mt-3 text-xs text-slate-500">Refreshing graph…</p>}
         </aside>
 
-        {/* Centre canvas */}
-        <div className="min-h-[24rem]">
+        {/* Centre canvas — bounded to the viewport so the graph fits the
+            display instead of the renderer defaulting to full-window size. */}
+        <div className="h-[70vh] min-h-[24rem]">
           <ForceGraph nodes={nodes} edges={edges} mode={mode} paused={paused} onSelect={handleSelect} />
         </div>
 

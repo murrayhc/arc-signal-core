@@ -44,7 +44,7 @@ export function IntelligenceBrain({
   meanConfidence: number | null
   lastScanAt: string | null
 }) {
-  const { select, clear } = useSelection()
+  const { selectedId, select, clear } = useSelection()
   const empty = nodes.length === 0
   const legendGroups = LEGEND_ORDER.filter((g) => (byType[g] ?? 0) > 0)
   // Central-core legend entries appear only for kinds actually present.
@@ -106,7 +106,7 @@ export function IntelligenceBrain({
           </div>
         ) : (
           <div className="relative z-10 h-full">
-            <BrainGraph nodes={nodes} edges={edges} onSelect={select} onClear={clear} />
+            <BrainGraph nodes={nodes} edges={edges} selectedId={selectedId} onSelect={select} onClear={clear} />
           </div>
         )}
         <p className="sr-only">

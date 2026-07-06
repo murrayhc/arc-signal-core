@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import type { GraphEdgeData, RenderNode } from '@/server/services/graph'
 
@@ -62,6 +62,22 @@ export function ForceGraph({
   const [mounted, setMounted] = useState(false)
   useEffect(() => setMounted(true), [])
 
+  // Size the renderer to its CONTAINER. react-force-graph defaults to the whole
+  // window when width/height are omitted, which overflows the column and the
+  // page — measure the box instead and pass explicit dimensions.
+  const containerRef = useRef<HTMLDivElement | null>(null)
+  const [size, setSize] = useState<{ width: number; height: number } | null>(null)
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+    const observer = new ResizeObserver((entries) => {
+      const rect = entries[0]?.contentRect
+      if (rect) setSize({ width: rect.width, height: rect.height })
+    })
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [mounted])
+
   const graphData = useMemo(() => {
     // react-force-graph throws ("node not found") if a link references an id
     // absent from the node set — drop any dangling edge before handing it over.
@@ -76,26 +92,11 @@ export function ForceGraph({
     return { nodes, links }
   }, [nodes, edges])
 
-  if (nodes.length === 0) {
-    return (
-      <div className="flex h-full min-h-[24rem] items-center justify-center rounded-lg border border-slate-800 bg-slate-950 text-sm text-slate-500">
-        No nodes match the current filters.
-      </div>
-    )
-  }
-
-  // Until mounted on the client, render the same placeholder the server did.
-  if (!mounted) {
-    return (
-      <div className="flex h-full min-h-[24rem] items-center justify-center rounded-lg border border-slate-800 bg-slate-950 text-sm text-slate-500">
-        Loading graph…
-      </div>
-    )
-  }
-
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const commonProps: any = {
     graphData,
+    width: size?.width,
+    height: size?.height,
     nodeId: 'id',
     nodeLabel: (node: SimNode) => node.title,
     nodeVal: (node: SimNode) => node.val,
@@ -114,14 +115,25 @@ export function ForceGraph({
     cooldownTicks: paused ? 0 : undefined,
   }
 
+  // The ref container always renders (so the ResizeObserver can measure it);
+  // the graph is drawn only once mounted, sized, and non-empty. Server and the
+  // first client render both show the placeholder (ready=false), so there is no
+  // hydration mismatch.
+  const ready = mounted && size !== null && nodes.length > 0
+
   return (
-    <div className="h-full min-h-[24rem] w-full overflow-hidden rounded-lg border border-slate-800 bg-slate-950">
-      {mode === '3d' ? (
-        <ForceGraph3D
-          {...commonProps}
-          nodeThreeObjectExtend={false}
-          backgroundColor="#020617"
-        />
+    <div
+      ref={containerRef}
+      className="h-full min-h-[24rem] w-full overflow-hidden rounded-lg border border-slate-800 bg-slate-950"
+    >
+      {nodes.length === 0 ? (
+        <div className="flex h-full items-center justify-center text-sm text-slate-500">
+          No nodes match the current filters.
+        </div>
+      ) : !ready ? (
+        <div className="flex h-full items-center justify-center text-sm text-slate-500">Loading graph…</div>
+      ) : mode === '3d' ? (
+        <ForceGraph3D {...commonProps} nodeThreeObjectExtend={false} backgroundColor="#020617" />
       ) : (
         <ForceGraph2D
           {...commonProps}
@@ -132,14 +144,14 @@ export function ForceGraph({
           }
           nodeCanvasObject={(node: SimNode, ctx: CanvasRenderingContext2D) => {
             if (!DISTINCT_MARKER_TYPES.has(node.group)) return
-            const size = 4 + node.val
+            const markerSize = 4 + node.val
             ctx.save()
             ctx.strokeStyle = '#f43f5e'
             ctx.lineWidth = 1.5
             ctx.beginPath()
             // Distinct marker: a square ring around contradiction/data-gap nodes,
             // set apart from the round dots used for every other node type.
-            ctx.rect((node.x ?? 0) - size, (node.y ?? 0) - size, size * 2, size * 2)
+            ctx.rect((node.x ?? 0) - markerSize, (node.y ?? 0) - markerSize, markerSize * 2, markerSize * 2)
             ctx.stroke()
             ctx.restore()
           }}

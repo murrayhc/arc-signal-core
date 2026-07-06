@@ -22,12 +22,14 @@ export function BrainGraph2D({
   nodes,
   edges,
   centrals,
+  selectedId,
   onSelect,
   onClear,
 }: {
   nodes: RenderNode[]
   edges: GraphEdgeData[]
   centrals: CentralNode[]
+  selectedId: string | null
   onSelect: (nodeId: string) => void
   onClear: () => void
 }) {
@@ -35,6 +37,10 @@ export function BrainGraph2D({
   const [reducedMotion, setReducedMotion] = useState(false)
   const containerRef = useRef<HTMLDivElement | null>(null)
   const [size, setSize] = useState<{ width: number; height: number } | null>(null)
+  // Read inside the per-frame canvas draw so the selected node's card follows
+  // selection without rebuilding the graph props.
+  const selectedIdRef = useRef<string | null>(null)
+  selectedIdRef.current = selectedId
 
   useEffect(() => setMounted(true), [])
 
@@ -129,41 +135,44 @@ export function BrainGraph2D({
         ctx.fill()
         ctx.shadowBlur = 0
 
-        // Lead line + info box (constant screen size via globalScale).
-        const s = 1 / globalScale
-        const off = 26 * s
-        const bx = x + off
-        const by = y - off
-        ctx.strokeStyle = color
-        ctx.globalAlpha = 0.7
-        ctx.lineWidth = s
-        ctx.beginPath()
-        ctx.moveTo(x + r * 0.7, y - r * 0.7)
-        ctx.lineTo(bx, by)
-        ctx.stroke()
+        // Lead line + info box — only for the selected central, so cards never
+        // pile up over the mesh (selecting also opens the node detail panel).
+        if (node.id === selectedIdRef.current) {
+          const s = 1 / globalScale
+          const off = 26 * s
+          const bx = x + off
+          const by = y - off
+          ctx.strokeStyle = color
+          ctx.globalAlpha = 0.7
+          ctx.lineWidth = s
+          ctx.beginPath()
+          ctx.moveTo(x + r * 0.7, y - r * 0.7)
+          ctx.lineTo(bx, by)
+          ctx.stroke()
 
-        const kindText = `${central.kind === 'RISK' ? 'HIGH RISK' : 'HIGH OPPORTUNITY'} · ${Math.round(central.score * 100)}%`
-        const title = central.title.length > 30 ? `${central.title.slice(0, 29)}…` : central.title
-        ctx.font = `600 ${9 * s}px "IBM Plex Mono", monospace`
-        const kindWidth = ctx.measureText(kindText).width
-        ctx.font = `${10 * s}px "IBM Plex Sans", sans-serif`
-        const titleWidth = ctx.measureText(title).width
-        const pad = 5 * s
-        const boxW = Math.max(kindWidth, titleWidth) + pad * 2
-        const boxH = 26 * s
+          const kindText = `${central.kind === 'RISK' ? 'HIGH RISK' : 'HIGH OPPORTUNITY'} · ${Math.round(central.score * 100)}%`
+          const title = central.title.length > 30 ? `${central.title.slice(0, 29)}…` : central.title
+          ctx.font = `600 ${9 * s}px "IBM Plex Mono", monospace`
+          const kindWidth = ctx.measureText(kindText).width
+          ctx.font = `${10 * s}px "IBM Plex Sans", sans-serif`
+          const titleWidth = ctx.measureText(title).width
+          const pad = 5 * s
+          const boxW = Math.max(kindWidth, titleWidth) + pad * 2
+          const boxH = 26 * s
 
-        ctx.globalAlpha = 0.92
-        ctx.fillStyle = '#0b1222'
-        ctx.fillRect(bx, by - boxH, boxW, boxH)
-        ctx.globalAlpha = 1
-        ctx.strokeStyle = color
-        ctx.strokeRect(bx, by - boxH, boxW, boxH)
-        ctx.fillStyle = color
-        ctx.font = `600 ${9 * s}px "IBM Plex Mono", monospace`
-        ctx.fillText(kindText, bx + pad, by - boxH + 10 * s)
-        ctx.fillStyle = '#e8eef9'
-        ctx.font = `${10 * s}px "IBM Plex Sans", sans-serif`
-        ctx.fillText(title, bx + pad, by - boxH + 21 * s)
+          ctx.globalAlpha = 0.92
+          ctx.fillStyle = '#0b1222'
+          ctx.fillRect(bx, by - boxH, boxW, boxH)
+          ctx.globalAlpha = 1
+          ctx.strokeStyle = color
+          ctx.strokeRect(bx, by - boxH, boxW, boxH)
+          ctx.fillStyle = color
+          ctx.font = `600 ${9 * s}px "IBM Plex Mono", monospace`
+          ctx.fillText(kindText, bx + pad, by - boxH + 10 * s)
+          ctx.fillStyle = '#e8eef9'
+          ctx.font = `${10 * s}px "IBM Plex Sans", sans-serif`
+          ctx.fillText(title, bx + pad, by - boxH + 21 * s)
+        }
         ctx.restore()
         return
       }

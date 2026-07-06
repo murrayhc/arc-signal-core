@@ -46,6 +46,7 @@ export function BrainGraph3D({
   edges,
   centrals,
   depths,
+  selectedId,
   onSelect,
   onClear,
 }: {
@@ -53,6 +54,7 @@ export function BrainGraph3D({
   edges: GraphEdgeData[]
   centrals: CentralNode[]
   depths: Map<string, number>
+  selectedId: string | null
   onSelect: (nodeId: string) => void
   onClear: () => void
 }) {
@@ -64,6 +66,9 @@ export function BrainGraph3D({
   const fgRef = useRef<any>(null)
   // Central-node halos, keyed by node id, mutated by the pulse loop.
   const halosRef = useRef(new Map<string, { halo: THREE.Mesh; phase: number }>())
+  // Central-node callouts (info card + lead line), keyed by node id. Hidden by
+  // default; only the selected node's callout is shown (see the effect below).
+  const calloutsRef = useRef(new Map<string, { box: HTMLDivElement; line: THREE.Line }>())
 
   useEffect(() => setMounted(true), [])
 
@@ -95,6 +100,7 @@ export function BrainGraph3D({
 
   const graphData = useMemo(() => {
     halosRef.current.clear()
+    calloutsRef.current.clear()
     fittedRef.current = false
     const nodeIds = new Set(nodes.map((n) => n.id))
     const links: GraphLink[] = edges
@@ -201,6 +207,16 @@ export function BrainGraph3D({
     return () => cancelAnimationFrame(raf)
   }, [reducedMotion, graphData])
 
+  // Show only the selected central's callout; hide every other. Re-applies when
+  // the dataset rebuilds (calloutsRef is repopulated with everything hidden).
+  useEffect(() => {
+    for (const [id, callout] of calloutsRef.current) {
+      const on = id === selectedId
+      callout.box.style.display = on ? '' : 'none'
+      callout.line.visible = on
+    }
+  }, [selectedId, graphData])
+
   if (!mounted || !size) {
     return (
       <div ref={containerRef} className="h-full w-full">
@@ -274,25 +290,28 @@ export function BrainGraph3D({
         group.add(halo)
         halosRef.current.set(n.id, { halo, phase: pulsePhase(n.id) })
 
-        // Lead line out to the info box.
+        // Lead line out to the info box. Hidden until this node is selected.
         const lineGeometry = new THREE.BufferGeometry().setFromPoints([
           new THREE.Vector3(0, 0, 0),
           calloutOffset,
         ])
-        group.add(
-          new THREE.Line(
-            lineGeometry,
-            new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.7 }),
-          ),
+        const line = new THREE.Line(
+          lineGeometry,
+          new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.7 }),
         )
+        line.visible = false
+        group.add(line)
 
         // Info box: names the central node; click selects it. Built with
         // textContent only — node titles originate in scanned feed content,
-        // so no markup path (innerHTML) is allowed here.
+        // so no markup path (innerHTML) is allowed here. Hidden by default —
+        // the callout appears only when this node is the selected one, so the
+        // graph is never buried under a card per central (see the effect below).
         const box = document.createElement('div')
         box.className = 'cursor-pointer border bg-abyss/90 px-2 py-1 backdrop-blur-sm max-w-52'
         box.style.borderColor = color
         box.style.pointerEvents = 'auto'
+        box.style.display = 'none'
         const kindEl = document.createElement('p')
         kindEl.className = 'font-display text-[8px] font-semibold uppercase tracking-[0.2em]'
         kindEl.style.color = color
@@ -308,6 +327,7 @@ export function BrainGraph3D({
         const label = new CSS2DObject(box)
         label.position.copy(calloutOffset)
         group.add(label)
+        calloutsRef.current.set(n.id, { box, line })
 
         return group
       }
