@@ -6,6 +6,14 @@ export type ConsequenceCounts = {
   futureScenariosCreated: number
 }
 
+/** Outcome of an on-demand AI enrichment pass over one event. */
+export type EnrichmentResult = {
+  status: 'ENRICHED' | 'DORMANT'
+  impactsEnriched: number
+  contextEnriched: boolean
+  skipped: number
+}
+
 /** API/UI view of a CompanyImpact — JSON fields parsed to arrays. */
 export type CompanyImpactView = {
   id: string
