@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto'
 import { prisma } from '@/server/db'
 import type { LLMRunStatus } from '@/shared/enums'
+import { isWithinDailyBudget } from './budget'
 import { getActiveProvider } from './provider'
 import { loadRouterConfigs, routeTask } from './router'
 import { NoProviderConfiguredError, type LLMProvider, type LLMRequest } from './types'
@@ -91,6 +92,26 @@ export async function runLLMTask(req: LLMRequest, opts: RunLLMTaskOptions): Prom
   const routedModel = routed?.modelName ?? UNROUTED_MODEL
   const routedCostTier = routed?.costTier ?? 'MEDIUM'
   const routedReq: LLMRequest = routed ? { ...req, model: routed.modelName } : req
+
+  // Daily spend cap: over budget behaves like dormant — no provider call.
+  if (!(await isWithinDailyBudget(new Date()))) {
+    const run = await prisma.lLMRun.create({
+      data: {
+        taskType: req.taskType,
+        provider: provider.name,
+        model: routedModel,
+        promptHash,
+        inputSummary,
+        outputSummary: '',
+        status: 'SKIPPED_BUDGET' satisfies LLMRunStatus,
+        tokenCountInput: 0,
+        tokenCountOutput: 0,
+        estimatedCost: 0,
+        latencyMs: 0,
+      },
+    })
+    return { status: 'SKIPPED_BUDGET', llmRunId: run.id, validation: null }
+  }
 
   const startedAt = Date.now()
   let response
