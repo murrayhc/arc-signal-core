@@ -27,6 +27,29 @@ function parseArr(json: string): string[] {
   }
 }
 
+/** Parses a persisted llmNarrativeJson into the enriched narrative shape, or
+ *  null if absent/malformed. */
+function safeNarrative(
+  json: string | null,
+): { historic: string; present: string; future: string; executive: string } | null {
+  if (!json) return null
+  try {
+    const j = JSON.parse(json)
+    if (
+      j &&
+      typeof j.historic === 'string' &&
+      typeof j.present === 'string' &&
+      typeof j.future === 'string' &&
+      typeof j.executive === 'string'
+    ) {
+      return { historic: j.historic, present: j.present, future: j.future, executive: j.executive }
+    }
+  } catch {
+    /* fall through to null */
+  }
+  return null
+}
+
 async function eventSourceNames(eventCandidateId: string): Promise<string[]> {
   const clusters = await prisma.signalCluster.findMany({ where: { eventCandidateId }, select: { id: true } })
   if (clusters.length === 0) return []
@@ -58,6 +81,7 @@ export async function assembleReport(
   const harmed = impacts.filter((i) => HARMED_TYPES.has(i.impactType))
 
   const context = await prisma.eventContextSynthesis.findUnique({ where: { eventCandidateId } })
+  const narrative = safeNarrative(context?.llmNarrativeJson ?? null)
   const scenarios = await prisma.futureScenario.findMany({ where: { eventCandidateId }, orderBy: { confidence: 'desc' } })
   const positioning = await prisma.strategicPositioningExample.findMany({ where: { eventCandidateId }, orderBy: { confidence: 'desc' } })
   const sources = await eventSourceNames(eventCandidateId)
@@ -77,9 +101,11 @@ export async function assembleReport(
     originSourcesTraced: originUrls.length,
     beneficiaries,
     harmed,
-    historicContext: context?.historicContext ?? null,
-    presentContext: context?.presentContext ?? null,
-    futureContext: context?.futureContext ?? null,
+    aiEnhanced: !!narrative,
+    executiveNarrative: narrative?.executive ?? null,
+    historicContext: narrative?.historic ?? context?.historicContext ?? null,
+    presentContext: narrative?.present ?? context?.presentContext ?? null,
+    futureContext: narrative?.future ?? context?.futureContext ?? null,
     scenarios: scenarios.map((s) => ({ scenarioType: s.scenarioType, title: s.title, summary: s.summary, confidence: s.confidence })),
     positioning: positioning.map((p) => ({ title: p.title, userType: p.userType, howItCouldBeUsed: p.howItCouldBeUsed })),
     watchSignals,
@@ -95,7 +121,7 @@ export async function assembleReport(
     `_${REPORT_FOCUS[reportType]}_`,
     ``,
     `## Summary`,
-    event.summary,
+    narrative?.executive ? `${narrative.executive}\n\n${event.summary}` : event.summary,
     ``,
     `## Evidence reliability`,
     `Overall reliability: ${pct(reliability)}. Origin traced to ${originUrls.length} source(s).`,
@@ -107,10 +133,10 @@ export async function assembleReport(
     harmed.length ? harmed.map(impactLine).join('\n') : '- No specific harmed party identified in the evidence.',
     ``,
     `## Historic context`,
-    context?.historicContext ?? 'Not yet synthesised.',
+    narrative?.historic ?? context?.historicContext ?? 'Not yet synthesised.',
     ``,
     `## Present context`,
-    context?.presentContext ?? 'Not yet synthesised.',
+    narrative?.present ?? context?.presentContext ?? 'Not yet synthesised.',
     ``,
     `## Future scenarios`,
     scenarios.length ? scenarios.map((s) => `- **${s.title}** (${pct(s.confidence)}): ${s.summary}`).join('\n') : '- No scenarios generated.',

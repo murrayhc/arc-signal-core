@@ -27,5 +27,9 @@ export type CompanyImpactView = {
   opportunityScore: number
   entityId: string | null
   lowConfidence: boolean
+  /** AI-written "why", when the impact has been enriched; null otherwise. */
+  llmRationale: string | null
+  /** True when this impact carries AI-enriched rationale. */
+  aiEnhanced: boolean
   lastUpdated: string
 }

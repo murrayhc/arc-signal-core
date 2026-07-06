@@ -24,13 +24,17 @@ function toView(i: CompanyImpact): CompanyImpactView {
     companyName: i.companyName,
     impactType: i.impactType,
     confidence: i.confidence,
-    impactPathway: i.impactPathway,
+    // Prefer the AI rationale for display when present; the deterministic
+    // pathway remains the fallback.
+    impactPathway: i.llmRationale ?? i.impactPathway,
     evidenceIds: parseArr(i.evidenceIdsJson),
     watchSignals: parseArr(i.watchSignalsJson),
     riskScore: i.riskScore,
     opportunityScore: i.opportunityScore,
     entityId: i.entityId,
     lowConfidence,
+    llmRationale: i.llmRationale ?? null,
+    aiEnhanced: !!i.llmRationale,
     lastUpdated: i.updatedAt.toISOString(),
   }
 }
@@ -89,10 +93,42 @@ export type EventDeepReport = {
   companies: CompanyImpactView[]
   beneficiaries: CompanyImpactView[]
   harmed: CompanyImpactView[]
-  context: { historicContext: string; presentContext: string; futureContext: string; confidence: number } | null
+  context:
+    | {
+        historicContext: string
+        presentContext: string
+        futureContext: string
+        confidence: number
+        /** AI-written narrative when the event has been enriched; null otherwise. */
+        llmNarrative: { historic: string; present: string; future: string; executive: string } | null
+      }
+    | null
   scenarios: ScenarioView[]
   positioning: PositioningView[]
   watchSignals: string[]
+}
+
+/** Parses a persisted llmNarrativeJson into the enriched narrative shape, or
+ *  null if absent/malformed. */
+function parseNarrative(
+  json: string | null,
+): { historic: string; present: string; future: string; executive: string } | null {
+  if (!json) return null
+  try {
+    const j = JSON.parse(json)
+    if (
+      j &&
+      typeof j.historic === 'string' &&
+      typeof j.present === 'string' &&
+      typeof j.future === 'string' &&
+      typeof j.executive === 'string'
+    ) {
+      return { historic: j.historic, present: j.present, future: j.future, executive: j.executive }
+    }
+  } catch {
+    /* fall through to null */
+  }
+  return null
 }
 
 function parseStrArr(json: string): string[] {
@@ -138,7 +174,13 @@ export async function getEventDeepReport(eventCandidateId: string): Promise<Even
     beneficiaries,
     harmed,
     context: ctx
-      ? { historicContext: ctx.historicContext, presentContext: ctx.presentContext, futureContext: ctx.futureContext, confidence: ctx.confidence }
+      ? {
+          historicContext: ctx.historicContext,
+          presentContext: ctx.presentContext,
+          futureContext: ctx.futureContext,
+          confidence: ctx.confidence,
+          llmNarrative: parseNarrative(ctx.llmNarrativeJson),
+        }
       : null,
     scenarios,
     positioning: positioningRows.map((p) => ({
