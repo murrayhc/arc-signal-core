@@ -1,4 +1,5 @@
 import type { NextConfig } from 'next'
+import { securityHeaders } from './src/lib/security-headers'
 
 const nextConfig: NextConfig = {
   // @anthropic-ai/sdk is loaded via a guarded, non-literal dynamic import in
@@ -12,6 +13,9 @@ const nextConfig: NextConfig = {
   // turbopackIgnore magic comments on the import call itself — see
   // provider.ts. This entry alone does not silence that warning.)
   serverExternalPackages: ['@anthropic-ai/sdk'],
+  async headers() {
+    return [{ source: '/:path*', headers: securityHeaders(process.env.NODE_ENV === 'production') }]
+  },
 }
 
 export default nextConfig
