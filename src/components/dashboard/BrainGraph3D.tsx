@@ -68,7 +68,10 @@ export function BrainGraph3D({
   const halosRef = useRef(new Map<string, { halo: THREE.Mesh; phase: number }>())
   // Central-node callouts (info card + lead line), keyed by node id. Hidden by
   // default; only the selected node's callout is shown (see the effect below).
-  const calloutsRef = useRef(new Map<string, { box: HTMLDivElement; line: THREE.Line }>())
+  // We toggle the CSS2DObject's `.visible` (which CSS2DRenderer honours by
+  // setting element display each frame) — NOT the element's own style, which
+  // the renderer would immediately overwrite.
+  const calloutsRef = useRef(new Map<string, { label: CSS2DObject; line: THREE.Line }>())
 
   useEffect(() => setMounted(true), [])
 
@@ -212,7 +215,7 @@ export function BrainGraph3D({
   useEffect(() => {
     for (const [id, callout] of calloutsRef.current) {
       const on = id === selectedId
-      callout.box.style.display = on ? '' : 'none'
+      callout.label.visible = on
       callout.line.visible = on
     }
   }, [selectedId, graphData])
@@ -311,7 +314,6 @@ export function BrainGraph3D({
         box.className = 'cursor-pointer border bg-abyss/90 px-2 py-1 backdrop-blur-sm max-w-52'
         box.style.borderColor = color
         box.style.pointerEvents = 'auto'
-        box.style.display = 'none'
         const kindEl = document.createElement('p')
         kindEl.className = 'font-display text-[8px] font-semibold uppercase tracking-[0.2em]'
         kindEl.style.color = color
@@ -326,8 +328,9 @@ export function BrainGraph3D({
         })
         const label = new CSS2DObject(box)
         label.position.copy(calloutOffset)
+        label.visible = false
         group.add(label)
-        calloutsRef.current.set(n.id, { box, line })
+        calloutsRef.current.set(n.id, { label, line })
 
         return group
       }
