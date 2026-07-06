@@ -58,7 +58,7 @@ existing LLM layer and a headers block in `next.config.ts`. Each guard is a
 
 ### P1c — Security headers (audit M2)
 
-- `src/lib/security-headers.ts` (new): `securityHeaders(): { key: string; value: string }[]` — `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy: camera=(), microphone=(), geolocation=()`, `Content-Security-Policy: default-src 'self'; frame-ancestors 'none'; base-uri 'self'; object-src 'none'` (anti-clickjacking/base-hijack without a restrictive `script-src` that would break Next's inline runtime), and `Strict-Transport-Security` **only when `NODE_ENV === 'production'`**.
+- `src/lib/security-headers.ts` (new): `securityHeaders(): { key: string; value: string }[]` — `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy: camera=(), microphone=(), geolocation=()`, `Content-Security-Policy: frame-ancestors 'none'; base-uri 'self'; object-src 'none'` (safe subset — anti-clickjacking/base-hijack; **no `default-src`/`script-src`**, which would block Next's inline hydration runtime), and `Strict-Transport-Security` **only when `NODE_ENV === 'production'`**.
 - `next.config.ts` `async headers()` applies them to all routes via the shared function.
 - A strict nonce-based `script-src` CSP is a documented follow-up (needs Next nonce middleware).
 
