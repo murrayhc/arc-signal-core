@@ -53,3 +53,12 @@ few short calls for that one event (roughly: one Opus call per named company +
 one Sonnet call for the narrative). It never runs during scans, so cost tracks
 your clicks, not how much Archlight ingests. Every call is logged to `LLMRun`
 with a token count and cost estimate you can inspect.
+
+## Before exposing Archlight with AI on
+
+If you ever run Archlight anywhere other than your own machine, **set
+`ARCHLIGHT_AUTH_TOKEN`** first (see `docs/security-hardening.md`) — otherwise the
+unauthenticated "Enhance" endpoint could be looped to run up charges. The daily
+call cap (`LLM_DAILY_CALL_CAP`, default 100) and per-event cooldown bound spend,
+but authentication is the real control. In production the app fails closed
+(denies everything) until the token is set.

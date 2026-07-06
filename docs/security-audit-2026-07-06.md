@@ -112,3 +112,22 @@ Activation adds the key to `.env`; documenting it (empty) in `.env.example` clar
 ## What was NOT found (checked, clean)
 
 SQL injection · XSS sinks · committed secrets/keys · raw-error/stack leakage · permissive CORS · missing input validation · a known-exploitable Next.js runtime CVE. Injection and data-hygiene fundamentals are solid; the work is authentication and exposure hardening.
+
+---
+
+## Remediation status (2026-07-06)
+
+Addressed in the hardening pass (`docs/security-hardening.md`; spec/plan under `docs/superpowers/…/2026-07-06-security-hardening…`):
+
+| ID | Status | Control |
+|---|---|---|
+| **H1** | ✅ Addressed | Basic-Auth middleware over all routes; fail-closed in production. |
+| **H2** | ✅ Addressed | Auth (H1) + daily LLM call-cap (`SKIPPED_BUDGET`) + enrich cooldown. |
+| **M1** | ✅ Addressed (baseline) | `safeFetchText` — scheme allowlist, private-IP block, size cap, bounded re-validated redirect. (DNS-rebind resolve-and-check remains a documented follow-up.) |
+| **M2** | ✅ Addressed | Security headers via `next.config.ts`. (Strict nonce CSP remains a follow-up.) |
+| **M3** | ✅ Addressed | Per-IP rate limiting in middleware, tighter on paid routes. (Shared store is a follow-up for multi-node.) |
+| **L1** | ⚠️ Accepted-with-note | Advisories not exploitable in this app; `npm audit fix --force` still forbidden (Next downgrade). |
+| **L2** | ✅ Addressed | `ANTHROPIC_API_KEY` + `ARCHLIGHT_AUTH_TOKEN` documented in `.env.example`. |
+| **L3** | ✅ Addressed | Enrich cooldown. |
+
+Open follow-ups (all documented in `docs/security-hardening.md`): DNS-rebind SSRF resolution, strict nonce-based CSP, shared rate-limit store, multi-user accounts/roles.
