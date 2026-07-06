@@ -1,5 +1,6 @@
 import { XMLParser } from 'fast-xml-parser'
 import type { Source } from '@prisma/client'
+import { safeFetchText } from '@/server/net/safe-fetch'
 import type { RawItem } from '../types'
 
 function text(value: unknown): string {
@@ -55,10 +56,8 @@ export function parseRssXml(xml: string): RawItem[] {
 
 export async function collectRss(source: Source): Promise<RawItem[]> {
   if (!source.url) throw new Error(`RSS source ${source.name} has no url`)
-  const res = await fetch(source.url, {
-    signal: AbortSignal.timeout(10_000),
-    headers: { 'user-agent': 'ArchlightRadar/0.1 (public intelligence radar)' },
-  })
-  if (!res.ok) throw new Error(`RSS fetch failed with HTTP ${res.status}`)
-  return parseRssXml(await res.text())
+  // SSRF-guarded: http(s) only, private/loopback hosts blocked, response size
+  // capped, redirects bounded + re-validated. Keeps the 10s timeout.
+  const xml = await safeFetchText(source.url, { timeoutMs: 10_000 })
+  return parseRssXml(xml)
 }
