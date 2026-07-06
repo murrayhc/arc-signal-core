@@ -13,6 +13,7 @@ import { updateSourceHealth } from './health'
 import { syncGraphForEvents } from '@/server/graph/builder'
 import { recordGraphEvents } from '@/server/graph/timeline'
 import { runEvidenceDepth } from '@/server/evidence/depth-pipeline'
+import { runConsequenceSynthesis } from '@/server/consequence/consequence-pipeline'
 import type { PipelineError } from './types'
 
 export type ScanSummary = {
@@ -42,6 +43,9 @@ export type ScanSummary = {
     claimClustersUpserted: number
     lineageRecordsCreated: number
     investigationQueriesGenerated: number
+    companyImpactsCreated: number
+    contextSynthesesCreated: number
+    futureScenariosCreated: number
   }
   errors: PipelineError[]
   warnings: PipelineError[]
@@ -75,6 +79,9 @@ export async function runFullScan(options: { scanType?: string } = {}): Promise<
     claimClustersUpserted: 0,
     lineageRecordsCreated: 0,
     investigationQueriesGenerated: 0,
+    companyImpactsCreated: 0,
+    contextSynthesesCreated: 0,
+    futureScenariosCreated: 0,
   }
 
   try {
@@ -162,6 +169,21 @@ export async function runFullScan(options: { scanType?: string } = {}): Promise<
     const positioning = await generatePositioning(cardsWithEvents, lens)
     errors.push(...positioning.errors)
     counts.positioningExamplesCreated = positioning.created.length
+
+    // 13b. Commercial Consequence Engine (additive, non-fatal): company impacts →
+    // historic/present/future context + scenarios → impact positioning, for this
+    // scan's events. Runs BEFORE graph sync so the projected graph includes the
+    // impact positioning (a fresh rebuild then stays idempotent). A failure here
+    // never fails the scan.
+    try {
+      const consequence = await runConsequenceSynthesis(allEvents)
+      errors.push(...consequence.errors)
+      counts.companyImpactsCreated = consequence.counts.companyImpactsCreated
+      counts.contextSynthesesCreated = consequence.counts.contextSynthesesCreated
+      counts.futureScenariosCreated = consequence.counts.futureScenariosCreated
+    } catch (err) {
+      errors.push({ stage: 'consequence', message: err instanceof Error ? err.message : String(err) })
+    }
 
     // 14. Graph sync: project events + evidence chains into GraphNodes/GraphEdges (upsert, idempotent).
     const g = await syncGraphForEvents(allEvents)

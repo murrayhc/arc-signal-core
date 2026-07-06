@@ -202,14 +202,16 @@ describe('Stage 14 upgrade proofs 1-12: full scan -> DB/API state', () => {
   })
 
   it('proof 11: manual company search finds a graph root', async () => {
-    // Entity resolution during the scan is deferred (see orchestrator.test.ts —
-    // every EventCandidate.primaryEntityId is null on fixture data), so there is
-    // no COMPANY node from the scan alone. Simulate the realistic downstream case
-    // — a company later resolved and linked to a real scanned event — then prove
+    // The consequence engine now resolves entities during the scan, but does not
+    // link them as an event's primaryEntity, so there is still no COMPANY node
+    // from the scan alone. Upsert the company (it may already exist from the
+    // scan's entity resolution) and link it to a real scanned event, then prove
     // manual search finds it as a graph root (never fabricates a hit).
     const event = await prisma.eventCandidate.findFirstOrThrow()
-    const entity = await prisma.entity.create({
-      data: { name: 'Meridian Grid Systems', entityType: 'ORGANISATION' },
+    const entity = await prisma.entity.upsert({
+      where: { name: 'Meridian Grid Systems' },
+      create: { name: 'Meridian Grid Systems', entityType: 'ORGANISATION' },
+      update: {},
     })
     await prisma.eventCandidate.update({ where: { id: event.id }, data: { primaryEntityId: entity.id } })
     const updatedEvent = await prisma.eventCandidate.findUniqueOrThrow({
