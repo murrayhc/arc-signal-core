@@ -1,8 +1,24 @@
 import type { AtomicClaim, ClaimLineage } from '@prisma/client'
 import { prisma } from '@/server/db'
 import type { RelationToOrigin } from '@/shared/enums'
+import { isNearDuplicate } from './fingerprint'
 import { blendedSimilarity, COPY_THRESHOLD, normalise } from './text'
 import type { EvidenceError } from './types'
+
+/** Copies landing within this window of the origin count toward the
+ *  copy-burst (coordinated-amplification) signal. */
+const BURST_WINDOW_MS = 48 * 60 * 60 * 1000
+
+/** Per-relation confidence that a row is itself the true origin. The origin
+ *  candidate's own confidence grows with corroboration (set separately); a
+ *  near-verbatim copy is almost certainly downstream of the origin; an
+ *  independently-worded report could plausibly be an undetected origin. */
+const ORIGIN_CONFIDENCE_BY_RELATION: Record<string, number> = {
+  LIKELY_COPY: 0.05,
+  INDEPENDENT_SUPPORT: 0.3,
+  COMMENTARY: 0.1,
+  CONTRADICTION: 0.05,
+}
 
 /** Lexical markers that a report is disputing/denying the origin claim rather
  *  than repeating or supporting it. */
@@ -46,6 +62,33 @@ export async function traceLineage(
   const docIds = [...new Set(ordered.map((a) => a.documentId))]
   const docs = await prisma.document.findMany({ where: { id: { in: docIds } } })
   const urlByDoc = new Map(docs.map((d) => [d.id, d.url]))
+  const simhashByDoc = new Map(docs.map((d) => [d.id, d.simhash]))
+  // Normalised full-document text, for the length-robust copy check: simhash
+  // distance scales with edit FRACTION, so on short documents (RSS blurbs)
+  // even light rewording moves the hash too far — the token/trigram blend on
+  // the whole body catches those. Computed lazily, origin-vs-row only (a
+  // cluster is small, so this stays O(cluster size), never O(n²)).
+  const normalisedDocText = new Map<string, ReturnType<typeof normalise>>()
+  const docTextOf = (docId: string) => {
+    let cached = normalisedDocText.get(docId)
+    if (!cached) {
+      const raw = docs.find((d) => d.id === docId)?.rawContent ?? ''
+      cached = normalise(raw)
+      normalisedDocText.set(docId, cached)
+    }
+    return cached
+  }
+
+  // Publisher independence groups: sources in one group are one voice.
+  const lineageSourceIds = [...new Set(ordered.map((a) => a.sourceId))]
+  const lineageSources = await prisma.source.findMany({
+    where: { id: { in: lineageSourceIds } },
+    select: { id: true, independenceGroup: true },
+  })
+  const groupBySource = new Map(lineageSources.map((s) => [s.id, s.independenceGroup ?? s.id]))
+  const groupOf = (sourceId: string) => groupBySource.get(sourceId) ?? sourceId
+
+  const originSimhash = simhashByDoc.get(ordered[0].documentId)
 
   type Row = { atomic: AtomicClaim; relation: RelationToOrigin; isLikelyCopy: boolean; originConfidence: number }
   const rows: Row[] = ordered.map((atomic, i) => {
@@ -58,15 +101,24 @@ export async function traceLineage(
       }
     }
     const sim = blendedSimilarity(normalise(atomic.claimText), originNorm)
+    // Three copy signals, any of which is sufficient: near-verbatim CLAIM
+    // wording (Jaccard blend on the extracted sentence); near-identical
+    // DOCUMENT fingerprint (simhash — cheap, catches long-article
+    // syndication); or high whole-DOCUMENT text similarity (length-robust,
+    // catches short-doc syndication where the fingerprint is noisy).
+    const documentIsNearDuplicate =
+      atomic.documentId !== ordered[0].documentId &&
+      (isNearDuplicate(originSimhash, simhashByDoc.get(atomic.documentId)) ||
+        blendedSimilarity(docTextOf(atomic.documentId), docTextOf(ordered[0].documentId)) >= COPY_THRESHOLD)
     let relation: RelationToOrigin
     let isLikelyCopy = false
     if (CONTRADICTION_RE.test(atomic.claimText)) relation = 'CONTRADICTION'
-    else if (sim >= COPY_THRESHOLD) {
+    else if (sim >= COPY_THRESHOLD || documentIsNearDuplicate) {
       relation = 'LIKELY_COPY'
       isLikelyCopy = true
     } else if (readCommentary(atomic.metadataJson)) relation = 'COMMENTARY'
     else relation = 'INDEPENDENT_SUPPORT'
-    return { atomic, relation, isLikelyCopy, originConfidence: 0 }
+    return { atomic, relation, isLikelyCopy, originConfidence: ORIGIN_CONFIDENCE_BY_RELATION[relation] ?? 0 }
   })
 
   const lineage: ClaimLineage[] = []
@@ -101,19 +153,35 @@ export async function traceLineage(
     }
   }
 
-  const independentSources = new Set(rows.filter((r) => isSupport(r.relation)).map((r) => r.atomic.sourceId))
+  // Independence is counted in publisher GROUPS, not source rows: five feeds
+  // owned by one publisher are one independent voice. Copies never count.
+  const independentGroups = new Set(rows.filter((r) => isSupport(r.relation)).map((r) => groupOf(r.atomic.sourceId)))
   const copiedSources = new Set(rows.filter((r) => r.relation === 'LIKELY_COPY').map((r) => r.atomic.sourceId))
   const allSources = new Set(rows.map((r) => r.atomic.sourceId))
   const contradictionCount = rows.filter((r) => r.relation === 'CONTRADICTION').length
   const repeatCount = rows.length
 
+  // Copy-burst manipulation signal: a claim whose copies mostly land inside a
+  // tight window after the origin looks amplified, not corroborated. Requires
+  // >=2 copies — one syndicated pickup is normal news flow, not a campaign.
+  const copies = rows.filter((r) => r.relation === 'LIKELY_COPY')
+  const originTime = firstSeenAt.getTime()
+  const burstCopies = copies.filter((r) => {
+    const t = (r.atomic.eventDate ?? r.atomic.createdAt).getTime()
+    return t - originTime <= BURST_WINDOW_MS
+  })
+  const manipulationRiskScore =
+    copies.length >= 2
+      ? Math.min(1, 0.6 * (burstCopies.length / rows.length) + 0.4 * (copies.length / rows.length))
+      : 0
+
   await prisma.canonicalClaim.update({
     where: { id: canonicalClaimId },
     data: {
-      independentSourceCount: independentSources.size,
+      independentSourceCount: independentGroups.size,
       repeatCount,
       contradictionCount,
-      supportScore: Math.min(1, independentSources.size / 3),
+      supportScore: Math.min(1, independentGroups.size / 3),
       originCandidateUrl: urlByDoc.get(ordered[0].documentId) ?? canonical.originCandidateUrl,
     },
   })
@@ -125,15 +193,17 @@ export async function traceLineage(
       title: canonical.claimText.slice(0, 80),
       summary: `${repeatCount} report(s) of ${canonical.claimType}`,
       sourceCount: allSources.size,
-      independentSourceCount: independentSources.size,
+      independentSourceCount: independentGroups.size,
       copiedSourceCount: copiedSources.size,
       contradictionCount,
+      manipulationRiskScore,
     },
     update: {
       sourceCount: allSources.size,
-      independentSourceCount: independentSources.size,
+      independentSourceCount: independentGroups.size,
       copiedSourceCount: copiedSources.size,
       contradictionCount,
+      manipulationRiskScore,
     },
   })
 

@@ -2,6 +2,8 @@ import { createHash } from 'node:crypto'
 import { prisma } from '@/server/db'
 import { extractAtomicClaims } from './extraction'
 import { assignCanonicalClaims } from './canonical'
+import { simhash64 } from './fingerprint'
+import { deriveIndependenceGroup } from './independence'
 import { traceLineageForMany } from './lineage'
 import { scoreReliabilityForMany } from './reliability'
 import { generateQueriesForCanonical } from './investigation-query'
@@ -53,6 +55,10 @@ async function resolveTargets(target: InvestigationTarget): Promise<string[]> {
  *  Deduped-content documents (unique constraint) are skipped. */
 async function ingest(doc: SearchDoc): Promise<string[]> {
   const sourceName = `search:${doc.sourceName ?? 'web'}`
+  // Group search-ingested sources by the RESULT's publisher domain, not the
+  // synthetic source name — a search hit on bbc.co.uk is the same publisher
+  // as the scanned BBC feed for independence-counting purposes.
+  const independenceGroup = deriveIndependenceGroup(doc.url, sourceName)
   const source = await prisma.source.upsert({
     where: { name: sourceName },
     create: {
@@ -64,6 +70,7 @@ async function ingest(doc: SearchDoc): Promise<string[]> {
       // scan capability that does not exist. Scan-time reconciliation in
       // collect.ts keeps this honest even if a collector lands later.
       collectorStatus: 'UNSUPPORTED',
+      independenceGroup,
       isFixture: false,
     },
     update: {},
@@ -79,6 +86,7 @@ async function ingest(doc: SearchDoc): Promise<string[]> {
         rawContent: doc.content,
         rawContentHash: sha256(doc.content),
         normalisedContentHash: sha256(normalised),
+        simhash: simhash64(doc.content),
         documentType: 'SEARCH_RESULT',
         publishedAt: doc.publishedAt ?? null,
         isFixture: false,

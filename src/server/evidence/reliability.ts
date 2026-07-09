@@ -4,7 +4,16 @@ import type { FactualityLabel } from '@/shared/enums'
 import { deriveAuthority } from './authority'
 import type { EvidenceError, ReliabilityDimensions, ReliabilityResult } from './types'
 
-const WEIGHTS = { authority: 0.28, independence: 0.3, support: 0.12, specificity: 0.15, freshness: 0.15 }
+const WEIGHTS = {
+  authority: 0.26,
+  independence: 0.28,
+  support: 0.12,
+  specificity: 0.14,
+  freshness: 0.12,
+  // How confidently the earliest report can be treated as the true origin —
+  // computed by lineage, previously ignored here.
+  originTrace: 0.08,
+}
 const FRESHNESS_HORIZON_DAYS = 180
 const STALE_BELOW = 0.25
 const PRIMARY_AUTHORITY = 0.85
@@ -63,12 +72,16 @@ export async function scoreReliability(
     sources.map((s: Source) => [s.id, deriveAuthority(s.category, s.accessMethod)]),
   )
   const authorityOf = (sid: string) => authorityBySource.get(sid) ?? deriveAuthority('UNKNOWN')
+  // Publisher independence groups: sources in one group are one voice.
+  const groupBySource = new Map<string, string>(sources.map((s: Source) => [s.id, s.independenceGroup ?? s.id]))
+  const groupOf = (sid: string) => groupBySource.get(sid) ?? sid
 
   const supportRows = lineage.filter((l) => isSupport(l.relationToOrigin))
   const copyRows = lineage.filter((l) => l.relationToOrigin === 'LIKELY_COPY')
   const contradictionRows = lineage.filter((l) => l.relationToOrigin === 'CONTRADICTION')
+  const originRow = lineage.find((l) => l.relationToOrigin === 'ORIGIN_CANDIDATE')
 
-  const independentSources = new Set(supportRows.map((l) => l.sourceId))
+  const independentSources = new Set(supportRows.map((l) => groupOf(l.sourceId)))
   const copiedSources = new Set(copyRows.map((l) => l.sourceId))
   const allSources = new Set(lineage.map((l) => l.sourceId))
   const independentSourceCount = independentSources.size
@@ -83,14 +96,25 @@ export async function scoreReliability(
   const support = Math.min(1, independentSourceCount / 3)
   const contradictionDim = contradictionCount === 0 ? 0 : contradictionCount / (independentSourceCount + contradictionCount)
   const copyLoopRisk = allSources.size === 0 ? 0 : copiedSources.size / allSources.size
+  // Origin-trace strength: lineage's confidence that the earliest report is
+  // the true origin (grows with corroboration). Neutral 0.5 when untraced.
+  const originTrace = originRow?.originConfidence ?? 0.5
+  // Copy-burst manipulation signal, computed by lineage on the cluster.
+  const cluster = await prisma.claimCluster.findUnique({ where: { canonicalClaimId } })
+  const manipulationRisk = cluster?.manipulationRiskScore ?? 0
 
   const positive =
     WEIGHTS.authority * authority +
     WEIGHTS.independence * independence +
     WEIGHTS.support * support +
     WEIGHTS.specificity * specificity +
-    WEIGHTS.freshness * freshness
-  const reliabilityScore = clamp01(positive * (1 - 0.5 * contradictionDim) * (1 - 0.4 * copyLoopRisk))
+    WEIGHTS.freshness * freshness +
+    WEIGHTS.originTrace * originTrace
+  // Multiplicative penalties: contradiction, copy-loop, and manipulation can
+  // only ever LOWER the score — amplification never inflates confidence.
+  const reliabilityScore = clamp01(
+    positive * (1 - 0.5 * contradictionDim) * (1 - 0.4 * copyLoopRisk) * (1 - 0.3 * manipulationRisk),
+  )
 
   const recycled = copiedSources.size >= 2 && independentSourceCount <= 1
   const stale = freshness < STALE_BELOW
@@ -104,6 +128,8 @@ export async function scoreReliability(
     support,
     contradiction: contradictionDim,
     copyLoopRisk,
+    originTrace,
+    manipulationRisk,
   }
   const { reasoningSummary, evidenceFor, evidenceAgainst, warnings } = explain({
     reliabilityScore,
@@ -113,11 +139,14 @@ export async function scoreReliability(
     contradictionCount,
     authority,
     freshness,
+    manipulationRisk,
   })
 
   await prisma.canonicalClaim.update({
     where: { id: canonicalClaimId },
-    data: { reliabilityScore, status: canonical.status },
+    // Factuality is rolled up onto the canonical claim on every re-score —
+    // it is never frozen at extraction time.
+    data: { reliabilityScore, factualityLabel, status: canonical.status },
   })
   await prisma.claimCluster.updateMany({ where: { canonicalClaimId }, data: { reliabilityScore } })
   await prisma.atomicClaim.updateMany({ where: { canonicalClaimId }, data: { factualityLabel } })
@@ -178,12 +207,13 @@ function explain(input: {
   contradictionCount: number
   authority: number
   freshness: number
+  manipulationRisk: number
 }): { reasoningSummary: string; evidenceFor: string[]; evidenceAgainst: string[]; warnings: string[] } {
   const evidenceFor: string[] = []
   const evidenceAgainst: string[] = []
   const warnings: string[] = []
 
-  evidenceFor.push(`${input.independentSourceCount} independent source(s)`)
+  evidenceFor.push(`${input.independentSourceCount} independent publisher(s)`)
   evidenceFor.push(`strongest source authority ${input.authority.toFixed(2)}`)
   evidenceFor.push(`freshness ${input.freshness.toFixed(2)}`)
   if (input.copiedCount > 0) {
@@ -192,13 +222,19 @@ function explain(input: {
   if (input.contradictionCount > 0) {
     evidenceAgainst.push(`${input.contradictionCount} contradicting report(s)`)
   }
-  if (input.independentSourceCount <= 1) warnings.push('single independent source')
+  if (input.independentSourceCount <= 1) warnings.push('single independent publisher')
+  if (input.manipulationRisk >= 0.3) {
+    warnings.push(
+      `possible coordinated amplification: copies of this claim landed in a tight burst (risk ${input.manipulationRisk.toFixed(2)})`,
+    )
+  }
 
   const reasoningSummary =
     `Reliability ${input.reliabilityScore.toFixed(2)} (${input.factualityLabel}): ` +
-    `${input.independentSourceCount} independent source(s), strongest authority ${input.authority.toFixed(2)}` +
+    `${input.independentSourceCount} independent publisher(s), strongest authority ${input.authority.toFixed(2)}` +
     (input.copiedCount > 0 ? `, ${input.copiedCount} likely copy(ies) ignored` : '') +
     (input.contradictionCount > 0 ? `, ${input.contradictionCount} contradiction(s)` : '') +
+    (input.manipulationRisk >= 0.3 ? `, copy-burst risk ${input.manipulationRisk.toFixed(2)}` : '') +
     '.'
 
   return { reasoningSummary, evidenceFor, evidenceAgainst, warnings }

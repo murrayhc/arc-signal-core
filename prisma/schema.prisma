@@ -16,6 +16,10 @@ model Source {
   isActive        Boolean       @default(true)
   isFixture       Boolean       @default(false)
   collectorStatus String        @default("UNSUPPORTED")
+  // Publisher/ownership group derived from the registrable domain (or the
+  // source name when there is no URL). Independence counting collapses
+  // sources in the same group so syndication never reads as corroboration.
+  independenceGroup String?
   lastRunStatus   String?
   lastRunAt       DateTime?
   notes           String?
@@ -56,6 +60,9 @@ model Document {
   language              String          @default("en")
   isFixture             Boolean         @default(false)
   metadataJson          String          @default("{}")
+  // 64-bit simhash of the normalised content, hex-encoded. Near-duplicate /
+  // syndication fingerprint: small hamming distance = same underlying text.
+  simhash               String?
   createdAt             DateTime        @default(now())
   updatedAt             DateTime        @updatedAt
   parsedDocument        ParsedDocument?
@@ -697,6 +704,9 @@ model CanonicalClaim {
   contradictionCount     Int                  @default(0)
   supportScore           Float                @default(0)
   reliabilityScore       Float                @default(0)
+  // Rolled-up factuality, re-derived on every reliability re-score (it was
+  // previously frozen at atomic-extraction time and never updated).
+  factualityLabel        String               @default("UNVERIFIED")
   status                 String               @default("ACTIVE")
   createdAt              DateTime             @default(now())
   updatedAt              DateTime             @updatedAt
@@ -721,6 +731,9 @@ model ClaimCluster {
   contradictionCount     Int            @default(0)
   reliabilityScore       Float          @default(0)
   momentumScore          Float          @default(0)
+  // Copy-burst / coordinated-amplification signal in [0,1]: many near-identical
+  // copies landing in a tight window after the origin. Penalises reliability.
+  manipulationRiskScore  Float          @default(0)
   createdAt              DateTime       @default(now())
   updatedAt              DateTime       @updatedAt
 }

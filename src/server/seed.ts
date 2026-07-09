@@ -1,4 +1,5 @@
 import { prisma } from '@/server/db'
+import { deriveIndependenceGroup } from '@/server/evidence/independence'
 
 type SeedSource = {
   name: string
@@ -56,15 +57,20 @@ export async function runSeed(options: { includeLive?: boolean } = {}) {
   const includeLive = options.includeLive ?? true
   const sources = includeLive ? [...FIXTURE_SOURCES, ...LIVE_SOURCES] : FIXTURE_SOURCES
   for (const s of sources) {
+    // Publisher independence group: registrable domain for real URLs, the
+    // source name otherwise — collapses same-publisher feeds in every
+    // independence count. Scan-time reconciliation keeps this current.
+    const independenceGroup = deriveIndependenceGroup(s.url, s.name)
     await prisma.source.upsert({
       where: { name: s.name },
-      create: s,
+      create: { ...s, independenceGroup },
       update: {
         category: s.category,
         accessMethod: s.accessMethod,
         url: s.url,
         isFixture: s.isFixture,
         collectorStatus: s.collectorStatus,
+        independenceGroup,
         notes: s.notes,
       },
     })

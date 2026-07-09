@@ -2,6 +2,7 @@ import { createHash, randomUUID } from 'node:crypto'
 import { prisma } from '@/server/db'
 import type { Prisma } from '@prisma/client'
 import { runEvidenceDepth } from '@/server/evidence/depth-pipeline'
+import { simhash64 } from '@/server/evidence/fingerprint'
 
 export async function makeSource(overrides: Partial<Prisma.SourceUncheckedCreateInput> = {}) {
   return prisma.source.create({
@@ -32,6 +33,7 @@ export async function makeDocument(
       normalisedContentHash: createHash('sha256')
         .update(content.toLowerCase().replace(/\s+/g, ' ').trim())
         .digest('hex'),
+      simhash: simhash64(content),
       documentType: 'FIXTURE_ITEM',
       isFixture: true,
       ...overrides,

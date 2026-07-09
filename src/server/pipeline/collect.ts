@@ -2,6 +2,8 @@ import { createHash } from 'node:crypto'
 import type { Document, Source } from '@prisma/client'
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/server/db'
+import { simhash64 } from '@/server/evidence/fingerprint'
+import { deriveIndependenceGroup } from '@/server/evidence/independence'
 import { getCollector } from './collectors/registry'
 import type { PipelineError } from './types'
 import type { SourceOutcome } from './health'
@@ -40,6 +42,13 @@ export async function collectFromSources(sources: Source[]): Promise<{
       })
       continue
     }
+    // Reconcile the publisher independence group at scan time (like
+    // collectorStatus): derived from the source's registrable domain so
+    // same-publisher feeds can never be counted as independent corroboration.
+    const independenceGroup = deriveIndependenceGroup(source.url, source.name)
+    if (source.independenceGroup !== independenceGroup) {
+      await prisma.source.update({ where: { id: source.id }, data: { independenceGroup } })
+    }
     let createdForThisSource = 0
     try {
       const items = await entry.collect(source)
@@ -53,6 +62,7 @@ export async function collectFromSources(sources: Source[]): Promise<{
               rawContent: item.content,
               rawContentHash: sha256(item.content),
               normalisedContentHash: sha256(normalise(item.content)),
+              simhash: simhash64(item.content),
               publishedAt: item.publishedAt,
               documentType: entry.documentType,
               isFixture: source.isFixture,

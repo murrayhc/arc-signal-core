@@ -15,6 +15,10 @@ export type ReliabilityDimensions = {
   support: number
   contradiction: number
   copyLoopRisk: number
+  /** Lineage's confidence that the earliest report is the true origin. */
+  originTrace: number
+  /** Copy-burst / coordinated-amplification signal (penalty). */
+  manipulationRisk: number
 }
 
 export type ReliabilityResult = {
