@@ -17,8 +17,14 @@ describe('seed provider configs (real model IDs)', () => {
     expect(rows.map((r) => r.modelName).sort()).toEqual([...REAL_IDS].sort())
   })
 
-  it('routes representative task types to the intended real model', async () => {
+  it('routes representative task types to the intended real model once activated', async () => {
     await runSeed({ includeLive: false })
+    // routeTask only routes to ENABLED configs — the dormant seed routes
+    // nothing; this asserts the routing table under the activated state.
+    const dormant = await loadRouterConfigs()
+    expect(routeTask('COMPANY_IMPACT_ANALYSIS', dormant)).toBeNull()
+
+    await prisma.lLMProviderConfig.updateMany({ data: { enabled: true } })
     const c = await loadRouterConfigs()
     expect(routeTask('COMPANY_IMPACT_ANALYSIS', c)?.modelName).toBe('claude-opus-4-8')
     expect(routeTask('PRESENT_CONTEXT', c)?.modelName).toBe('claude-sonnet-5')

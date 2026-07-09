@@ -20,10 +20,10 @@ async function seedRuns(n: number) {
 describe('LLM daily budget', () => {
   beforeEach(resetDb)
 
-  it('is within budget under the cap and over at the cap', async () => {
+  it('is within budget under the call cap and over at the cap', async () => {
     await seedRuns(2)
-    expect(await isWithinDailyBudget(new Date(), 3)).toBe(true)
-    expect(await isWithinDailyBudget(new Date(), 2)).toBe(false)
+    expect(await isWithinDailyBudget(new Date(), { callCap: 3 })).toBe(true)
+    expect(await isWithinDailyBudget(new Date(), { callCap: 2 })).toBe(false)
   })
 
   it('does not count SKIPPED runs', async () => {
@@ -34,7 +34,20 @@ describe('LLM daily budget', () => {
         tokenCountInput: 0, tokenCountOutput: 0, estimatedCost: 0, latencyMs: 0,
       },
     })
-    expect(await isWithinDailyBudget(new Date(), 1)).toBe(true)
+    expect(await isWithinDailyBudget(new Date(), { callCap: 1 })).toBe(true)
+  })
+
+  it('enforces the MONETARY cap independently of the call count', async () => {
+    // One expensive run — far under the call cap, over a small spend cap.
+    await prisma.lLMRun.create({
+      data: {
+        taskType: 'COMPANY_IMPACT_ANALYSIS', provider: 'x', model: 'claude-opus-4-8', promptHash: 'h',
+        inputSummary: '', outputSummary: '', status: 'SUCCEEDED',
+        tokenCountInput: 100_000, tokenCountOutput: 50_000, estimatedCost: 1.75, latencyMs: 1,
+      },
+    })
+    expect(await isWithinDailyBudget(new Date(), { callCap: 100, spendCapUsd: 2 })).toBe(true)
+    expect(await isWithinDailyBudget(new Date(), { callCap: 100, spendCapUsd: 1.5 })).toBe(false)
   })
 
   it('runLLMTask over budget logs SKIPPED_BUDGET and never calls the provider', async () => {

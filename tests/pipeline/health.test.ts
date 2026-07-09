@@ -42,6 +42,27 @@ describe('updateSourceHealth', () => {
     expect(health.healthScore).toBe(0.32)
   })
 
+  it('persists the failure reason on the health row, truncated', async () => {
+    const source = await makeSource()
+    await updateSourceHealth([
+      { sourceId: source.id, outcome: 'FAILED', documentsStored: 0, errorMessage: 'ECONNREFUSED 127.0.0.1:9' },
+    ])
+    let health = await prisma.sourceHealth.findUniqueOrThrow({ where: { sourceId: source.id } })
+    expect(health.notes).toBe('Last failure: ECONNREFUSED 127.0.0.1:9')
+
+    // Long errors are truncated, never stored unbounded.
+    await updateSourceHealth([
+      { sourceId: source.id, outcome: 'FAILED', documentsStored: 0, errorMessage: 'x'.repeat(1000) },
+    ])
+    health = await prisma.sourceHealth.findUniqueOrThrow({ where: { sourceId: source.id } })
+    expect(health.notes!.length).toBeLessThanOrEqual('Last failure: '.length + 300)
+
+    // Recovery clears the failure note (HEALTHY path sets notes null).
+    await updateSourceHealth([{ sourceId: source.id, outcome: 'SUCCESS', documentsStored: 3 }])
+    health = await prisma.sourceHealth.findUniqueOrThrow({ where: { sourceId: source.id } })
+    expect(health.notes).toBeNull()
+  })
+
   it('marks unsupported sources UNSUPPORTED with zero score', async () => {
     const source = await makeSource({ name: 'Unsupported', accessMethod: 'UNSUPPORTED', url: null })
     await updateSourceHealth([{ sourceId: source.id, outcome: 'SKIPPED_UNSUPPORTED', documentsStored: 0 }])

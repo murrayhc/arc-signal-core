@@ -138,13 +138,3 @@ export async function updateOpportunityStatus(
   return { id, status }
 }
 
-export async function getRevenueLenses(): Promise<{ id: string; name: string; userType: string; isDefault: boolean; active: boolean }[]> {
-  const lenses = await prisma.revenueLens.findMany({ orderBy: [{ isDefault: 'desc' }, { name: 'asc' }] })
-  return lenses.map((l) => ({
-    id: l.id,
-    name: l.name,
-    userType: l.userType,
-    isDefault: l.isDefault,
-    active: l.active,
-  }))
-}

@@ -135,7 +135,7 @@ export const LLM_TASK_TYPES = [
 ] as const
 export type LLMTaskType = (typeof LLM_TASK_TYPES)[number]
 
-export const LLM_RUN_STATUSES = ['PENDING','SUCCEEDED','FAILED','SKIPPED_NO_PROVIDER','SKIPPED_BUDGET','REJECTED_VALIDATION'] as const
+export const LLM_RUN_STATUSES = ['PENDING','SUCCEEDED','FAILED','SKIPPED_NO_PROVIDER','SKIPPED_BUDGET','SKIPPED_UNROUTED','REJECTED_VALIDATION'] as const
 export type LLMRunStatus = (typeof LLM_RUN_STATUSES)[number]
 
 export const VALIDATION_STATUSES = ['PASSED','FAILED','NOT_RUN'] as const

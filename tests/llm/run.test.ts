@@ -166,6 +166,9 @@ describe('runLLMTask — model routing', () => {
   beforeEach(async () => {
     await resetDb()
     await runSeed({ includeLive: false })
+    // Routing only considers ENABLED configs — enable the dormant seeds so the
+    // routed-model audit assertions below describe the activated state.
+    await prisma.lLMProviderConfig.updateMany({ data: { enabled: true } })
   })
 
   it('logs the ROUTED model name on LLMRun.model for a task the seeded configs support, not the provider name', async () => {
@@ -190,11 +193,45 @@ describe('runLLMTask — model routing', () => {
       system: 'Translate this.',
       prompt: 'Bonjour.',
     }
+    // Injected provider: the caller takes responsibility, so the call proceeds
+    // even unrouted — but the audit row never fabricates a model id.
     const result = await runLLMTask(req, { provider: new FakeProvider() })
     expect(result.status).toBe('SUCCEEDED')
 
     const run = await prisma.lLMRun.findUniqueOrThrow({ where: { id: result.llmRunId } })
     // Not the (wrong) provider name masquerading as a model, and not a fabricated model id.
     expect(run.model).not.toBe('fake-provider')
+  })
+
+  it('LIVE provider path: an unrouted task is SKIPPED_UNROUTED with no provider call — disabled configs are a cost contract', async () => {
+    // Simulate the activation cost trap: the owner sets a key and enables ONLY
+    // the fast/cheap config. A task class whose supporting configs remain
+    // disabled must NOT fall back to a default model and spend money — it must
+    // skip before any provider call. (The key is fake; if this gate ever
+    // regressed, the run would surface as FAILED, not SKIPPED_UNROUTED.)
+    process.env.ANTHROPIC_API_KEY = 'sk-ant-fake-test-key-never-called'
+    try {
+      await prisma.lLMProviderConfig.updateMany({ data: { enabled: false } })
+      await prisma.lLMProviderConfig.updateMany({
+        where: { modelName: 'claude-haiku-4-5' },
+        data: { enabled: true },
+      })
+      // OPPORTUNITY_PLAYBOOK_GENERATION is supported only by the (still
+      // disabled) sonnet config — so with only haiku enabled it is unrouted.
+      const result = await runLLMTask(
+        { taskType: 'OPPORTUNITY_PLAYBOOK_GENERATION', system: 's', prompt: 'p' },
+        {}, // no injected provider → live getActiveProvider() path
+      )
+      expect(result.status).toBe('SKIPPED_UNROUTED')
+      expect(result.text).toBeUndefined()
+
+      const run = await prisma.lLMRun.findUniqueOrThrow({ where: { id: result.llmRunId } })
+      expect(run.status).toBe('SKIPPED_UNROUTED')
+      expect(run.model).toBe('unrouted')
+      expect(run.tokenCountInput).toBe(0)
+      expect(run.estimatedCost).toBe(0)
+    } finally {
+      delete process.env.ANTHROPIC_API_KEY
+    }
   })
 })

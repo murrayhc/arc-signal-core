@@ -59,17 +59,20 @@ fallback pointer. **It has no API-key column.** Keys live only in
 `process.env.ANTHROPIC_API_KEY`, read once at call time and never persisted
 or logged.
 
-**Seeded `modelName` values are PLACEHOLDERS.** The shipped seed
-(`src/server/seed.ts`) populates `LLMProviderConfig.modelName` with
-descriptive slugs (`claude-fast`, `claude-reasoning`, `claude-longcontext`,
-`claude-creative`) rather than real Anthropic model ids — these exist to
-prove the routing logic end-to-end in tests, not as activation-ready values.
-Before enabling a config in production, the owner must update its
-`modelName` to a real, current Anthropic model id (see §7). The Anthropic
-adapter's own fallback (used only when a request reaches it with no routed
+**Seeded `modelName` values are REAL, current Anthropic model ids.** The
+shipped seed (`src/server/seed.ts`) populates `LLMProviderConfig.modelName`
+with `claude-haiku-4-5` (fast/LOW), `claude-sonnet-5` (synthesis/MEDIUM) and
+`claude-opus-4-8` (reasoning/HIGH) — activation-ready values; the seed also
+deletes any legacy placeholder rows (`claude-fast` etc.) it finds. The
+configs still ship `enabled: false`, so nothing runs until the owner
+activates them (see §7 and `docs/ai-activation.md`). The Anthropic adapter's
+own fallback (used only when a request reaches it with no routed
 `req.model`) is a separate, clearly-named constant,
-`DEFAULT_ANTHROPIC_MODEL` in `provider.ts` — not the seeded placeholder and
-not the retired `claude-3-5-sonnet-latest` id.
+`DEFAULT_ANTHROPIC_MODEL` in `provider.ts`. Note: since the Stage-0
+truth pass, `routeTask` only routes to ENABLED configs, and a live
+(non-injected) provider call with no enabled route is skipped as
+`SKIPPED_UNROUTED` rather than falling through to the default model —
+disabling a config is an owner cost control the router now honours.
 
 ## 3. The dormancy model
 

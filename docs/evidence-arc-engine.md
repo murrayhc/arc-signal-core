@@ -133,18 +133,20 @@ interactivity) renders, given an arc and its steps:
 It is mounted as an "Evidence arc" `Section` on the event detail page
 (`src/app/events/[id]/page.tsx`), populated server-side via `getEventArc`.
 
-## 6. What's deferred (not gaps)
+## 6. What's deferred (historical note — since shipped)
 
-- **Interactive 3D graph/arc render** — Phase 3c. The current `/graph` page
-  is a stats-and-list view; there is no WebGL/3D visualisation of nodes,
-  edges, or arcs yet.
-- **Interrogation** — Phase 3c, alongside the 3D view.
-- **LLM-generated summaries** over arcs or graph structure — Phase 3d. All
-  arc `title`/`summary` text today is deterministic string composition, not
-  model-generated.
-- **Market/instrument nodes** (`COMMODITY`, `INSTRUMENT` node types) — Phase
-  3e. The enum values exist; nothing currently creates these nodes, so an
-  arc never traverses through them today.
-- **Graph replay/snapshots** — Phase 3f. There is no history of past graph
-  states; every `buildArc` and `getLiveGraph` call reflects only the current
-  database contents.
+This section originally listed Phase 3c–3f capabilities as deferred. All of
+them have since shipped and the list is retained only as history:
+
+- **Interactive 2D/3D graph render** — shipped in Phase 3c
+  (`src/components/GraphExplorer.tsx`, `ForceGraph.tsx`, `/graph`).
+- **Interrogation** — shipped in Phase 3c (`src/server/interrogate/`,
+  `/interrogate`).
+- **LLM-generated summaries** — the dormant LLM layer shipped in Phase 3d;
+  arc `title`/`summary` text remains deterministic by default, with
+  enrichment available on the consequence layer when a provider is active.
+- **Market/instrument nodes** — shipped in Phase 3e
+  (`src/server/market/graph.ts` projects `COMMODITY`/`INSTRUMENT` nodes).
+- **Graph replay/snapshots** — shipped in Phase 3f
+  (`src/server/graph/timeline.ts`, `GraphEvent`/`GraphSnapshot`, replay
+  panels on `/` and event pages).

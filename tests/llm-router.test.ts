@@ -8,6 +8,10 @@ describe('LLM routing for consequence task classes', () => {
 
   it('routes each new task class to the intended cost tier', async () => {
     await runSeed({ includeLive: false })
+    // Routing only considers ENABLED configs — this test describes the
+    // activated routing table, so enable the seeded (dormant) configs first.
+    const { prisma } = await import('@/server/db')
+    await prisma.lLMProviderConfig.updateMany({ data: { enabled: true } })
     const configs = await loadRouterConfigs()
 
     // Reasoning tier (HIGH) — deep analysis.

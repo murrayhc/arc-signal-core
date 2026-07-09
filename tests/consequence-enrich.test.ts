@@ -10,22 +10,39 @@ import { makeEventGraph } from './factories'
 
 const BODY = 'Voltcore is cutting 400 jobs at its Manchester plant.'
 
-/** Task-aware fake: rationale = plain prose; context = JSON narrative. */
+/** Evidence ids arrive in the prompt as "- [<id>] <claim text>" lines — a
+ *  grounded fake cites them back, exactly as a well-behaved model must. */
+function evidenceIdsFromPrompt(prompt: string): string[] {
+  return [...prompt.matchAll(/\[([^\]]+)\]/g)].map((m) => m[1])
+}
+
+/** Task-aware fake. Values may be literal strings (returned as-is — used for
+ *  bad-output tests) or 'GROUNDED' to emit schema-valid JSON citing the
+ *  evidence ids found in the request prompt. */
 function fake(byTask: Record<string, string>): LLMProvider {
   return {
     name: 'fake',
     async generate(req: LLMRequest) {
-      return { text: byTask[req.taskType] ?? '', tokensIn: 1, tokensOut: 1 }
+      const spec = byTask[req.taskType] ?? ''
+      if (spec !== 'GROUNDED') return { text: spec, tokensIn: 1, tokensOut: 1 }
+      const ids = evidenceIdsFromPrompt(req.prompt)
+      const text =
+        req.taskType === 'COMPANY_IMPACT_ANALYSIS'
+          ? JSON.stringify({
+              rationale: 'Voltcore may face pressure as the situation develops; verify against primary sources.',
+              citedEvidenceIds: ids.slice(0, 1),
+            })
+          : JSON.stringify({
+              historic: 'Prior comparable layoffs in the sector resolved slowly.',
+              present: 'Voltcore is currently the named exposed party.',
+              future: 'Watch for confirming reports before drawing conclusions.',
+              executive: 'A layoff signal at Voltcore that a supplier or recruiter may wish to monitor.',
+              citedEvidenceIds: ids.slice(0, 1),
+            })
+      return { text, tokensIn: 1, tokensOut: 1 }
     },
   }
 }
-
-const GOOD_CONTEXT = JSON.stringify({
-  historic: 'Prior comparable layoffs in the sector resolved slowly.',
-  present: 'Voltcore is currently the named exposed party.',
-  future: 'Watch for confirming reports before drawing conclusions.',
-  executive: 'A layoff signal at Voltcore that a supplier or recruiter may wish to monitor.',
-})
 
 async function seedDeterministic(eventId: string) {
   await resolveCompanyImpacts(eventId)
@@ -39,8 +56,8 @@ describe('enrichEventConsequence', () => {
     const { event } = await makeEventGraph(BODY, { eventClass: 'RISK', sector: 'manufacturing' })
     await seedDeterministic(event.id)
     const provider = fake({
-      COMPANY_IMPACT_ANALYSIS: 'Voltcore may face pressure as the situation develops; verify against primary sources.',
-      PRESENT_CONTEXT: GOOD_CONTEXT,
+      COMPANY_IMPACT_ANALYSIS: 'GROUNDED',
+      PRESENT_CONTEXT: 'GROUNDED',
     })
     const res = await enrichEventConsequence(event.id, { provider })
 
@@ -50,20 +67,40 @@ describe('enrichEventConsequence', () => {
 
     const named = await prisma.companyImpact.findFirst({ where: { eventCandidateId: event.id, entityId: { not: null } } })
     expect(named?.llmRationale).toContain('Voltcore')
+    // The stored rationale is the PARSED prose, not the raw JSON envelope.
+    expect(named?.llmRationale).not.toContain('citedEvidenceIds')
     expect(named?.enrichedByLLMRunId).toBeTruthy()
 
     const ctx = await prisma.eventContextSynthesis.findUnique({ where: { eventCandidateId: event.id } })
-    expect(JSON.parse(ctx!.llmNarrativeJson!).executive).toContain('Voltcore')
-    for (const s of Object.values(JSON.parse(ctx!.llmNarrativeJson!))) {
-      expect(findAdviceLanguage(s as string)).toEqual([])
+    const narrative = JSON.parse(ctx!.llmNarrativeJson!)
+    expect(narrative.executive).toContain('Voltcore')
+    expect(narrative.citedEvidenceIds.length).toBeGreaterThan(0)
+    for (const s of Object.values(narrative)) {
+      if (typeof s === 'string') expect(findAdviceLanguage(s)).toEqual([])
     }
+  })
+
+  it('rejects an output that cites none of the supplied evidence ids (ungrounded)', async () => {
+    const { event } = await makeEventGraph(BODY, { eventClass: 'RISK', sector: 'manufacturing' })
+    await seedDeterministic(event.id)
+    // Schema-valid, advice-clean — but cites a fabricated evidence id.
+    const ungrounded = JSON.stringify({
+      rationale: 'Voltcore may face pressure; verify against primary sources.',
+      citedEvidenceIds: ['fabricated-id-000'],
+    })
+    const res = await enrichEventConsequence(event.id, {
+      provider: fake({ COMPANY_IMPACT_ANALYSIS: ungrounded, PRESENT_CONTEXT: 'not json' }),
+    })
+    expect(res.impactsEnriched).toBe(0)
+    const named = await prisma.companyImpact.findFirst({ where: { eventCandidateId: event.id, entityId: { not: null } } })
+    expect(named?.llmRationale).toBeNull()
   })
 
   it('does NOT enrich category-level impacts (entityId null)', async () => {
     const { event } = await makeEventGraph(BODY, { eventClass: 'RISK', sector: 'manufacturing' })
     await seedDeterministic(event.id)
     await enrichEventConsequence(event.id, {
-      provider: fake({ COMPANY_IMPACT_ANALYSIS: 'Some category prose.', PRESENT_CONTEXT: GOOD_CONTEXT }),
+      provider: fake({ COMPANY_IMPACT_ANALYSIS: 'GROUNDED', PRESENT_CONTEXT: 'GROUNDED' }),
     })
     const category = await prisma.companyImpact.findFirst({ where: { eventCandidateId: event.id, entityId: null } })
     expect(category?.llmRationale).toBeNull()

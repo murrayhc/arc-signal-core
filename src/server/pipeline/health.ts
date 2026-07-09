@@ -7,7 +7,12 @@ export type SourceOutcome = {
   sourceId: string
   outcome: 'SUCCESS' | 'FAILED' | 'SKIPPED_UNSUPPORTED'
   documentsStored: number
+  /** Present on FAILED: the fetch/collect error, persisted (truncated) on
+   *  SourceHealth.notes so per-source failure detail survives past the scan. */
+  errorMessage?: string
 }
+
+const MAX_ERROR_NOTE_LENGTH = 300
 
 export async function updateSourceHealth(
   outcomes: SourceOutcome[],
@@ -36,7 +41,9 @@ export async function updateSourceHealth(
           failureCount,
           lastFailedFetchAt: new Date(),
           documentsStoredLastRun: 0,
-          notes: null,
+          // Keep the failure reason on the health row — an operator looking at
+          // a DEGRADED source should not have to dig through ScanRun.errorsJson.
+          notes: o.errorMessage ? `Last failure: ${o.errorMessage.slice(0, MAX_ERROR_NOTE_LENGTH)}` : null,
         }
       } else {
         data = {

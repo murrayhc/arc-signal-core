@@ -59,7 +59,11 @@ async function ingest(doc: SearchDoc): Promise<string[]> {
       name: sourceName,
       category: doc.sourceName ? 'NEWS' : 'AGGREGATOR',
       accessMethod: 'SEARCH',
-      collectorStatus: 'FUNCTIONAL',
+      // Search-ingested sources have NO scan collector (accessMethod SEARCH is
+      // not in the collector registry) — stamping them FUNCTIONAL would claim a
+      // scan capability that does not exist. Scan-time reconciliation in
+      // collect.ts keeps this honest even if a collector lands later.
+      collectorStatus: 'UNSUPPORTED',
       isFixture: false,
     },
     update: {},

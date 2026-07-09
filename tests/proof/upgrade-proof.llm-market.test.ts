@@ -133,6 +133,9 @@ describe('Stage 14 upgrade proof 15: multi-model router selects the expected mod
   beforeAll(async () => {
     await resetDb()
     await runSeed({ includeLive: false })
+    // routeTask only routes to ENABLED configs — proof 15 describes the
+    // activated routing table, so enable the dormant seeds first.
+    await prisma.lLMProviderConfig.updateMany({ data: { enabled: true } })
   })
 
   it('proof 15: routes creative/fast/reasoning task types to their respective model classes', async () => {

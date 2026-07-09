@@ -56,6 +56,26 @@ describe('collectFromSources', () => {
     expect(result.errors.some((e) => e.stage === 'collect' && e.message.length > 0)).toBe(true)
     const broken = await prisma.source.findFirstOrThrow({ where: { name: 'Broken RSS' } })
     expect(broken.lastRunStatus).toBe('FAILED')
+    // The failure detail is carried on the per-source outcome for SourceHealth.
+    const outcome = result.perSource.find((o) => o.sourceId === broken.id)
+    expect(outcome?.outcome).toBe('FAILED')
+    expect(outcome?.errorMessage).toBeTruthy()
+  })
+
+  it('reconciles collectorStatus with runtime truth on every scan, ignoring stale seed values', async () => {
+    await runSeed({ includeLive: false })
+    // Lie in the DB in both directions: a supported source stamped UNSUPPORTED,
+    // and the unsupported Companies House placeholder stamped FUNCTIONAL.
+    await prisma.source.updateMany({ where: { name: 'Fixture Wire A' }, data: { collectorStatus: 'UNSUPPORTED' } })
+    await prisma.source.updateMany({ where: { name: 'Companies House Filings' }, data: { collectorStatus: 'FUNCTIONAL' } })
+
+    const sources = await prisma.source.findMany({ where: { isActive: true } })
+    await collectFromSources(sources)
+
+    const wireA = await prisma.source.findFirstOrThrow({ where: { name: 'Fixture Wire A' } })
+    expect(wireA.collectorStatus).toBe('FUNCTIONAL') // a collector exists and ran
+    const companiesHouse = await prisma.source.findFirstOrThrow({ where: { name: 'Companies House Filings' } })
+    expect(companiesHouse.collectorStatus).toBe('UNSUPPORTED') // no collector exists
   })
 
   it('refuses fixture paths outside fixtures/', async () => {

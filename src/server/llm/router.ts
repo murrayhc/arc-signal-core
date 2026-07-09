@@ -17,11 +17,15 @@ export type RoutedModel = {
   latencyTier: string
 }
 
-/** Pure: picks the config whose taskTypesJson includes the requested task.
- *  Prefers enabled configs; ties are broken deterministically by modelName
- *  (ascending). Returns null when no config supports the task. */
+/** Pure: picks the ENABLED config whose taskTypesJson includes the requested
+ *  task. Disabled configs are never routed to — disabling a config is the
+ *  owner's cost control, so a task whose only supporting config is disabled
+ *  is honestly unrouted (null) rather than silently sent to a model the owner
+ *  switched off. Ties are broken deterministically by modelName (ascending).
+ *  Returns null when no enabled config supports the task. */
 export function routeTask(taskType: LLMTaskType, configs: RouterConfig[]): RoutedModel | null {
   const candidates = configs.filter((c) => {
+    if (!c.enabled) return false
     let taskTypes: string[] = []
     try {
       taskTypes = JSON.parse(c.taskTypesJson) as string[]
@@ -32,10 +36,7 @@ export function routeTask(taskType: LLMTaskType, configs: RouterConfig[]): Route
   })
   if (candidates.length === 0) return null
 
-  const sorted = [...candidates].sort((a, b) => {
-    if (a.enabled !== b.enabled) return a.enabled ? -1 : 1
-    return a.modelName.localeCompare(b.modelName)
-  })
+  const sorted = [...candidates].sort((a, b) => a.modelName.localeCompare(b.modelName))
 
   const picked = sorted[0]
   return { modelName: picked.modelName, costTier: picked.costTier, latencyTier: picked.latencyTier }

@@ -20,13 +20,13 @@ export type EnrichTextOptions = {
  *  deterministic value. Never throws for content or provider reasons. */
 export async function enrichText(
   opts: EnrichTextOptions,
-): Promise<{ text: string; llmRunId: string } | null> {
+): Promise<{ text: string; parsed?: unknown; llmRunId: string } | null> {
   const result = await runLLMTask(
     { taskType: opts.taskType, system: opts.system, prompt: opts.prompt, maxTokens: opts.maxTokens },
     { provider: opts.provider, validate: opts.validate ?? {} },
   )
   if (result.status === 'SUCCEEDED' && result.text) {
-    return { text: result.text, llmRunId: result.llmRunId }
+    return { text: result.text, parsed: result.parsed, llmRunId: result.llmRunId }
   }
   return null
 }

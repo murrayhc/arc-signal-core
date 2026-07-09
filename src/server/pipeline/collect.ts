@@ -27,13 +27,16 @@ export async function collectFromSources(sources: Source[]): Promise<{
 
   for (const source of sources) {
     const entry = getCollector(source.accessMethod)
+    // Reconcile collectorStatus with runtime truth on every scan: the status
+    // is derived from whether a collector actually exists for this access
+    // method NOW, never trusted from a static seed value.
     if (!entry) {
       const reason = `No compatible collector for access method ${source.accessMethod} (UNSUPPORTED)`
       skipped.push({ sourceId: source.id, reason })
       perSource.push({ sourceId: source.id, outcome: 'SKIPPED_UNSUPPORTED', documentsStored: 0 })
       await prisma.source.update({
         where: { id: source.id },
-        data: { lastRunStatus: 'SKIPPED_UNSUPPORTED', lastRunAt: new Date() },
+        data: { lastRunStatus: 'SKIPPED_UNSUPPORTED', lastRunAt: new Date(), collectorStatus: 'UNSUPPORTED' },
       })
       continue
     }
@@ -65,20 +68,23 @@ export async function collectFromSources(sources: Source[]): Promise<{
       }
       await prisma.source.update({
         where: { id: source.id },
-        data: { lastRunStatus: 'SUCCESS', lastRunAt: new Date() },
+        data: { lastRunStatus: 'SUCCESS', lastRunAt: new Date(), collectorStatus: 'FUNCTIONAL' },
       })
       perSource.push({ sourceId: source.id, outcome: 'SUCCESS', documentsStored: createdForThisSource })
     } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
       errors.push({
         stage: 'collect',
         sourceId: source.id,
-        message: err instanceof Error ? err.message : String(err),
+        message,
       })
       await prisma.source.update({
         where: { id: source.id },
-        data: { lastRunStatus: 'FAILED', lastRunAt: new Date() },
+        // A collector exists (we reached it) — the FETCH failed. That is a
+        // health matter, not a collector-support matter.
+        data: { lastRunStatus: 'FAILED', lastRunAt: new Date(), collectorStatus: 'FUNCTIONAL' },
       })
-      perSource.push({ sourceId: source.id, outcome: 'FAILED', documentsStored: 0 })
+      perSource.push({ sourceId: source.id, outcome: 'FAILED', documentsStored: 0, errorMessage: message })
     }
   }
   return { documents, skipped, errors, perSource }

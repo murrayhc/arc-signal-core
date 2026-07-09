@@ -28,12 +28,25 @@ export type RunLLMTaskResult = {
   validation: ValidationResult | null
 }
 
-/** Per-token cost estimate constants, keyed by costTier. Deliberately crude —
- *  good enough for relative cost tracking, not a billing system. */
-const COST_PER_TOKEN_BY_TIER: Record<string, number> = {
-  LOW: 0.000001,
-  MEDIUM: 0.000005,
-  HIGH: 0.000015,
+/** Per-model pricing in USD per token, split input/output (Anthropic bills the
+ *  two at different rates — output is 5× input on current models). Source:
+ *  Anthropic price list, 2026-06 — haiku-4-5 $1/$5, sonnet-5 $3/$15,
+ *  opus-4-8 $5/$25 per million tokens. An estimate, not a billing system —
+ *  but denominated in real prices so the daily monetary cap means something. */
+const USD_PER_TOKEN_BY_MODEL: Record<string, { input: number; output: number }> = {
+  'claude-haiku-4-5': { input: 1 / 1_000_000, output: 5 / 1_000_000 },
+  'claude-sonnet-5': { input: 3 / 1_000_000, output: 15 / 1_000_000 },
+  'claude-opus-4-8': { input: 5 / 1_000_000, output: 25 / 1_000_000 },
+}
+
+/** Fallback for models not in the pricing table: assume sonnet-tier rates —
+ *  overestimating a cheap model is safer for a spend cap than underestimating
+ *  an expensive one. */
+const USD_PER_TOKEN_FALLBACK = { input: 3 / 1_000_000, output: 15 / 1_000_000 }
+
+export function estimateCostUsd(model: string, tokensIn: number, tokensOut: number): number {
+  const rates = USD_PER_TOKEN_BY_MODEL[model] ?? USD_PER_TOKEN_FALLBACK
+  return tokensIn * rates.input + tokensOut * rates.output
 }
 
 function hashPrompt(system: string, prompt: string): string {
@@ -90,8 +103,34 @@ export async function runLLMTask(req: LLMRequest, opts: RunLLMTaskOptions): Prom
   // routeTask is pure/DB-read-only, never a network call, so this stays dormant-safe.
   const routed = routeTask(req.taskType, await loadRouterConfigs())
   const routedModel = routed?.modelName ?? UNROUTED_MODEL
-  const routedCostTier = routed?.costTier ?? 'MEDIUM'
   const routedReq: LLMRequest = routed ? { ...req, model: routed.modelName } : req
+
+  // Cost-control gate for the LIVE activation path: when the provider came from
+  // getActiveProvider() (not injected by the caller) and no ENABLED config routes
+  // this task, do not call the provider at all — the owner's enable/disable
+  // choices are the routing contract, and falling back to a default model would
+  // spend money on a task class the owner never switched on. Explicitly injected
+  // providers (tests, dependency-injected callers) bypass this gate by design —
+  // injection is the caller taking responsibility for the provider.
+  const providerWasInjected = opts.provider !== undefined
+  if (!providerWasInjected && !routed) {
+    const run = await prisma.lLMRun.create({
+      data: {
+        taskType: req.taskType,
+        provider: provider.name,
+        model: UNROUTED_MODEL,
+        promptHash,
+        inputSummary,
+        outputSummary: '',
+        status: 'SKIPPED_UNROUTED' satisfies LLMRunStatus,
+        tokenCountInput: 0,
+        tokenCountOutput: 0,
+        estimatedCost: 0,
+        latencyMs: 0,
+      },
+    })
+    return { status: 'SKIPPED_UNROUTED', llmRunId: run.id, validation: null }
+  }
 
   // Daily spend cap: over budget behaves like dormant — no provider call.
   if (!(await isWithinDailyBudget(new Date()))) {
@@ -154,9 +193,7 @@ export async function runLLMTask(req: LLMRequest, opts: RunLLMTaskOptions): Prom
   // redact it from the audit row rather than retaining the snippet verbatim.
   const outputSummary = finalStatus === 'SUCCEEDED' ? summarize(response.text) : '[redacted: output failed validation]'
 
-  const estimatedCost =
-    (response.tokensIn + response.tokensOut) *
-    (COST_PER_TOKEN_BY_TIER[routedCostTier] ?? COST_PER_TOKEN_BY_TIER.MEDIUM)
+  const estimatedCost = estimateCostUsd(routedModel, response.tokensIn, response.tokensOut)
 
   const run = await prisma.lLMRun.create({
     data: {

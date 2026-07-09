@@ -6,6 +6,12 @@ export type ValidateOptions = {
   schema?: ZodSchema<unknown>
   evidenceIds?: string[]
   requireGrounding?: boolean
+  /** Minimum fraction of the supplied evidenceIds that must appear verbatim in
+   *  the raw output for it to count as grounded (0..1). Only meaningful with
+   *  requireGrounding. Default 0 preserves the base contract: at least ONE
+   *  evidence id must always appear — the fraction tightens on top of that,
+   *  it never loosens it. */
+  minGroundedFraction?: number
   /** Additional caller-supplied prohibited-language checkers, run over the raw
    *  text alongside the base advice-language guard. Each checker returns the
    *  list of matched phrases (empty = clean). A non-empty result from ANY
@@ -30,7 +36,7 @@ export type ValidationResult = {
  *  (nothing to fail), but grounding, when required, must be demonstrated —
  *  never assumed. */
 export function validateLLMOutput(raw: string, opts: ValidateOptions): ValidationResult {
-  const { schema, evidenceIds = [], requireGrounding = false, extraCheckers = [] } = opts
+  const { schema, evidenceIds = [], requireGrounding = false, minGroundedFraction = 0, extraCheckers = [] } = opts
   const notes: string[] = []
 
   let schemaValid = true
@@ -51,9 +57,23 @@ export function validateLLMOutput(raw: string, opts: ValidateOptions): Validatio
   if (adviceMatches.length > 0) notes.push(`Prohibited language detected: ${adviceMatches.join('; ')}`)
   if (extraMatches.length > 0) notes.push(`Prohibited language detected: ${extraMatches.join('; ')}`)
 
-  const evidenceGrounded = !requireGrounding || evidenceIds.some((id) => raw.includes(id))
+  // Grounding: count how many supplied evidence ids the output actually cites.
+  // Fail-closed: with requireGrounding, at least one id must appear AND the
+  // cited fraction must meet the caller's bar. An empty evidence list can never
+  // be grounded — callers must supply the ids they expect to be cited.
+  const groundedCount = evidenceIds.filter((id) => raw.includes(id)).length
+  const groundedFraction = evidenceIds.length > 0 ? groundedCount / evidenceIds.length : 0
+  const evidenceGrounded = !requireGrounding || (groundedCount >= 1 && groundedFraction >= minGroundedFraction)
   const unsupportedClaimsDetected = requireGrounding && !evidenceGrounded
-  if (unsupportedClaimsDetected) notes.push('Output could not be grounded in any supplied evidence id.')
+  if (unsupportedClaimsDetected) {
+    notes.push(
+      groundedCount === 0
+        ? 'Output could not be grounded in any supplied evidence id.'
+        : `Output cited ${groundedCount}/${evidenceIds.length} evidence ids — below the required fraction (${minGroundedFraction}).`,
+    )
+  } else if (requireGrounding) {
+    notes.push(`Grounded in ${groundedCount}/${evidenceIds.length} supplied evidence ids.`)
+  }
 
   const validationStatus: ValidationStatus =
     schemaValid && !prohibitedLanguageDetected && (!requireGrounding || evidenceGrounded) ? 'PASSED' : 'FAILED'

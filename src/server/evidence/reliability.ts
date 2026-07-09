@@ -30,8 +30,11 @@ function deriveFactuality(input: {
     return 'STRONGLY_SUPPORTED'
   }
   if (input.independentSourceCount >= 2 || input.primaryOrOfficial) return 'SUPPORTED'
-  if (input.independentSourceCount <= 1) return 'WEAK_SINGLE_SOURCE'
-  return 'UNVERIFIED'
+  // Zero independent sources (defensive — an origin normally counts as one):
+  // nothing supports the claim at all, so it stays at the pre-corroboration
+  // default rather than being credited as a (weak) sourced claim.
+  if (input.independentSourceCount === 0) return 'UNVERIFIED'
+  return 'WEAK_SINGLE_SOURCE'
 }
 
 export type ReliabilityOptions = { now?: Date }
