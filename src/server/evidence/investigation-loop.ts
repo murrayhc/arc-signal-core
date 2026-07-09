@@ -7,6 +7,7 @@ import { deriveIndependenceGroup } from './independence'
 import { traceLineageForMany } from './lineage'
 import { scoreReliabilityForMany } from './reliability'
 import { generateQueriesForCanonical } from './investigation-query'
+import { getActiveProvider } from '@/server/llm/provider'
 import { getActiveSearchAdapters, type SearchAdapter, type SearchDoc } from './search/registry'
 import {
   DEFAULT_INVESTIGATION_LIMITS,
@@ -15,12 +16,21 @@ import {
   type InvestigationSummary,
 } from './types'
 
-export type InvestigationTarget = { canonicalClaimId?: string; eventCandidateId?: string }
+export type InvestigationTarget = {
+  canonicalClaimId?: string
+  eventCandidateId?: string
+  /** Free-text seed (the interrogate→investigate bridge): the loop first
+   *  searches the term itself, ingests what it finds, then investigates the
+   *  canonical claims that evidence produced. */
+  queryText?: string
+}
 export type InvestigationRunOptions = {
   limits?: InvestigationLimits
-  /** Inject adapters for tests / future activation. Defaults to the (empty)
-   *  registry, i.e. dormant. */
+  /** Inject adapters for tests. Defaults to the registry (env-gated). */
   adapters?: SearchAdapter[]
+  /** LLM provider for query generation. Omit → getActiveProvider() (dormant
+   *  unless the owner has activated AI); templates remain the fallback. */
+  provider?: import('@/server/llm/types').LLMProvider | null
 }
 
 function sha256(s: string): string {
@@ -119,30 +129,77 @@ async function ingest(doc: SearchDoc): Promise<string[]> {
 
 /** Runs a bounded, recursive investigation. Dormant-safe: with no configured
  *  adapter it generates follow-up queries, marks them SKIPPED_NO_ADAPTER, and
- *  stops with NO_ADAPTER_CONFIGURED — no external calls, no fabrication. With an
- *  adapter it ingests new evidence, re-scores, and stops on saturation / depth /
- *  limits. Per-adapter failures are swallowed, never crash the run; the same
- *  document is never processed twice. */
+ *  stops with NO_ADAPTER_CONFIGURED — no external calls, no fabrication. With
+ *  an adapter it ingests new evidence, re-scores, and stops on saturation /
+ *  depth / runtime / cost limits — ALL limits are enforced, so a live adapter
+ *  can never turn the loop into an unbounded crawler. Per-adapter failures
+ *  are swallowed, never crash the run; the same document is never processed
+ *  twice. */
 export async function runInvestigation(
   target: InvestigationTarget,
   opts: InvestigationRunOptions = {},
 ): Promise<InvestigationSummary> {
-  const limits = opts.limits ?? DEFAULT_INVESTIGATION_LIMITS
-  const adapters = opts.adapters ?? getActiveSearchAdapters()
+  const limits = { ...DEFAULT_INVESTIGATION_LIMITS, ...opts.limits }
+  // Source-type filter: when set, only adapters reaching allowed categories run.
+  const allAdapters = opts.adapters ?? getActiveSearchAdapters()
+  const adapters = limits.allowedSourceTypes
+    ? allAdapters.filter((a) => a.sourceType && limits.allowedSourceTypes!.includes(a.sourceType))
+    : allAdapters
+  // LLM query generation only when a provider is active (owner decision);
+  // deterministic templates otherwise.
+  const provider = opts.provider === undefined ? await getActiveProvider() : opts.provider
+
+  const startedAt = Date.now()
+  const deadline = limits.maxRuntimeMs != null ? startedAt + limits.maxRuntimeMs : null
+  let adapterCalls = 0
   const processedUrls = new Set<string>()
   let queriesGenerated = 0
   let documentsAdded = 0
   let stoppedReason: InvestigationStoppedReason = 'NO_NEW_EVIDENCE'
+  const outOfRuntime = () => deadline !== null && Date.now() > deadline
+  const outOfBudget = () => limits.maxCostBudget != null && adapterCalls >= limits.maxCostBudget
 
   let frontier = await resolveTargets(target)
-  let depth = 0
 
-  while (depth < limits.maxDepth) {
+  // Free-text seed round (interrogate → investigate): search the term itself,
+  // ingest, and let the produced canonical claims form the first frontier.
+  if (frontier.length === 0 && target.queryText && adapters.length > 0) {
+    const seeded = new Set<string>()
+    for (const adapter of adapters) {
+      if (outOfRuntime() || outOfBudget()) break
+      adapterCalls++
+      let docs: SearchDoc[] = []
+      try {
+        docs = await adapter.search(
+          { queryText: target.queryText, queryClass: 'AFFECTED_ENTITIES' },
+          { limit: limits.maxDocumentsPerQuery },
+        )
+      } catch {
+        continue
+      }
+      for (const doc of docs.slice(0, limits.maxDocumentsPerQuery)) {
+        if (processedUrls.has(doc.url)) continue
+        processedUrls.add(doc.url)
+        const affected = await ingest(doc)
+        if (affected.length > 0) {
+          documentsAdded++
+          affected.forEach((id) => seeded.add(id))
+        }
+      }
+    }
+    frontier = [...seeded]
+  }
+
+  let depth = 0
+  outer: while (depth < limits.maxDepth) {
     depth++
     const newlyAffected = new Set<string>()
 
     for (const canonicalId of frontier) {
-      const queries = await generateQueriesForCanonical(canonicalId, { max: limits.maxQueriesPerClaim })
+      const queries = await generateQueriesForCanonical(canonicalId, {
+        max: limits.maxQueriesPerClaim,
+        provider: provider ?? undefined,
+      })
       queriesGenerated += queries.length
 
       if (adapters.length === 0) {
@@ -154,8 +211,17 @@ export async function runInvestigation(
       }
 
       for (const q of queries) {
+        if (outOfRuntime() || outOfBudget()) {
+          stoppedReason = 'LIMIT'
+          break outer
+        }
         let resultCount = 0
         for (const adapter of adapters) {
+          if (outOfRuntime() || outOfBudget()) {
+            stoppedReason = 'LIMIT'
+            break outer
+          }
+          adapterCalls++
           let docs: SearchDoc[] = []
           try {
             docs = await adapter.search({ queryText: q.queryText, queryClass: q.queryClass }, { limit: limits.maxDocumentsPerQuery })
@@ -179,7 +245,7 @@ export async function runInvestigation(
     }
 
     if (adapters.length === 0) {
-      stoppedReason = 'NO_ADAPTER_CONFIGURED'
+      stoppedReason = allAdapters.length === 0 ? 'NO_ADAPTER_CONFIGURED' : 'LIMIT'
       break
     }
     if (newlyAffected.size === 0) {
@@ -194,7 +260,11 @@ export async function runInvestigation(
   }
 
   return {
-    target: { canonicalClaimId: target.canonicalClaimId, eventCandidateId: target.eventCandidateId },
+    target: {
+      canonicalClaimId: target.canonicalClaimId,
+      eventCandidateId: target.eventCandidateId,
+      queryText: target.queryText,
+    },
     queriesGenerated,
     adaptersTried: adapters.length,
     documentsAdded,

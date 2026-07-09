@@ -32,9 +32,12 @@ function parseSeendate(value: string): Date | null {
   return Number.isNaN(d.getTime()) ? null : d
 }
 
-/** Pure GDELT artlist JSON → RawItem[]. Defensive: unknown shapes yield [],
- *  malformed articles are skipped item-by-item, never a crash. */
-export function parseGdeltJson(json: string): RawItem[] {
+export type GdeltParsedArticle = RawItem & { domain: string }
+
+/** Pure GDELT artlist JSON → articles (with source domain). Defensive:
+ *  unknown shapes yield [], malformed articles are skipped item-by-item,
+ *  never a crash. */
+export function parseGdeltArticles(json: string): GdeltParsedArticle[] {
   let doc: unknown
   try {
     doc = JSON.parse(json)
@@ -43,7 +46,7 @@ export function parseGdeltJson(json: string): RawItem[] {
   }
   const articles = (doc as { articles?: unknown })?.articles
   if (!Array.isArray(articles)) return []
-  const items: RawItem[] = []
+  const items: GdeltParsedArticle[] = []
   for (const raw of articles as GdeltArticle[]) {
     const url = typeof raw.url === 'string' ? raw.url.trim() : ''
     const title = typeof raw.title === 'string' ? raw.title.trim() : ''
@@ -56,9 +59,15 @@ export function parseGdeltJson(json: string): RawItem[] {
       title,
       content: meta ? `${title}\n\n${meta}` : title,
       publishedAt: typeof raw.seendate === 'string' ? parseSeendate(raw.seendate) : null,
+      domain,
     })
   }
   return items
+}
+
+/** RawItem view of the same parse (collector path). */
+export function parseGdeltJson(json: string): RawItem[] {
+  return parseGdeltArticles(json).map(({ domain: _domain, ...item }) => item)
 }
 
 export async function collectGdelt(source: Source): Promise<RawItem[]> {

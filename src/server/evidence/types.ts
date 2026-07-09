@@ -35,8 +35,13 @@ export type InvestigationLimits = {
   maxDepth: number
   maxQueriesPerClaim: number
   maxDocumentsPerQuery: number
+  /** Hard wall-clock deadline for the whole run — checked before every
+   *  adapter call; exceeded ⇒ stoppedReason LIMIT. */
   maxRuntimeMs?: number
+  /** Budget of adapter search CALLS for the whole run (the loop's unit of
+   *  external cost) — exhausted ⇒ stoppedReason LIMIT. */
   maxCostBudget?: number
+  /** When set, only adapters whose sourceType is listed are used. */
   allowedSourceTypes?: string[]
 }
 
@@ -44,6 +49,10 @@ export const DEFAULT_INVESTIGATION_LIMITS: InvestigationLimits = {
   maxDepth: 3,
   maxQueriesPerClaim: 12,
   maxDocumentsPerQuery: 10,
+  // Enforced defaults — a live adapter must never turn the loop into an
+  // unbounded crawler (audit finding R4).
+  maxRuntimeMs: 60_000,
+  maxCostBudget: 48,
 }
 
 export type InvestigationStoppedReason =
@@ -54,7 +63,7 @@ export type InvestigationStoppedReason =
   | 'LIMIT'
 
 export type InvestigationSummary = {
-  target: { canonicalClaimId?: string; eventCandidateId?: string }
+  target: { canonicalClaimId?: string; eventCandidateId?: string; queryText?: string }
   queriesGenerated: number
   adaptersTried: number
   documentsAdded: number

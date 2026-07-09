@@ -16,6 +16,9 @@ export type SearchQuery = { queryText: string; queryClass: string }
  *  provider abstraction: real adapters and test doubles both implement it. */
 export interface SearchAdapter {
   name: string
+  /** Source category this adapter reaches (NEWS/AGGREGATOR/…) — the loop's
+   *  allowedSourceTypes limit filters on it. Optional for test doubles. */
+  sourceType?: string
   status(): SearchAdapterStatus
   search(query: SearchQuery, opts?: { limit?: number }): Promise<SearchDoc[]>
 }
@@ -36,15 +39,35 @@ export const NullSearchAdapter: SearchAdapter = {
   },
 }
 
-/** Empty by construction — this pass ships NO working web-search connector
- *  (owner decision). A real adapter (e.g. Brave/Tavily, key-gated) is
- *  registered here in a later pass; the investigation loop then reaches the
- *  open web with no other change. Mirrors the dormant market provider registry. */
-export const SEARCH_ADAPTER_REGISTRY: Record<string, () => SearchAdapter> = {}
+import { GdeltSearchAdapter } from './gdelt'
 
-/** Returns only adapters that report themselves CONFIGURED. Empty today. */
+/** The investigation loop's live engines. GDELT (keyless, lawful) ships
+ *  registered; further adapters (key-gated news APIs etc.) add entries here
+ *  and activate via SEARCH_ADAPTERS. */
+export const SEARCH_ADAPTER_REGISTRY: Record<string, () => SearchAdapter> = {
+  gdelt: () => GdeltSearchAdapter,
+}
+
+/** Which adapters are enabled: SEARCH_ADAPTERS env (comma-separated names,
+ *  empty string = none) when set; otherwise gdelt by default — EXCEPT under
+ *  test, where the default is dormant so no test ever hits the network
+ *  without explicitly injecting an adapter. */
+export function enabledAdapterNames(): string[] {
+  const raw = process.env.SEARCH_ADAPTERS
+  if (raw !== undefined) {
+    return raw
+      .split(',')
+      .map((s) => s.trim().toLowerCase())
+      .filter(Boolean)
+  }
+  return process.env.NODE_ENV === 'test' ? [] : ['gdelt']
+}
+
+/** Returns the enabled adapters that report themselves CONFIGURED. */
 export function getActiveSearchAdapters(): SearchAdapter[] {
-  return Object.values(SEARCH_ADAPTER_REGISTRY)
+  return enabledAdapterNames()
+    .map((name) => SEARCH_ADAPTER_REGISTRY[name])
+    .filter((build): build is () => SearchAdapter => !!build)
     .map((build) => build())
     .filter((a) => a.status() === 'CONFIGURED')
 }
