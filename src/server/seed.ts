@@ -9,6 +9,7 @@ type SeedSource = {
   isFixture: boolean
   collectorStatus: string
   notes: string | null
+  scanIntervalMinutes?: number
 }
 
 const FIXTURE_SOURCES: SeedSource[] = [
@@ -41,6 +42,10 @@ const FIXTURE_SOURCES: SeedSource[] = [
   },
 ]
 
+/** The free lawful public source pack: multiple source CATEGORIES (news,
+ *  regulator, government, procurement, global aggregator), all keyless, all
+ *  health-tracked, all non-fatal on failure. Feed URL drift shows up honestly
+ *  as a FAILED health row with the reason persisted — never a crash. */
 const LIVE_SOURCES: SeedSource[] = [
   {
     name: 'BBC News Business',
@@ -50,6 +55,87 @@ const LIVE_SOURCES: SeedSource[] = [
     isFixture: false,
     collectorStatus: 'FUNCTIONAL',
     notes: 'Live public RSS feed. Failures are recorded on the ScanRun, never fatal.',
+    scanIntervalMinutes: 60,
+  },
+  {
+    name: 'BBC News Technology',
+    category: 'NEWS',
+    accessMethod: 'RSS',
+    url: 'https://feeds.bbci.co.uk/news/technology/rss.xml',
+    isFixture: false,
+    collectorStatus: 'FUNCTIONAL',
+    notes: 'Same publisher group as BBC Business (bbci.co.uk) — corroboration between the two never counts as independent.',
+    scanIntervalMinutes: 60,
+  },
+  {
+    name: 'The Guardian Business',
+    category: 'NEWS',
+    accessMethod: 'RSS',
+    url: 'https://www.theguardian.com/uk/business/rss',
+    isFixture: false,
+    collectorStatus: 'FUNCTIONAL',
+    notes: 'Live public RSS feed — independent publisher group from the BBC feeds.',
+    scanIntervalMinutes: 60,
+  },
+  {
+    name: 'Sky News Business',
+    category: 'NEWS',
+    accessMethod: 'RSS',
+    url: 'https://feeds.skynews.com/feeds/rss/business.xml',
+    isFixture: false,
+    collectorStatus: 'FUNCTIONAL',
+    notes: 'Live public RSS feed — third independent news publisher group.',
+    scanIntervalMinutes: 60,
+  },
+  {
+    name: 'FCA News',
+    category: 'REGULATOR',
+    accessMethod: 'RSS',
+    url: 'https://www.fca.org.uk/news/rss.xml',
+    isFixture: false,
+    collectorStatus: 'FUNCTIONAL',
+    notes: 'Financial Conduct Authority news feed — primary regulator signal, high authority prior.',
+    scanIntervalMinutes: 180,
+  },
+  {
+    name: 'Bank of England News',
+    category: 'REGULATOR',
+    accessMethod: 'RSS',
+    url: 'https://www.bankofengland.co.uk/rss/news',
+    isFixture: false,
+    collectorStatus: 'FUNCTIONAL',
+    notes: 'Bank of England news feed — primary macro/regulatory signal.',
+    scanIntervalMinutes: 180,
+  },
+  {
+    name: 'GOV.UK Competition and Markets Authority',
+    category: 'GOVERNMENT',
+    accessMethod: 'RSS',
+    url: 'https://www.gov.uk/government/organisations/competition-and-markets-authority.atom',
+    isFixture: false,
+    collectorStatus: 'FUNCTIONAL',
+    notes: 'GOV.UK organisation Atom feed — merger probes, market investigations, enforcement.',
+    scanIntervalMinutes: 180,
+  },
+  {
+    name: 'UK Contracts Finder (open tenders)',
+    category: 'PROCUREMENT',
+    accessMethod: 'CONTRACTS_FINDER',
+    url: 'https://www.contractsfinder.service.gov.uk/Published/Notices/OCDS/Search?stages=tender&orderBy=publishedDate&order=DESC&size=50',
+    isFixture: false,
+    collectorStatus: 'FUNCTIONAL',
+    notes: 'Open Contracting (OCDS) releases for live UK tender notices — primary public-sector demand signal.',
+    scanIntervalMinutes: 360,
+  },
+  {
+    name: 'GDELT: UK insolvency & restructuring watch',
+    category: 'AGGREGATOR',
+    accessMethod: 'GDELT',
+    url: 'https://api.gdeltproject.org/api/v2/doc/doc?query=(insolvency%20OR%20administration%20OR%20restructuring)%20sourcecountry:UK&mode=artlist&format=json&maxrecords=40&timespan=3d',
+    isFixture: false,
+    collectorStatus: 'FUNCTIONAL',
+    notes: 'Standing GDELT DOC 2.0 query (keyless) — low-visibility local reports of distress signals. Headline-level; aggregator authority prior.',
+    scanIntervalMinutes: 120,
   },
 ]
 
@@ -61,9 +147,10 @@ export async function runSeed(options: { includeLive?: boolean } = {}) {
     // source name otherwise — collapses same-publisher feeds in every
     // independence count. Scan-time reconciliation keeps this current.
     const independenceGroup = deriveIndependenceGroup(s.url, s.name)
+    const scanIntervalMinutes = s.scanIntervalMinutes ?? 60
     await prisma.source.upsert({
       where: { name: s.name },
-      create: { ...s, independenceGroup },
+      create: { ...s, independenceGroup, scanIntervalMinutes },
       update: {
         category: s.category,
         accessMethod: s.accessMethod,
@@ -71,6 +158,7 @@ export async function runSeed(options: { includeLive?: boolean } = {}) {
         isFixture: s.isFixture,
         collectorStatus: s.collectorStatus,
         independenceGroup,
+        scanIntervalMinutes,
         notes: s.notes,
       },
     })

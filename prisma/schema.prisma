@@ -20,6 +20,14 @@ model Source {
   // source name when there is no URL). Independence counting collapses
   // sources in the same group so syndication never reads as corroboration.
   independenceGroup String?
+  // Continuous-scan cadence: how often this source is due, when it is next
+  // due (set after every attempt, with failure backoff), and the HTTP cache
+  // validators for conditional GETs (an unchanged feed costs one header
+  // round-trip, not a re-download).
+  scanIntervalMinutes Int      @default(60)
+  nextScanAt          DateTime?
+  httpEtag            String?
+  httpLastModified    String?
   lastRunStatus   String?
   lastRunAt       DateTime?
   notes           String?

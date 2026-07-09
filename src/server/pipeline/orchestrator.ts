@@ -52,7 +52,9 @@ export type ScanSummary = {
   warnings: PipelineError[]
 }
 
-export async function runFullScan(options: { scanType?: string } = {}): Promise<ScanSummary> {
+export async function runFullScan(
+  options: { scanType?: string; dueOnly?: boolean } = {},
+): Promise<ScanSummary> {
   const scanRun = await prisma.scanRun.create({
     data: { scanType: options.scanType ?? 'FULL', status: 'RUNNING' },
   })
@@ -88,7 +90,13 @@ export async function runFullScan(options: { scanType?: string } = {}): Promise<
 
   try {
     // 1–4. Load active sources, collect, store raw evidence, dedupe.
-    const sources = await prisma.source.findMany({ where: { isActive: true } })
+    // dueOnly (scheduled scans): only sources whose cadence says they are due;
+    // manual scans always scan everything.
+    const sources = await prisma.source.findMany({
+      where: options.dueOnly
+        ? { isActive: true, OR: [{ nextScanAt: null }, { nextScanAt: { lte: new Date() } }] }
+        : { isActive: true },
+    })
     const collected = await collectFromSources(sources)
     errors.push(...collected.errors)
     for (const skip of collected.skipped) {

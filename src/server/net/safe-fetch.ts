@@ -37,31 +37,48 @@ export function assertSafeUrl(raw: string): URL {
 
 const UA = 'ArchlightRadar/0.1 (public intelligence radar)'
 
-/** SSRF-guarded text fetch with a hard byte cap and one bounded, re-guarded
- *  redirect. Streams the body and aborts past `maxBytes` (content-length can lie). */
-export async function safeFetchText(
+export type SafeFetchResult = {
+  status: number
+  /** Empty string on 304 Not Modified. */
+  text: string
+  /** Cache validators for conditional GETs on the next fetch. */
+  etag: string | null
+  lastModified: string | null
+}
+
+/** SSRF-guarded fetch with a hard byte cap, one bounded re-guarded redirect,
+ *  and conditional-GET support: pass the stored validators and a 304 comes
+ *  back as `{status: 304, text: ''}` instead of an error — "nothing changed"
+ *  is a successful outcome, not a failure. */
+export async function safeFetchResponse(
   raw: string,
-  opts: { maxBytes?: number; timeoutMs?: number } = {},
-): Promise<string> {
+  opts: { maxBytes?: number; timeoutMs?: number; etag?: string | null; lastModified?: string | null } = {},
+): Promise<SafeFetchResult> {
   const maxBytes = opts.maxBytes ?? Number(process.env.RSS_MAX_BYTES ?? 5_000_000)
   const timeoutMs = opts.timeoutMs ?? 10_000
+  const headers: Record<string, string> = { 'user-agent': UA }
+  if (opts.etag) headers['if-none-match'] = opts.etag
+  if (opts.lastModified) headers['if-modified-since'] = opts.lastModified
   const doFetch = (u: URL) =>
-    fetch(u, { redirect: 'manual', signal: AbortSignal.timeout(timeoutMs), headers: { 'user-agent': UA } })
+    fetch(u, { redirect: 'manual', signal: AbortSignal.timeout(timeoutMs), headers })
 
   let url = assertSafeUrl(raw)
   let res = await doFetch(url)
-  if (res.status >= 300 && res.status < 400) {
+  if (res.status >= 300 && res.status < 400 && res.status !== 304) {
     const loc = res.headers.get('location')
     if (!loc) throw new Error('Redirect without Location header')
     url = assertSafeUrl(new URL(loc, url).toString())
     res = await doFetch(url)
-    if (res.status >= 300 && res.status < 400) throw new Error('Too many redirects')
+    if (res.status >= 300 && res.status < 400 && res.status !== 304) throw new Error('Too many redirects')
   }
+  const etag = res.headers.get('etag')
+  const lastModified = res.headers.get('last-modified')
+  if (res.status === 304) return { status: 304, text: '', etag, lastModified }
   if (!res.ok) throw new Error(`fetch failed with HTTP ${res.status}`)
 
   const declared = Number(res.headers.get('content-length') ?? 0)
   if (declared && declared > maxBytes) throw new Error(`Response too large: ${declared} > ${maxBytes}`)
-  if (!res.body) return (await res.text()).slice(0, maxBytes)
+  if (!res.body) return { status: res.status, text: (await res.text()).slice(0, maxBytes), etag, lastModified }
 
   const reader = res.body.getReader()
   const chunks: Uint8Array[] = []
@@ -84,5 +101,15 @@ export async function safeFetchText(
     merged.set(c, off)
     off += c.byteLength
   }
-  return new TextDecoder().decode(merged)
+  return { status: res.status, text: new TextDecoder().decode(merged), etag, lastModified }
+}
+
+/** SSRF-guarded text fetch (no conditional-GET) — thin wrapper kept for
+ *  callers that just want the body. */
+export async function safeFetchText(
+  raw: string,
+  opts: { maxBytes?: number; timeoutMs?: number } = {},
+): Promise<string> {
+  const res = await safeFetchResponse(raw, opts)
+  return res.text
 }

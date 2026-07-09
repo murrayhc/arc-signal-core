@@ -77,9 +77,17 @@ export function IntelligenceBrain({
           <span>
             system confidence <span className="text-ink-dim">{meanConfidence === null ? '—' : pct(meanConfidence)}</span>
           </span>
-          <span className={lastScanAt ? 'text-teal' : 'text-ink-faint'}>
-            {lastScanAt ? 'LIVE' : 'IDLE'}
-          </span>
+          {/* LIVE is gated on scan RECENCY (<6h), not mere existence of a past
+              scan — an honest radar does not claim to be live off stale data. */}
+          {(() => {
+            const isRecent =
+              lastScanAt !== null && Date.now() - new Date(lastScanAt).getTime() < 6 * 60 * 60 * 1000
+            return (
+              <span className={isRecent ? 'text-teal' : 'text-ink-faint'}>
+                {isRecent ? 'LIVE' : lastScanAt ? 'STALE' : 'IDLE'}
+              </span>
+            )
+          })()}
         </div>
       </div>
 

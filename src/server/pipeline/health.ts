@@ -14,6 +14,28 @@ export type SourceOutcome = {
 
 const MAX_ERROR_NOTE_LENGTH = 300
 
+/** Deterministic per-source jitter in [0, 0.1) of the interval — spreads
+ *  scheduled fetches without nondeterministic randomness. */
+function jitterFraction(sourceId: string): number {
+  let h = 0
+  for (let i = 0; i < sourceId.length; i++) h = (h * 31 + sourceId.charCodeAt(i)) | 0
+  return (Math.abs(h) % 100) / 1000
+}
+
+/** When a source is next due: its interval on success, exponential backoff
+ *  (capped at 16×) on failure — a broken feed gets probed less and less
+ *  often instead of hammering it every tick. */
+export function computeNextScanAt(
+  now: Date,
+  sourceId: string,
+  intervalMinutes: number,
+  failureCount: number,
+): Date {
+  const backoff = failureCount > 0 ? Math.min(16, Math.pow(2, failureCount)) : 1
+  const ms = intervalMinutes * 60_000 * backoff * (1 + jitterFraction(sourceId))
+  return new Date(now.getTime() + Math.round(ms))
+}
+
 export async function updateSourceHealth(
   outcomes: SourceOutcome[],
 ): Promise<{ errors: PipelineError[] }> {
@@ -57,6 +79,16 @@ export async function updateSourceHealth(
         where: { sourceId: o.sourceId },
         create: { sourceId: o.sourceId, ...data },
         update: data,
+      })
+      // Schedule the next attempt: interval on success, backoff on failure.
+      const src = await prisma.source.findUnique({
+        where: { id: o.sourceId },
+        select: { scanIntervalMinutes: true },
+      })
+      const failures = o.outcome === 'FAILED' ? Number(data.failureCount ?? 1) : 0
+      await prisma.source.update({
+        where: { id: o.sourceId },
+        data: { nextScanAt: computeNextScanAt(new Date(), o.sourceId, src?.scanIntervalMinutes ?? 60, failures) },
       })
     } catch (err) {
       errors.push({

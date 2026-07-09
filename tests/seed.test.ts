@@ -30,15 +30,34 @@ describe('runSeed', () => {
     expect(lens.name).toBe('General Commercial Lens')
   })
 
-  it('includes the live BBC RSS source when includeLive is true and is idempotent', async () => {
+  it('includes the live source pack when includeLive is true and is idempotent', async () => {
     await runSeed({ includeLive: true })
     await runSeed({ includeLive: true })
     const sources = await prisma.source.findMany()
-    expect(sources).toHaveLength(4)
+    // 3 fixture/placeholder + 9 live pack (idempotent: no duplicates on re-seed).
+    expect(sources).toHaveLength(12)
     const bbc = sources.find((s) => s.name === 'BBC News Business')!
     expect(bbc.accessMethod).toBe('RSS')
     expect(bbc.isFixture).toBe(false)
     expect(bbc.url).toBe('https://feeds.bbci.co.uk/news/business/rss.xml')
+
+    // Multiple source CATEGORIES are live — the radar is no longer one lighthouse.
+    const liveCategories = new Set(sources.filter((s) => !s.isFixture && s.url).map((s) => s.category))
+    for (const category of ['NEWS', 'REGULATOR', 'GOVERNMENT', 'PROCUREMENT', 'AGGREGATOR']) {
+      expect(liveCategories).toContain(category)
+    }
+
+    // Same-publisher feeds share an independence group; different publishers differ.
+    const bbcTech = sources.find((s) => s.name === 'BBC News Technology')!
+    const guardian = sources.find((s) => s.name === 'The Guardian Business')!
+    expect(bbcTech.independenceGroup).toBe(bbc.independenceGroup)
+    expect(guardian.independenceGroup).not.toBe(bbc.independenceGroup)
+
+    // Every live source has a real collector registered — no pretend-live rows.
+    const { getCollector } = await import('@/server/pipeline/collectors/registry')
+    for (const s of sources.filter((x) => !x.isFixture && x.url)) {
+      expect(getCollector(s.accessMethod), `${s.name} (${s.accessMethod})`).not.toBeNull()
+    }
   })
 
   it('seeds ≥1 LLMProviderConfig with enabled=false', async () => {
