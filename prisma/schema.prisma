@@ -133,10 +133,16 @@ model Signal {
   explanation  String
   sector       String?
   region       String?
+  // Link into the evidence-depth layer: the canonical claim whose reliability
+  // and factuality this signal's confidence is derived from. Plain string id
+  // (additive-layer convention), null when no canonical claim matched.
+  canonicalClaimId String?
   isFixture    Boolean               @default(false)
   createdAt    DateTime              @default(now())
   updatedAt    DateTime              @updatedAt
   clusterLinks SignalClusterSignal[]
+
+  @@index([canonicalClaimId])
 }
 
 model SignalCluster {
@@ -202,6 +208,13 @@ model EventCandidate {
   noveltyScore         Float
   opportunityScore     Float
   riskScore            Float
+  // First-class exposure fields, promoted from the atomic claims behind the
+  // event's signals (previously trapped in the evidence layer).
+  commoditiesJson      String                        @default("[]")
+  instrumentsJson      String                        @default("[]")
+  // Recency-weighted momentum from the graph-event timeline (0.5 = neutral),
+  // persisted after each scan's timeline stage.
+  momentumScore        Float                         @default(0.5)
   createdFromScanRunId String
   createdFromScanRun   ScanRun                       @relation(fields: [createdFromScanRunId], references: [id])
   isFixture            Boolean                       @default(false)
@@ -281,6 +294,7 @@ model ScanRun {
   investigationQueriesGenerated Int              @default(0)
   companyImpactsCreated         Int              @default(0)
   contextSynthesesCreated       Int              @default(0)
+  signalsQuarantined            Int              @default(0)
   futureScenariosCreated        Int              @default(0)
   errorsJson                    String           @default("[]")
   warningsJson                  String           @default("[]")

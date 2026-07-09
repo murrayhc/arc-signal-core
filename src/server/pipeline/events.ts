@@ -1,15 +1,37 @@
 import type { DashboardFeedItem, EventCandidate, Signal } from '@prisma/client'
 import { prisma } from '@/server/db'
-import type { ClusterWithSignals } from './cluster'
-import { scoreCluster } from './cluster'
+import type { ClusterWithSignals, GroupOf } from './cluster'
+import { groupResolverFor, scoreCluster } from './cluster'
 import type { PipelineError } from './types'
 
 const round2 = (n: number) => Math.round(n * 100) / 100
 
 const STICKY_STATUSES = ['ESCALATED', 'NEEDS_REVIEW', 'CONFIRMED']
 
-export function computeEventMetrics(members: Signal[], noveltyScore: number) {
-  const { strength, confidence, distinctSources } = scoreCluster(members)
+/** First-class exposure promoted from the atomic claims behind the event's
+ *  signals: which commodities and instruments the underlying evidence names. */
+async function exposureFor(members: Signal[]): Promise<{ commoditiesJson: string; instrumentsJson: string }> {
+  const canonicalIds = [...new Set(members.map((m) => m.canonicalClaimId).filter((x): x is string => !!x))]
+  if (canonicalIds.length === 0) return { commoditiesJson: '[]', instrumentsJson: '[]' }
+  const atomics = await prisma.atomicClaim.findMany({
+    where: { canonicalClaimId: { in: canonicalIds } },
+    select: { commoditiesJson: true, instrumentsJson: true },
+  })
+  const parse = (json: string): string[] => {
+    try {
+      const v = JSON.parse(json)
+      return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []
+    } catch {
+      return []
+    }
+  }
+  const commodities = [...new Set(atomics.flatMap((a) => parse(a.commoditiesJson)))].sort()
+  const instruments = [...new Set(atomics.flatMap((a) => parse(a.instrumentsJson)))].sort()
+  return { commoditiesJson: JSON.stringify(commodities), instrumentsJson: JSON.stringify(instruments) }
+}
+
+export function computeEventMetrics(members: Signal[], noveltyScore: number, groupOf?: GroupOf) {
+  const { strength, confidence, distinctSources } = scoreCluster(members, groupOf)
   const n = members.length
   const severity = strength
   const probability = Math.min(0.9, round2(0.25 + 0.5 * confidence + 0.15 * severity))
@@ -59,7 +81,7 @@ type Metrics = ReturnType<typeof computeEventMetrics>
 
 function buildSummary(title: string, m: Metrics, clusterExplanation: string): string {
   return (
-    `${title}: ${m.memberCount} corroborating signal(s) across ${m.distinctSources} independent source(s). ` +
+    `${title}: ${m.memberCount} corroborating signal(s) across ${m.distinctSources} independent publisher(s). ` +
     `Class ${m.eventClass} — confidence ${m.confidence.toFixed(2)}, severity ${m.severity.toFixed(2)}, ` +
     `probability ${m.probability.toFixed(2)} (0.25 + 0.5×confidence + 0.15×severity). ` +
     `Risk ${m.riskScore.toFixed(2)} / opportunity ${m.opportunityScore.toFixed(2)} ` +
@@ -133,7 +155,8 @@ export async function createEventCandidates(
           include: { signal: true },
         })
         const union = links.map((l) => l.signal)
-        const m = computeEventMetrics(union, existing.noveltyScore)
+        const m = computeEventMetrics(union, existing.noveltyScore, await groupResolverFor(union))
+        const exposure = await exposureFor(union)
         const rising =
           m.confidence > existing.confidence ||
           Math.max(m.riskScore, m.opportunityScore) > Math.max(existing.riskScore, existing.opportunityScore)
@@ -166,6 +189,8 @@ export async function createEventCandidates(
             signalStrength: m.signalStrength,
             opportunityScore: m.opportunityScore,
             riskScore: m.riskScore,
+            commoditiesJson: exposure.commoditiesJson,
+            instrumentsJson: exposure.instrumentsJson,
             isFixture: m.isFixture,
             },
           }),
@@ -175,8 +200,9 @@ export async function createEventCandidates(
         continue
       }
 
-      // CREATE (unchanged spine behaviour, via the shared metrics function)
-      const m = computeEventMetrics(cluster.memberSignals, cluster.novelty)
+      // CREATE (via the shared metrics function, publisher-group-aware)
+      const m = computeEventMetrics(cluster.memberSignals, cluster.novelty, await groupResolverFor(cluster.memberSignals))
+      const exposure = await exposureFor(cluster.memberSignals)
       const entityIds = new Set(cluster.memberSignals.map((s) => s.entityId ?? 'none'))
       const primaryEntityId =
         entityIds.size === 1 && !entityIds.has('none') ? cluster.memberSignals[0].entityId : null
@@ -201,6 +227,8 @@ export async function createEventCandidates(
           noveltyScore: m.noveltyScore,
           opportunityScore: m.opportunityScore,
           riskScore: m.riskScore,
+          commoditiesJson: exposure.commoditiesJson,
+          instrumentsJson: exposure.instrumentsJson,
           createdFromScanRunId: scanRunId,
           isFixture: m.isFixture,
         },

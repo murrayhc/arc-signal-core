@@ -35,7 +35,7 @@ describe('createEventCandidates', () => {
     expect(event.evidenceCount).toBe(2)
     expect(event.sourceDiversityScore).toBe(1)
     expect(event.riskScore).toBeGreaterThan(event.opportunityScore)
-    expect(event.summary).toContain('source')
+    expect(event.summary).toContain('publisher')
     expect(event.createdFromScanRunId).toBe(scanRun.id)
 
     const linkedCluster = await prisma.signalCluster.findUniqueOrThrow({ where: { id: clusters[0].id } })

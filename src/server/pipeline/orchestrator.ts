@@ -11,7 +11,7 @@ import { generateOpportunities } from './opportunity'
 import { generatePositioning } from './positioning'
 import { updateSourceHealth } from './health'
 import { syncGraphForEvents } from '@/server/graph/builder'
-import { recordGraphEvents } from '@/server/graph/timeline'
+import { persistEventMomentum, recordGraphEvents } from '@/server/graph/timeline'
 import { runEvidenceDepth } from '@/server/evidence/depth-pipeline'
 import { runConsequenceSynthesis } from '@/server/consequence/consequence-pipeline'
 import type { PipelineError } from './types'
@@ -46,6 +46,7 @@ export type ScanSummary = {
     companyImpactsCreated: number
     contextSynthesesCreated: number
     futureScenariosCreated: number
+    signalsQuarantined: number
   }
   errors: PipelineError[]
   warnings: PipelineError[]
@@ -82,6 +83,7 @@ export async function runFullScan(options: { scanType?: string } = {}): Promise<
     companyImpactsCreated: 0,
     contextSynthesesCreated: 0,
     futureScenariosCreated: 0,
+    signalsQuarantined: 0,
   }
 
   try {
@@ -128,10 +130,16 @@ export async function runFullScan(options: { scanType?: string } = {}): Promise<
     errors.push(...claims.errors)
     counts.claimsExtracted = claims.claims.length
 
-    // 7. Create signals.
+    // 7. Create signals — confidence derived from the evidence layer's
+    // reliability engine; recycled/contradicted claims are quarantined here
+    // and never reach clustering or events.
     const signals = await createSignals(claims.claims, docsById)
     errors.push(...signals.errors)
     counts.signalsCreated = signals.signals.length
+    counts.signalsQuarantined = signals.quarantined.length
+    for (const q of signals.quarantined) {
+      warnings.push({ stage: 'signals:quarantine', message: q.reason })
+    }
 
     // 8. Cluster signals.
     const clusters = await clusterSignals(signals.signals)
@@ -196,6 +204,11 @@ export async function runFullScan(options: { scanType?: string } = {}): Promise<
     // recordGraphEvents never throws, so a timeline failure never fails the scan.
     const timeline = await recordGraphEvents(allEvents, new Date())
     errors.push(...timeline.errors)
+
+    // 15b. Momentum as a first-class event field: persist each event's
+    // recency-weighted momentum from its graph-event timeline. Non-fatal.
+    const momentum = await persistEventMomentum(allEvents, new Date())
+    errors.push(...momentum.errors)
 
     const status = errors.length > 0 ? 'COMPLETED_WITH_ERRORS' : 'COMPLETED'
     const completed = await prisma.scanRun.update({

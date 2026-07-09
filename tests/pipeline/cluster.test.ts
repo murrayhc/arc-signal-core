@@ -43,7 +43,7 @@ describe('clusterSignals', () => {
     expect(clusters[0].memberSignals).toHaveLength(2)
     expect(clusters[0].clusterType).toBe('LAYOFF_SIGNAL')
     expect(clusters[0].sector).toBe('technology')
-    expect(clusters[0].explanation).toContain('2 independent source')
+    expect(clusters[0].explanation).toContain('2 independent publisher')
     expect(await prisma.signalClusterSignal.count()).toBe(2)
   })
 

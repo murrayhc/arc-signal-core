@@ -238,6 +238,42 @@ export type EventReplay = {
 }
 
 /**
+ * Persists each event's momentum (recency-weighted graph-event score, 0.5 =
+ * neutral) onto EventCandidate.momentumScore so momentum is a first-class
+ * event field rather than a graph-layer-only computation. Non-fatal: an
+ * event with no graph node/timeline yet keeps its current value.
+ */
+export async function persistEventMomentum(
+  events: { id: string }[],
+  now: Date,
+): Promise<{ updated: number; errors: { stage: string; message: string }[] }> {
+  const errors: { stage: string; message: string }[] = []
+  let updated = 0
+  for (const event of events) {
+    try {
+      const graphNode = await prisma.graphNode.findUnique({
+        where: { refType_refId: { refType: 'event', refId: event.id } },
+      })
+      if (!graphNode) continue
+      const timeline = await prisma.graphEvent.findMany({
+        where: { graphNodeId: graphNode.id },
+        select: { eventType: true, occurredAt: true },
+      })
+      if (timeline.length === 0) continue
+      const momentum = momentumScore(
+        timeline.map((e) => ({ eventType: e.eventType, occurredAt: e.occurredAt })),
+        now,
+      )
+      await prisma.eventCandidate.update({ where: { id: event.id }, data: { momentumScore: momentum } })
+      updated += 1
+    } catch (err) {
+      errors.push({ stage: 'momentum', message: err instanceof Error ? err.message : String(err) })
+    }
+  }
+  return { updated, errors }
+}
+
+/**
  * The full replay for an event: its ordered GraphEvent timeline, any captured GraphSnapshots,
  * and the computed momentum/confidenceDecay/freshness scores (as of now). confidenceDecay and
  * freshness are computed from the time since the last SUPPORTING GraphEvent (SUPPORTING_EVENT_TYPES),
