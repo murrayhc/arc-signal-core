@@ -1,23 +1,12 @@
 import type { ImpactType } from '@/shared/enums'
 
-/** Places we must never treat as companies — keeps geographic tokens extracted
- *  alongside org names (e.g. "Manchester") out of the named-company list. */
-const PLACES = new Set([
-  'manchester', 'london', 'leeds', 'birmingham', 'glasgow', 'edinburgh', 'bristol', 'liverpool', 'sheffield',
-  'cardiff', 'belfast', 'newcastle', 'nottingham',
-  'uk', 'united kingdom', 'britain', 'england', 'scotland', 'wales', 'ireland',
-  'europe', 'european union', 'eu', 'us', 'usa', 'u.s.', 'united states', 'america', 'north america',
-  'china', 'japan', 'india', 'germany', 'france', 'spain', 'italy', 'netherlands', 'korea', 'taiwan',
-  'asia', 'africa', 'middle east', 'north sea', 'russia', 'australia', 'chile', 'peru',
-])
+import { isNameableOrganisation } from '@/server/evidence/entities'
 
-/** True when a capitalised token looks like an organisation rather than a place
- *  or a sentence-initial common word. Conservative: a place is never a company. */
+/** @deprecated Superseded by the Stage-5 entity resolver
+ *  (src/server/evidence/entities.ts) — one classification truth. Kept as a
+ *  thin alias for any external callers. */
 export function isLikelyOrganisation(name: string): boolean {
-  const n = name.trim()
-  if (n.length < 3) return false
-  if (PLACES.has(n.toLowerCase())) return false
-  return /^[A-Z]/.test(n)
+  return isNameableOrganisation(name)
 }
 
 export const CLAIM_TYPE_WORDS: Record<string, string> = {

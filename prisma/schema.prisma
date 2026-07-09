@@ -42,6 +42,9 @@ model Entity {
   id           String                 @id @default(cuid())
   name         String                 @unique
   entityType   String                 @default("ORGANISATION")
+  // Suffix-folded, alias-resolved identity key: 'Voltcore Ltd' and
+  // 'Voltcore Limited' share one canonicalKey and resolve to one entity.
+  canonicalKey String?
   sector       String?
   region       String?
   createdAt    DateTime               @default(now())
@@ -51,6 +54,8 @@ model Entity {
   clusterLinks SignalClusterEntity[]
   eventLinks   EventCandidateEntity[]
   primaryFor   EventCandidate[]       @relation("PrimaryEntity")
+
+  @@index([canonicalKey])
 }
 
 model Document {

@@ -2,9 +2,10 @@ import type { AtomicClaim, CompanyImpact, EventCandidate } from '@prisma/client'
 import { prisma } from '@/server/db'
 import type { ImpactType } from '@/shared/enums'
 import { assertNoAdviceLanguage } from '@/server/safety/advice-language'
+import { isNameableOrganisation, resolveEntityName } from '@/server/evidence/entities'
 import { canonicalIdsForEvent } from '@/server/evidence/investigation-loop'
 import type { ConsequenceError } from './types'
-import { CLAIM_TYPE_WORDS, impactTypeFor, isLikelyOrganisation, watchSignalsForClaimType } from './watch-signals'
+import { CLAIM_TYPE_WORDS, impactTypeFor, watchSignalsForClaimType } from './watch-signals'
 
 const LOW_CONFIDENCE = 0.4
 /** Category impacts are inferential (sector/relationship), never a specific
@@ -96,17 +97,52 @@ export async function resolveCompanyImpacts(
   await prisma.companyImpact.deleteMany({ where: { eventCandidateId } })
   const impacts: CompanyImpact[] = []
 
-  // Named organisations from the evidence.
-  const orgToAtomics = new Map<string, AtomicClaim[]>()
+  // Named organisations from the evidence — resolved, not just capitalised.
+  // Mentions are grouped by CANONICAL KEY (suffix-folded, alias-resolved) so
+  // 'Voltcore Ltd' and 'Voltcore Limited' are one organisation, and only
+  // names the entity resolver accepts (or that 2+ independent sources
+  // corroborate) can become a publicly named impact. Persons, places, roles
+  // and unclassifiable fragments never can.
+  type OrgGroup = { displayName: string; basis: string; atomics: AtomicClaim[]; mentions: Set<string> }
+  const mentionsByKey = new Map<string, { name: string; atomics: AtomicClaim[] }>()
   for (const a of atomics) {
     for (const name of parseArr(a.entitiesJson)) {
-      if (!isLikelyOrganisation(name)) continue
-      orgToAtomics.set(name, [...(orgToAtomics.get(name) ?? []), a])
+      const key = resolveEntityName(name).canonicalKey
+      const existing = mentionsByKey.get(`${key}::${name}`)
+      if (existing) existing.atomics.push(a)
+      else mentionsByKey.set(`${key}::${name}`, { name, atomics: [a] })
+    }
+  }
+  const orgGroups = new Map<string, OrgGroup>()
+  for (const { name, atomics: mentionAtomics } of mentionsByKey.values()) {
+    const resolved = resolveEntityName(name)
+    const sourceCount = new Set(mentionAtomics.map((a) => a.sourceId)).size
+    if (!isNameableOrganisation(name, sourceCount >= 2)) continue
+    const group = orgGroups.get(resolved.canonicalKey)
+    if (group) {
+      group.atomics.push(...mentionAtomics)
+      group.mentions.add(name)
+      // Prefer the longest display form (usually the full legal name).
+      if (name.length > group.displayName.length) group.displayName = name
+    } else {
+      orgGroups.set(resolved.canonicalKey, {
+        displayName: name,
+        basis:
+          resolved.kind === 'ORGANISATION'
+            ? resolved.basis
+            : sourceCount >= 2
+              ? 'brand-shaped mention, corroborated across independent sources'
+              : 'brand-shaped mention',
+        atomics: [...mentionAtomics],
+        mentions: new Set([name]),
+      })
     }
   }
 
-  for (const [name, orgAtomics] of orgToAtomics) {
+  for (const [canonicalKey, group] of orgGroups) {
     try {
+      const orgAtomics = group.atomics
+      const name = group.displayName
       const evidenceIds = [...new Set([...orgAtomics.map((a) => a.id), ...orgAtomics.map((a) => a.sourceId)])]
       const reliability = maxReliability
       const impactType = impactTypeFor(event.eventClass, claimTypes, reliability)
@@ -114,15 +150,42 @@ export async function resolveCompanyImpacts(
       const sourceCount = new Set(orgAtomics.map((a) => a.sourceId)).size
       const pathway =
         `${name} is named because it appears in the evidence for this event (${words}), ` +
-        `reported across ${sourceCount} source(s) at evidence reliability ${Math.round(reliability * 100)}%. ` +
+        `reported across ${sourceCount} source(s) at evidence reliability ${Math.round(reliability * 100)}%, ` +
+        `and was identified as an organisation (${group.basis}). ` +
         `It may be ${impactType.toLowerCase().replace(/_/g, ' ')} as the situation develops; verify against primary sources.`
       assertNoAdviceLanguage(pathway, 'CompanyImpact.impactPathway')
 
-      const entity = await prisma.entity.upsert({
-        where: { name },
-        create: { name, entityType: 'ORGANISATION', sector: event.affectedSector, region: event.affectedRegion },
+      // Resolve to ONE entity per canonical key (alias/suffix variants merge).
+      let entity = await prisma.entity.findFirst({ where: { canonicalKey } })
+      if (!entity) {
+        entity = await prisma.entity.upsert({
+          where: { name },
+          create: {
+            name,
+            canonicalKey,
+            entityType: 'ORGANISATION',
+            sector: event.affectedSector,
+            region: event.affectedRegion,
+          },
+          update: { canonicalKey },
+        })
+      }
+      // Populate the entity join tables (previously dead scaffolding): the
+      // graph and interrogation COMPANY paths read these.
+      await prisma.eventCandidateEntity.upsert({
+        where: { eventCandidateId_entityId: { eventCandidateId, entityId: entity.id } },
+        create: { eventCandidateId, entityId: entity.id },
         update: {},
       })
+      const eventClusters = await prisma.signalCluster.findMany({ where: { eventCandidateId }, select: { id: true } })
+      for (const cluster of eventClusters) {
+        await prisma.signalClusterEntity.upsert({
+          where: { clusterId_entityId: { clusterId: cluster.id, entityId: entity.id } },
+          create: { clusterId: cluster.id, entityId: entity.id },
+          update: {},
+        })
+      }
+
       const lowConfidence = reliability < LOW_CONFIDENCE
       impacts.push(
         await prisma.companyImpact.create({
@@ -137,7 +200,13 @@ export async function resolveCompanyImpacts(
             riskScore: event.riskScore,
             opportunityScore: event.opportunityScore,
             watchSignalsJson: JSON.stringify(watchSignalsForClaimType(claimTypes[0] ?? 'UNKNOWN')),
-            metadataJson: JSON.stringify({ lowConfidence, level: 'NAMED' }),
+            metadataJson: JSON.stringify({
+              lowConfidence,
+              level: 'NAMED',
+              nameBasis: group.basis,
+              canonicalKey,
+              mentionVariants: [...group.mentions],
+            }),
           },
         }),
       )
