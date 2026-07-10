@@ -1856,6 +1856,71 @@ export type Database = {
           },
         ]
       }
+      track_record_snapshots: {
+        Row: {
+          base_rate: number | null
+          by_horizon: Json
+          calibration: Json
+          created_at: string
+          graded_count: number
+          happened_count: number
+          id: string
+          mean_brier_final: number | null
+          mean_brier_first: number | null
+          mean_lead_time_days: number | null
+          open_count: number
+          pending_review_count: number
+          resolved_count: number
+          scan_run_id: string | null
+          scenario_count: number
+          scenario_mean_brier: number | null
+        }
+        Insert: {
+          base_rate?: number | null
+          by_horizon?: Json
+          calibration?: Json
+          created_at?: string
+          graded_count?: number
+          happened_count?: number
+          id?: string
+          mean_brier_final?: number | null
+          mean_brier_first?: number | null
+          mean_lead_time_days?: number | null
+          open_count?: number
+          pending_review_count?: number
+          resolved_count?: number
+          scan_run_id?: string | null
+          scenario_count?: number
+          scenario_mean_brier?: number | null
+        }
+        Update: {
+          base_rate?: number | null
+          by_horizon?: Json
+          calibration?: Json
+          created_at?: string
+          graded_count?: number
+          happened_count?: number
+          id?: string
+          mean_brier_final?: number | null
+          mean_brier_first?: number | null
+          mean_lead_time_days?: number | null
+          open_count?: number
+          pending_review_count?: number
+          resolved_count?: number
+          scan_run_id?: string | null
+          scenario_count?: number
+          scenario_mean_brier?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "track_record_snapshots_scan_run_id_fkey"
+            columns: ["scan_run_id"]
+            isOneToOne: false
+            referencedRelation: "scan_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       watchlists: {
         Row: {
           created_at: string
