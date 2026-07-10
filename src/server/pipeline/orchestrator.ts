@@ -11,6 +11,7 @@ import { generateOpportunities } from './opportunity'
 import { generatePositioning } from './positioning'
 import { updateSourceHealth } from './health'
 import { syncGraphForEvents } from '@/server/graph/builder'
+import { buildArcsForEvents } from '@/server/services/graph'
 import { persistEventMomentum, recordGraphEvents } from '@/server/graph/timeline'
 import { runEvidenceDepth } from '@/server/evidence/depth-pipeline'
 import { runConsequenceSynthesis } from '@/server/consequence/consequence-pipeline'
@@ -220,6 +221,11 @@ export async function runFullScan(
     // recency-weighted momentum from its graph-event timeline. Non-fatal.
     const momentum = await persistEventMomentum(allEvents, new Date())
     errors.push(...momentum.errors)
+
+    // 15b-ii. Warm the evidence-arc cache at scan time so event-page reads
+    // are cache hits (no write-on-GET). Non-fatal.
+    const arcs = await buildArcsForEvents(allEvents)
+    errors.push(...arcs.errors)
 
     // 15c. Review queue (non-fatal): turn everything the pipeline withheld or
     // flagged this scan into visible ReviewItems — quarantined claims,

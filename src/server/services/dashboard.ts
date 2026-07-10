@@ -30,6 +30,13 @@ export type DashboardData = {
   opportunityRadar: OpportunityCardData[]
   inbox: FeedCardData[]
   sources: SourceStatus[]
+  /** Live source-category coverage: how many distinct categories the radar
+   *  actually watches (news, regulator, government, procurement, aggregator…)
+   *  — honest breadth, not one lighthouse. */
+  sourceCategories: { category: string; count: number; healthy: number }[]
+  /** Pending human-review items (Stage 6) — surfaced so the queue is visible
+   *  from the command centre, not buried. */
+  pendingReviewCount: number
 }
 
 type EventWithRO = EventCandidate & { riskOpportunities: RiskOpportunity[] }
@@ -86,6 +93,7 @@ export async function getSources(): Promise<SourceStatus[]> {
 }
 
 export async function getDashboardData(): Promise<DashboardData> {
+  const sources = await getSources()
   const lastScanRow = await prisma.scanRun.findFirst({ orderBy: { startedAt: 'desc' } })
   const [newEvents, rising, highConfidence, watch] = await Promise.all([
     prisma.eventCandidate.count({ where: { status: 'NEW' } }),
@@ -116,6 +124,23 @@ export async function getDashboardData(): Promise<DashboardData> {
     opportunitySignals: await radar('OPPORTUNITY_RADAR'),
     opportunityRadar: await getOpportunityRadar(),
     inbox: inboxEvents.map(toCard),
-    sources: await getSources(),
+    sources,
+    sourceCategories: summariseCategories(sources),
+    pendingReviewCount: await prisma.reviewItem.count({ where: { status: 'PENDING' } }),
   }
+}
+
+/** Groups the live (non-fixture) sources by category with a healthy count. */
+function summariseCategories(sources: SourceStatus[]): { category: string; count: number; healthy: number }[] {
+  const live = sources.filter((s) => !s.isFixture)
+  const byCategory = new Map<string, { count: number; healthy: number }>()
+  for (const s of live) {
+    const entry = byCategory.get(s.category) ?? { count: 0, healthy: 0 }
+    entry.count += 1
+    if (s.healthStatus === 'HEALTHY') entry.healthy += 1
+    byCategory.set(s.category, entry)
+  }
+  return [...byCategory.entries()]
+    .map(([category, v]) => ({ category, ...v }))
+    .sort((a, b) => b.count - a.count)
 }

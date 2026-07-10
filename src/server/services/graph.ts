@@ -325,25 +325,14 @@ export type EvidenceArcStepData = {
   sourceCount: number
 }
 
-/**
- * The evidence arc rooted at an event's EVENT GraphNode: finds the node via
- * `getEventGraphNodeId`, runs `buildArc`, and joins each step to its node's
- * title/nodeType for display. Returns null if the event has no graph node
- * (not yet scanned/synced) or the node was since removed.
- */
-export async function getEventArc(
-  eventId: string,
-): Promise<{ arc: EvidenceArcData; steps: EvidenceArcStepData[] } | null> {
-  const nodeId = await getEventGraphNodeId(eventId)
-  if (!nodeId) return null
-
-  const result = await buildArc(nodeId)
-  if (!result) return null
-
-  const { arc, steps } = result
+/** Shapes persisted arc + step rows into the display DTO (shared by the
+ *  cached read and the rebuild path). */
+async function shapeArc(
+  arc: EvidenceArcData,
+  steps: { degree: number; nodeId: string; relationshipType: string; explanation: string; confidence: number; sourceCount: number }[],
+): Promise<{ arc: EvidenceArcData; steps: EvidenceArcStepData[] }> {
   const stepNodes = await prisma.graphNode.findMany({ where: { id: { in: steps.map((s) => s.nodeId) } } })
   const nodeById = new Map(stepNodes.map((n) => [n.id, n]))
-
   const stepsData: EvidenceArcStepData[] = steps
     .map((s) => {
       const node = nodeById.get(s.nodeId)
@@ -358,23 +347,68 @@ export async function getEventArc(
       }
     })
     .sort((a, b) => a.degree - b.degree)
+  return { arc, steps: stepsData }
+}
 
-  return {
-    arc: {
-      id: arc.id,
-      rootNodeId: arc.rootNodeId,
-      title: arc.title,
-      summary: arc.summary,
-      maxDegrees: arc.maxDegrees,
-      truePotentialScore: arc.truePotentialScore,
-      confidence: arc.confidence,
-      originStrength: arc.originStrength,
-      sourceDiversity: arc.sourceDiversity,
-      contradictionScore: arc.contradictionScore,
-      momentumScore: arc.momentumScore,
-      chainClass: arc.chainClass,
-      isFixture: arc.isFixture,
-    },
-    steps: stepsData,
+const asArcData = (arc: {
+  id: string; rootNodeId: string; title: string; summary: string; maxDegrees: number; truePotentialScore: number
+  confidence: number; originStrength: number; sourceDiversity: number; contradictionScore: number
+  momentumScore: number; chainClass: string; isFixture: boolean
+}): EvidenceArcData => ({
+  id: arc.id, rootNodeId: arc.rootNodeId, title: arc.title, summary: arc.summary, maxDegrees: arc.maxDegrees,
+  truePotentialScore: arc.truePotentialScore, confidence: arc.confidence, originStrength: arc.originStrength,
+  sourceDiversity: arc.sourceDiversity, contradictionScore: arc.contradictionScore, momentumScore: arc.momentumScore,
+  chainClass: arc.chainClass, isFixture: arc.isFixture,
+})
+
+/**
+ * The evidence arc rooted at an event's EVENT GraphNode. CACHED: serves the
+ * persisted EvidenceArc/steps when they are fresh (built at/after the graph
+ * node's last update) rather than rebuilding — this removes the write-on-GET
+ * behaviour (viewing an event page no longer deletes+recreates arc rows and
+ * two concurrent views no longer race). Rebuilds only on a cache miss (never
+ * built) or staleness (the graph node changed since). Arcs are warmed at scan
+ * time by `buildArcsForEvents`. Returns null if the event has no graph node.
+ */
+export async function getEventArc(
+  eventId: string,
+): Promise<{ arc: EvidenceArcData; steps: EvidenceArcStepData[] } | null> {
+  const nodeId = await getEventGraphNodeId(eventId)
+  if (!nodeId) return null
+
+  // Cache check: a persisted arc that is at least as new as its root node.
+  const node = await prisma.graphNode.findUnique({ where: { id: nodeId }, select: { updatedAt: true } })
+  const cached = await prisma.evidenceArc.findFirst({ where: { rootNodeId: nodeId }, orderBy: { updatedAt: 'desc' } })
+  if (cached && node && cached.updatedAt >= node.updatedAt) {
+    const cachedSteps = await prisma.evidenceArcStep.findMany({ where: { evidenceArcId: cached.id } })
+    return shapeArc(asArcData(cached), cachedSteps)
   }
+
+  const result = await buildArc(nodeId)
+  if (!result) return null
+
+  return shapeArc(asArcData(result.arc), result.steps)
+}
+
+/**
+ * Warms the arc cache for a scan's events by building each event's arc once,
+ * at scan time — so subsequent event-page reads are cache hits and never
+ * write. Non-fatal: a failed arc build for one event never fails the scan.
+ */
+export async function buildArcsForEvents(
+  events: { id: string }[],
+): Promise<{ built: number; errors: { stage: string; message: string }[] }> {
+  const errors: { stage: string; message: string }[] = []
+  let built = 0
+  for (const event of events) {
+    try {
+      const nodeId = await getEventGraphNodeId(event.id)
+      if (!nodeId) continue
+      const result = await buildArc(nodeId)
+      if (result) built++
+    } catch (err) {
+      errors.push({ stage: 'arc', message: err instanceof Error ? err.message : String(err) })
+    }
+  }
+  return { built, errors }
 }
