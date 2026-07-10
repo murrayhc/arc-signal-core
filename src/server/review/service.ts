@@ -16,7 +16,7 @@ import { REVIEW_STATUSES } from '@/shared/enums'
 
 export type ReviewDraft = {
   itemType: ReviewItemType
-  subjectKind: 'claim' | 'companyImpact' | 'entity' | 'event'
+  subjectKind: 'claim' | 'companyImpact' | 'entity' | 'event' | 'prediction'
   subjectId: string
   dedupeKey: string
   title: string

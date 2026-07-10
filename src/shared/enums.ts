@@ -226,8 +226,29 @@ export const REVIEW_ITEM_TYPES = [
   'AMBIGUOUS_ENTITY',      // a mention the resolver could not classify
   'CONTRADICTION_SPIKE',   // an event carrying an unusual density of contradictions
   'MANIPULATION_ALERT',    // a claim flagged for copy-burst amplification
+  'PREDICTION_RESOLUTION', // a prediction whose outcome needs a human verdict
 ] as const
 export type ReviewItemType = (typeof REVIEW_ITEM_TYPES)[number]
 
 export const REVIEW_STATUSES = ['PENDING','APPROVED','REJECTED','NEEDS_MORE_EVIDENCE'] as const
 export type ReviewStatus = (typeof REVIEW_STATUSES)[number]
+
+// ── Outcome-Resolution Engine (Stage 11) ───────────────────────────────────
+
+export const PREDICTION_SUBJECT_KINDS = ['EVENT', 'SCENARIO'] as const
+export type PredictionSubjectKind = (typeof PREDICTION_SUBJECT_KINDS)[number]
+
+export const PREDICTION_STATUSES = ['OPEN', 'PENDING_REVIEW', 'RESOLVED'] as const
+export type PredictionStatus = (typeof PREDICTION_STATUSES)[number]
+
+export const PREDICTION_OUTCOMES = ['HAPPENED', 'DID_NOT_HAPPEN', 'UNRESOLVABLE'] as const
+export type PredictionOutcome = (typeof PREDICTION_OUTCOMES)[number]
+
+export const RESOLUTION_METHODS = ['AUTO_EVIDENCE', 'AUTO_DEADLINE', 'REVIEW'] as const
+export type ResolutionMethod = (typeof RESOLUTION_METHODS)[number]
+
+export const OUTCOME_PATHS = ['REVERSED', 'CONTAINED', 'SUSTAINED', 'WIDENED', 'NONE'] as const
+export type OutcomePath = (typeof OUTCOME_PATHS)[number]
+
+export const WEIGHT_SUGGESTION_STATUSES = ['SUGGESTED', 'APPLIED', 'DISMISSED'] as const
+export type WeightSuggestionStatus = (typeof WEIGHT_SUGGESTION_STATUSES)[number]

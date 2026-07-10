@@ -3,6 +3,10 @@ import { prisma } from '@/server/db'
 /** Delete all rows in FK-safe order. Call in beforeEach of DB-touching suites. */
 export async function resetDb() {
   await prisma.$transaction([
+    // Outcome-Resolution Engine (Stage 11) — no FK relations, delete anytime.
+    prisma.outcomePrediction.deleteMany(),
+    prisma.trackRecordSnapshot.deleteMany(),
+    prisma.reliabilityWeightSuggestion.deleteMany(),
     // Review queue (Stage 6) — no FK relations, delete anytime.
     prisma.reviewItem.deleteMany(),
     // Commercial Consequence Engine.
