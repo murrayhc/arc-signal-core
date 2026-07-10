@@ -529,7 +529,7 @@ export const runScan = createServerFn({ method: "POST" }).handler(async () => {
       const entities = Array.from(new Set(group.flatMap((g) => g.entities))).slice(0, 6);
       const commodities = Array.from(new Set(group.flatMap((g) => g.commodities))).slice(0, 4);
       const avgRel = group.reduce((a, g) => a + g.reliability, 0) / group.length;
-      const sourceDiv = new Set(group.map((g) => g.source_id)).size;
+      const sourceDiv = new Set(group.map((g) => g.source_group || g.source_id)).size;
       const type = primaryType;
       const sector = primarySector;
 
