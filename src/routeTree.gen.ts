@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as WatchlistRouteImport } from './routes/watchlist'
+import { Route as TrackRecordRouteImport } from './routes/track-record'
 import { Route as SourcesRouteImport } from './routes/sources'
 import { Route as ScansRouteImport } from './routes/scans'
 import { Route as ReviewRouteImport } from './routes/review'
@@ -34,6 +35,11 @@ import { Route as ApiPublicExportsEventsRouteImport } from './routes/api/public/
 const WatchlistRoute = WatchlistRouteImport.update({
   id: '/watchlist',
   path: '/watchlist',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TrackRecordRoute = TrackRecordRouteImport.update({
+  id: '/track-record',
+  path: '/track-record',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SourcesRoute = SourcesRouteImport.update({
@@ -148,6 +154,7 @@ export interface FileRoutesByFullPath {
   '/review': typeof ReviewRoute
   '/scans': typeof ScansRoute
   '/sources': typeof SourcesRouteWithChildren
+  '/track-record': typeof TrackRecordRoute
   '/watchlist': typeof WatchlistRoute
   '/admin/routing': typeof AdminRoutingRoute
   '/arcs/$id': typeof ArcsIdRoute
@@ -170,6 +177,7 @@ export interface FileRoutesByTo {
   '/review': typeof ReviewRoute
   '/scans': typeof ScansRoute
   '/sources': typeof SourcesRouteWithChildren
+  '/track-record': typeof TrackRecordRoute
   '/watchlist': typeof WatchlistRoute
   '/admin/routing': typeof AdminRoutingRoute
   '/arcs/$id': typeof ArcsIdRoute
@@ -194,6 +202,7 @@ export interface FileRoutesById {
   '/review': typeof ReviewRoute
   '/scans': typeof ScansRoute
   '/sources': typeof SourcesRouteWithChildren
+  '/track-record': typeof TrackRecordRoute
   '/watchlist': typeof WatchlistRoute
   '/admin/routing': typeof AdminRoutingRoute
   '/arcs/$id': typeof ArcsIdRoute
@@ -219,6 +228,7 @@ export interface FileRouteTypes {
     | '/review'
     | '/scans'
     | '/sources'
+    | '/track-record'
     | '/watchlist'
     | '/admin/routing'
     | '/arcs/$id'
@@ -241,6 +251,7 @@ export interface FileRouteTypes {
     | '/review'
     | '/scans'
     | '/sources'
+    | '/track-record'
     | '/watchlist'
     | '/admin/routing'
     | '/arcs/$id'
@@ -264,6 +275,7 @@ export interface FileRouteTypes {
     | '/review'
     | '/scans'
     | '/sources'
+    | '/track-record'
     | '/watchlist'
     | '/admin/routing'
     | '/arcs/$id'
@@ -288,6 +300,7 @@ export interface RootRouteChildren {
   ReviewRoute: typeof ReviewRoute
   ScansRoute: typeof ScansRoute
   SourcesRoute: typeof SourcesRouteWithChildren
+  TrackRecordRoute: typeof TrackRecordRoute
   WatchlistRoute: typeof WatchlistRoute
   AdminRoutingRoute: typeof AdminRoutingRoute
   EventsIdRoute: typeof EventsIdRoute
@@ -303,6 +316,13 @@ declare module '@tanstack/react-router' {
       path: '/watchlist'
       fullPath: '/watchlist'
       preLoaderRoute: typeof WatchlistRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/track-record': {
+      id: '/track-record'
+      path: '/track-record'
+      fullPath: '/track-record'
+      preLoaderRoute: typeof TrackRecordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/sources': {
@@ -506,6 +526,7 @@ const rootRouteChildren: RootRouteChildren = {
   ReviewRoute: ReviewRoute,
   ScansRoute: ScansRoute,
   SourcesRoute: SourcesRouteWithChildren,
+  TrackRecordRoute: TrackRecordRoute,
   WatchlistRoute: WatchlistRoute,
   AdminRoutingRoute: AdminRoutingRoute,
   EventsIdRoute: EventsIdRoute,

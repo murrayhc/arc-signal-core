@@ -86,7 +86,7 @@ function TrackRecordPage() {
           ) : (
             <table className="w-full text-xs">
               <thead className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground bg-background/30">
-                <tr><Th>Stated range</Th><Th>N</Th><Th>Mean stated</Th><Th>Observed</Th><Th></Th></tr>
+                <tr><Th>Stated range</Th><Th>N</Th><Th>Mean stated</Th><Th>Observed</Th><Th>Δ</Th></tr>
               </thead>
               <tbody>
                 {tr.calibration.filter((b) => b.n > 0).map((b) => {
