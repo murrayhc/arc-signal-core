@@ -1275,6 +1275,105 @@ export type Database = {
           },
         ]
       }
+      outcome_predictions: {
+        Row: {
+          baseline: Json
+          brier_final: number | null
+          brier_first: number | null
+          created_at: string
+          deadline: string
+          dedupe_key: string
+          event_candidate_id: string
+          evidence_canonical_ids: string[]
+          final_probability: number
+          horizon: string | null
+          id: string
+          lead_time_days: number | null
+          observed_path: string | null
+          outcome: string | null
+          predicted_at: string
+          predicted_probability: number
+          prediction_text: string
+          resolution_evidence: Json
+          resolution_rationale: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          scenario_projection_id: string | null
+          status: string
+          subject_kind: string
+          updated_at: string
+        }
+        Insert: {
+          baseline?: Json
+          brier_final?: number | null
+          brier_first?: number | null
+          created_at?: string
+          deadline: string
+          dedupe_key: string
+          event_candidate_id: string
+          evidence_canonical_ids?: string[]
+          final_probability: number
+          horizon?: string | null
+          id?: string
+          lead_time_days?: number | null
+          observed_path?: string | null
+          outcome?: string | null
+          predicted_at?: string
+          predicted_probability: number
+          prediction_text: string
+          resolution_evidence?: Json
+          resolution_rationale?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          scenario_projection_id?: string | null
+          status?: string
+          subject_kind: string
+          updated_at?: string
+        }
+        Update: {
+          baseline?: Json
+          brier_final?: number | null
+          brier_first?: number | null
+          created_at?: string
+          deadline?: string
+          dedupe_key?: string
+          event_candidate_id?: string
+          evidence_canonical_ids?: string[]
+          final_probability?: number
+          horizon?: string | null
+          id?: string
+          lead_time_days?: number | null
+          observed_path?: string | null
+          outcome?: string | null
+          predicted_at?: string
+          predicted_probability?: number
+          prediction_text?: string
+          resolution_evidence?: Json
+          resolution_rationale?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          scenario_projection_id?: string | null
+          status?: string
+          subject_kind?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "outcome_predictions_event_candidate_id_fkey"
+            columns: ["event_candidate_id"]
+            isOneToOne: false
+            referencedRelation: "event_candidates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "outcome_predictions_scenario_projection_id_fkey"
+            columns: ["scenario_projection_id"]
+            isOneToOne: false
+            referencedRelation: "scenario_projections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       revenue_lenses: {
         Row: {
           average_deal_size: string | null

@@ -865,6 +865,31 @@ export const runScan = createServerFn({ method: "POST" }).handler(async () => {
     notes.push(`Precognition pass skipped: ${err instanceof Error ? err.message : String(err)}`);
   }
 
+  // ============ PREDICTION LEDGER (freeze receipts) ============
+  // Final, non-fatal stage. Freezes an immutable receipt per event + per
+  // scenario_projection so we can grade them later. Rolling final_probability
+  // is refreshed for still-open receipts. Any failure here MUST NOT fail the
+  // scan.
+  let predictionsFrozen = 0;
+  try {
+    const { freezePredictions, refreshFinalProbabilities } = await import("./outcome.functions");
+    const froze = await freezePredictions({ data: { scanRunId: run.id } });
+    predictionsFrozen = froze.events_frozen + froze.scenarios_frozen;
+    notes.push(`Prediction ledger: froze ${froze.events_frozen} event + ${froze.scenarios_frozen} scenario receipt(s)${froze.skipped.length ? `; ${froze.skipped.length} skipped` : ""}.`);
+    const refreshed = await refreshFinalProbabilities();
+    if (refreshed.refreshed > 0) notes.push(`Prediction ledger: refreshed final_probability on ${refreshed.refreshed} open receipt(s).`);
+  } catch (err) {
+    notes.push(`Prediction ledger skipped: ${err instanceof Error ? err.message : String(err)}`);
+  }
+
+  // Append prediction-ledger summary into the persisted scan notes (best-effort).
+  try {
+    const tailNote = `Predictions frozen: ${predictionsFrozen}`;
+    const { data: cur } = await db.from("scan_runs").select("notes").eq("id", run.id).maybeSingle();
+    const merged = `${cur?.notes ?? ""} | ${tailNote}`.slice(0, 2000);
+    await db.from("scan_runs").update({ notes: merged }).eq("id", run.id);
+  } catch { /* best-effort */ }
+
   return {
     scan_run_id: run.id,
     status,
@@ -876,8 +901,10 @@ export const runScan = createServerFn({ method: "POST" }).handler(async () => {
     events_created: eventsCreated,
     events_skipped: eventsSkipped,
     precognition_processed: precogProcessed,
+    predictions_frozen: predictionsFrozen,
     notes,
   };
+
 
 });
 
