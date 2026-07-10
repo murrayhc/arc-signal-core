@@ -1,6 +1,7 @@
 import { freezePredictions, updateOpenFinalProbabilities } from './ledger'
 import { evaluateOpenPredictions } from './resolution'
 import { writeTrackRecordSnapshot } from './track-record'
+import { maybeSuggestWeights } from './weight-learning'
 import type { OutcomeCounts, OutcomeError } from './types'
 
 /** Runs the outcome-resolution layer for one scan: freeze receipts for this
@@ -48,6 +49,12 @@ export async function runOutcomeResolution(
 
   const snapshot = await writeTrackRecordSnapshot(scanRunId)
   errors.push(...snapshot.errors)
+
+  // Owner-gated learning: computes a suggestion when the resolved base is big
+  // enough — never applies anything itself.
+  const learning = await maybeSuggestWeights(scanRunId)
+  errors.push(...learning.errors)
+  counts.weightSuggestionsCreated = learning.created ? 1 : 0
 
   return { counts, errors }
 }
