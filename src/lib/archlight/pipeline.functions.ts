@@ -342,10 +342,12 @@ export const runScan = createServerFn({ method: "POST" }).handler(async () => {
               if (Array.isArray(existing)) embedding = existing as number[];
             }
 
+            const srcGroup = ((src as { independence_group?: string | null }).independence_group ?? "").trim() ||
+              deriveIndependenceGroup(src.base_url ?? src.feed_url ?? null, src.name, !!src.is_synthetic, src.id);
+
             if (canonical) {
               await db.from("canonical_claims").update({
                 repeat_count: (canonical.repeat_count ?? 0) + 1,
-                independent_source_count: (canonical.independent_source_count ?? 0) + (canonical.first_seen_source_id === src.id ? 0 : 1),
                 support_score: Math.min(1, Number(canonical.support_score ?? 0) + 0.1),
                 updated_at: new Date().toISOString(),
               }).eq("id", canonical.id);
@@ -379,6 +381,37 @@ export const runScan = createServerFn({ method: "POST" }).handler(async () => {
                 origin_confidence: canonical.first_seen_source_id === src.id ? 0.8 : (isLikelyCopy ? 0.2 : 0.55),
               });
 
+              // Recompute independent_source_count as distinct publisher GROUPS
+              // across all lineage rows for this canonical (contradictions excluded).
+              const { data: linRows } = await db
+                .from("claim_lineage")
+                .select("source_id, relation_to_origin")
+                .eq("canonical_claim_id", canonical.id);
+              const linSrcIds = Array.from(new Set(
+                (linRows ?? [])
+                  .filter((l) => l.relation_to_origin !== "contradiction")
+                  .map((l) => l.source_id)
+                  .filter((x): x is string => !!x),
+              ));
+              let groupCount = 0;
+              if (linSrcIds.length) {
+                const { data: srcRows } = await db
+                  .from("sources")
+                  .select("id, independence_group, base_url, feed_url, name, is_synthetic")
+                  .in("id", linSrcIds);
+                const gset = new Set<string>();
+                for (const s of srcRows ?? []) {
+                  const sr = s as { id: string; independence_group?: string | null; base_url: string | null; feed_url: string | null; name: string; is_synthetic: boolean };
+                  const g = (sr.independence_group ?? "").trim() ||
+                    deriveIndependenceGroup(sr.base_url ?? sr.feed_url, sr.name, !!sr.is_synthetic, sr.id);
+                  if (g) gset.add(g);
+                }
+                groupCount = gset.size;
+              }
+              await db.from("canonical_claims").update({
+                independent_source_count: groupCount,
+              }).eq("id", canonical.id);
+
               newClaims.push({
                 id: atomic.id,
                 text: c.claim_text,
@@ -390,6 +423,7 @@ export const runScan = createServerFn({ method: "POST" }).handler(async () => {
                 canonical_id: canonical.id,
                 source_id: src.id,
                 source_name: src.name,
+                source_group: srcGroup,
                 reliability: rel,
                 doc_id: doc.id,
                 doc_url: doc.url ?? "",
