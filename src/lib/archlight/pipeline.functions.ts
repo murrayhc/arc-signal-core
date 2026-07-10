@@ -184,6 +184,7 @@ export const runScan = createServerFn({ method: "POST" }).handler(async () => {
     canonical_id: string | null;
     source_id: string;
     source_name: string;
+    source_group: string;
     reliability: number;
     doc_id: string;
     doc_url: string;
