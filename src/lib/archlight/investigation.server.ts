@@ -136,8 +136,8 @@ export async function runInvestigation(
     .map((e) => e.primary_entity_id).filter((x): x is string => !!x)));
   const entityNameMap = new Map<string, string>();
   if (entIds.length) {
-    const { data: ents } = await db.from("entities").select("id, name").in("id", entIds);
-    for (const e of ents ?? []) entityNameMap.set(e.id, e.name);
+    const { data: ents } = await db.from("entities").select("id, canonical_name").in("id", entIds);
+    for (const e of ents ?? []) entityNameMap.set(e.id, e.canonical_name);
   }
 
   // Small window of recent doc signatures for copy-loop detection.
