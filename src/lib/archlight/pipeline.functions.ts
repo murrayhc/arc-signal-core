@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { callAI, callJson, callEmbedding, guardFinancialAdvice, pickModel } from "./ai-gateway.server";
-import { shingles, jaccard, shingleSignature, cosine, centroid, fetchFeed } from "./text.server";
+import { shingles, jaccard, shingleSignature, cosine, centroid, fetchFeed, deriveIndependenceGroup } from "./text.server";
 import { DEFAULT_SCAN_SETTINGS, type ScanSettings } from "./settings.defaults";
 
 const SCAN_RUNTIME_BUDGET_MS = 4 * 60 * 1000;
