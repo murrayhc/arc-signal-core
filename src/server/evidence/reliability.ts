@@ -2,18 +2,13 @@ import type { AtomicClaim, ClaimLineage, Source } from '@prisma/client'
 import { prisma } from '@/server/db'
 import type { FactualityLabel } from '@/shared/enums'
 import { deriveAuthority } from './authority'
+import { getActiveWeights, type ReliabilityWeights } from './weights'
 import type { EvidenceError, ReliabilityDimensions, ReliabilityResult } from './types'
 
-const WEIGHTS = {
-  authority: 0.26,
-  independence: 0.28,
-  support: 0.12,
-  specificity: 0.14,
-  freshness: 0.12,
-  // How confidently the earliest report can be treated as the true origin —
-  // computed by lineage, previously ignored here.
-  originTrace: 0.08,
-}
+// Positive-part weights live in ./weights (DEFAULT_WEIGHTS): an APPLIED
+// owner-gated suggestion overrides them, otherwise scoring is byte-identical
+// to the previous hardcoded table. The originTrace dimension is how
+// confidently the earliest report can be treated as the true origin.
 const FRESHNESS_HORIZON_DAYS = 180
 const STALE_BELOW = 0.25
 const PRIMARY_AUTHORITY = 0.85
@@ -46,19 +41,19 @@ function deriveFactuality(input: {
   return 'WEAK_SINGLE_SOURCE'
 }
 
-export type ReliabilityOptions = { now?: Date }
+export type ReliabilityOptions = { now?: Date; weights?: ReliabilityWeights }
 
-/** Scores a canonical claim's reliability from its lineage. Independent
- *  primary/official sources raise the score; wide copying and contradictions
- *  lower it (as multiplicative penalties, so copies can never inflate
- *  confidence). Writes the score + factuality label onto the canonical claim
- *  and its cluster, and returns an explained result. */
-export async function scoreReliability(
+/** Read-only reliability assessment for a canonical claim — the same maths as
+ *  scoreReliability but with NO persistence. Used by the outcome ledger to
+ *  freeze dimension snapshots, and by the weight learner (via opts.weights)
+ *  to backtest candidate weights without touching stored scores. */
+export async function assessReliability(
   canonicalClaimId: string,
   opts: ReliabilityOptions = {},
 ): Promise<{ result: ReliabilityResult; errors: EvidenceError[] }> {
   const errors: EvidenceError[] = []
   const now = opts.now ?? new Date()
+  const weights = opts.weights ?? (await getActiveWeights())
   const canonical = await prisma.canonicalClaim.findUnique({ where: { id: canonicalClaimId } })
   if (!canonical) {
     throw new Error(`Canonical claim ${canonicalClaimId} not found`)
@@ -104,12 +99,12 @@ export async function scoreReliability(
   const manipulationRisk = cluster?.manipulationRiskScore ?? 0
 
   const positive =
-    WEIGHTS.authority * authority +
-    WEIGHTS.independence * independence +
-    WEIGHTS.support * support +
-    WEIGHTS.specificity * specificity +
-    WEIGHTS.freshness * freshness +
-    WEIGHTS.originTrace * originTrace
+    weights.authority * authority +
+    weights.independence * independence +
+    weights.support * support +
+    weights.specificity * specificity +
+    weights.freshness * freshness +
+    weights.originTrace * originTrace
   // Multiplicative penalties: contradiction, copy-loop, and manipulation can
   // only ever LOWER the score — amplification never inflates confidence.
   const reliabilityScore = clamp01(
@@ -142,15 +137,6 @@ export async function scoreReliability(
     manipulationRisk,
   })
 
-  await prisma.canonicalClaim.update({
-    where: { id: canonicalClaimId },
-    // Factuality is rolled up onto the canonical claim on every re-score —
-    // it is never frozen at extraction time.
-    data: { reliabilityScore, factualityLabel, status: canonical.status },
-  })
-  await prisma.claimCluster.updateMany({ where: { canonicalClaimId }, data: { reliabilityScore } })
-  await prisma.atomicClaim.updateMany({ where: { canonicalClaimId }, data: { factualityLabel } })
-
   const result: ReliabilityResult = {
     reliabilityScore,
     factualityLabel,
@@ -160,6 +146,31 @@ export async function scoreReliability(
     evidenceAgainst,
     warnings,
   }
+  return { result, errors }
+}
+
+/** Scores a canonical claim's reliability from its lineage. Independent
+ *  primary/official sources raise the score; wide copying and contradictions
+ *  lower it (as multiplicative penalties, so copies can never inflate
+ *  confidence). Writes the score + factuality label onto the canonical claim
+ *  and its cluster, and returns an explained result. */
+export async function scoreReliability(
+  canonicalClaimId: string,
+  opts: ReliabilityOptions = {},
+): Promise<{ result: ReliabilityResult; errors: EvidenceError[] }> {
+  const { result, errors } = await assessReliability(canonicalClaimId, opts)
+  const canonical = await prisma.canonicalClaim.findUnique({ where: { id: canonicalClaimId } })
+  if (!canonical) {
+    throw new Error(`Canonical claim ${canonicalClaimId} not found`)
+  }
+  await prisma.canonicalClaim.update({
+    where: { id: canonicalClaimId },
+    // Factuality is rolled up onto the canonical claim on every re-score —
+    // it is never frozen at extraction time.
+    data: { reliabilityScore: result.reliabilityScore, factualityLabel: result.factualityLabel, status: canonical.status },
+  })
+  await prisma.claimCluster.updateMany({ where: { canonicalClaimId }, data: { reliabilityScore: result.reliabilityScore } })
+  await prisma.atomicClaim.updateMany({ where: { canonicalClaimId }, data: { factualityLabel: result.factualityLabel } })
   return { result, errors }
 }
 

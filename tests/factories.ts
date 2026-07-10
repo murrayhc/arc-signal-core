@@ -172,3 +172,35 @@ export async function makeEventGraph(
   await prisma.signalClusterSignal.create({ data: { clusterId: cluster.id, signalId: signal.id } })
   return { event, source, doc }
 }
+
+export async function makeCanonicalClaim(
+  overrides: Partial<Prisma.CanonicalClaimUncheckedCreateInput> = {},
+) {
+  const text = (overrides.claimText as string) ?? `The company is cutting 100 jobs. ${randomUUID()}`
+  return prisma.canonicalClaim.create({
+    data: {
+      claimText: text,
+      normalisedClaimText: text.toLowerCase(),
+      claimType: 'LAYOFF_SIGNAL',
+      ...overrides,
+    },
+  })
+}
+
+export async function makeLineage(
+  canonicalClaimId: string,
+  sourceId: string,
+  documentId: string,
+  overrides: Partial<Prisma.ClaimLineageUncheckedCreateInput> = {},
+) {
+  return prisma.claimLineage.create({
+    data: {
+      canonicalClaimId,
+      sourceId,
+      documentId,
+      url: `https://fixture.archlight.local/${randomUUID()}`,
+      relationToOrigin: 'INDEPENDENT_SUPPORT',
+      ...overrides,
+    },
+  })
+}
