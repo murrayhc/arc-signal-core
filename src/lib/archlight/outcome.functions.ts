@@ -78,6 +78,7 @@ export const freezePredictions = createServerFn({ method: "POST" })
       let contradictionCount = 0;
       let groups = 0;
       let supportDays = 0;
+      let groupIds: string[] = [];
 
       if (atomicIds.length) {
         const { data: atomics } = await db
@@ -114,8 +115,10 @@ export const freezePredictions = createServerFn({ method: "POST" })
           }
           groups = groupSet.size;
           supportDays = daySet.size;
+          groupIds = Array.from(groupSet);
         }
       }
+
 
       if (needEvent) {
         const deadline = ev.time_window_end
