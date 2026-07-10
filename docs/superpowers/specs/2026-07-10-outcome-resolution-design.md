@@ -111,19 +111,20 @@ preserving lead-time.
 Path classification from observable post-prediction deltas over the window:
 
 - **REVERSED** — event resolved DID_NOT_HAPPEN via contradiction.
-- **CONTAINED** — HAPPENED, but corroboration arrived in only one post-prediction
-  scan and < 2 new affected entities appeared.
-- **SUSTAINED** — HAPPENED, corroboration across ≥ 2 distinct post-prediction
-  scans, and < 2 new affected entities.
+- **CONTAINED** — HAPPENED, but new corroboration arrived on only one distinct
+  (UTC) day and < 2 new affected entities appeared.
+- **SUSTAINED** — HAPPENED, new corroboration across ≥ 2 distinct (UTC) days,
+  and < 2 new affected entities.
 - **WIDENED** — HAPPENED, and ≥ 2 new affected entities (EventCandidateEntity
   rows created post-prediction).
 
 Each scenario prediction grades true iff its type matches the path
 (CONSERVATIVE↔CONTAINED, BASE_CASE↔SUSTAINED, ACCELERATED↔WIDENED,
-REVERSAL↔REVERSED). A quiet-deadline event (rule 3) took none of the four paths:
-all four scenarios grade false. Ambiguous events settle scenarios via the same
-review verdict (reviewer picks the path, or unresolvable). All thresholds are
-named constants pinned by tests.
+REVERSAL↔REVERSED). A quiet-deadline event (rule 3) took none of the four paths
+(path NONE): all four scenarios grade false. Ambiguous events are settled by the
+review verdict on the EVENT outcome (happened / didn't / unresolvable); the path
+then auto-derives from the observed deltas — the reviewer never has to pick a
+path by hand. All thresholds are named constants pinned by tests.
 
 ### Track-record maths
 
