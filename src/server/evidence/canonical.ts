@@ -1,6 +1,7 @@
 import type { AtomicClaim, CanonicalClaim, ClaimCluster } from '@prisma/client'
 import { prisma } from '@/server/db'
-import { blendedSimilarity, COPY_THRESHOLD, MATCH_THRESHOLD, normalise } from './text'
+import { COPY_THRESHOLD, MATCH_THRESHOLD, normalise } from './text'
+import { lexicalSimilarity, type SimilarityFn } from './embeddings/registry'
 import type { EvidenceError } from './types'
 
 /** Two claims dated more than this far apart are treated as different events
@@ -43,11 +44,23 @@ export type CanonicalAssignment = {
   errors: EvidenceError[]
 }
 
+export type CanonicalOptions = {
+  /** Similarity function over two claim texts (0..1). Defaults to the
+   *  deterministic lexical blend; the depth pipeline passes a semantic
+   *  (embedding-based) function when an embedding provider is active, which
+   *  catches paraphrase the lexical blend misses. */
+  similarity?: SimilarityFn
+}
+
 /** Groups atomic claims into canonical claims. Same claim type + text
  *  similarity, gated by entity / date / region compatibility. Different
  *  entities never merge. Creates a ClaimCluster per canonical claim and links
  *  each atomic claim back to its canonical. */
-export async function assignCanonicalClaims(atomicClaims: AtomicClaim[]): Promise<CanonicalAssignment> {
+export async function assignCanonicalClaims(
+  atomicClaims: AtomicClaim[],
+  opts: CanonicalOptions = {},
+): Promise<CanonicalAssignment> {
+  const similarity = opts.similarity ?? lexicalSimilarity
   const created: CanonicalClaim[] = []
   const touched = new Set<string>()
   const errors: EvidenceError[] = []
@@ -77,7 +90,7 @@ export async function assignCanonicalClaims(atomicClaims: AtomicClaim[]): Promis
         const entityOverlap = bothHaveEntities && shareAny(entities, candEntities)
         // Different named entities ⇒ different claim, never merge.
         if (bothHaveEntities && !entityOverlap) continue
-        const sim = blendedSimilarity(norm, normalise(cand.claimText))
+        const sim = similarity(atomic.claimText, cand.claimText)
         // Shared entity ⇒ a lower text bar suffices (groups independent wording).
         if (sim < (entityOverlap ? ENTITY_MATCH_THRESHOLD : MATCH_THRESHOLD)) continue
         // Different dates ⇒ different event unless close together.

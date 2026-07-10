@@ -1,6 +1,7 @@
 import type { Document, ParsedDocument, Source } from '@prisma/client'
 import { extractAtomicClaims } from './extraction'
 import { assignCanonicalClaims } from './canonical'
+import { buildSimilarity } from './embeddings/registry'
 import { traceLineageForMany } from './lineage'
 import { scoreReliabilityForMany } from './reliability'
 import { generateQueriesForCanonical } from './investigation-query'
@@ -35,7 +36,11 @@ export async function runEvidenceDepth(
   counts.atomicClaimsExtracted = extraction.atomicClaims.length
   if (extraction.atomicClaims.length === 0) return { counts, errors }
 
-  const canonical = await assignCanonicalClaims(extraction.atomicClaims)
+  // Semantic similarity when an embedding provider is active (catches
+  // paraphrase); the proven lexical blend when dormant (default). Embeds this
+  // batch's claim texts once, so it stays O(1) provider calls per scan.
+  const { fn: similarity } = await buildSimilarity(extraction.atomicClaims.map((a) => a.claimText))
+  const canonical = await assignCanonicalClaims(extraction.atomicClaims, { similarity })
   errors.push(...canonical.errors)
   counts.canonicalClaimsCreated = canonical.created.length
   counts.canonicalClaimsUpdated = canonical.updated.length

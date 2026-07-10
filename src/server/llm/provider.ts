@@ -54,8 +54,13 @@ export function createAnthropicProvider(): LLMProvider | null {
       )
       if (!sdk) throw new NoProviderConfiguredError('@anthropic-ai/sdk is not installed — orchestration is dormant.')
 
-      const AnthropicCtor = (sdk as { default: new (opts: { apiKey: string }) => AnthropicClient }).default
-      const client = new AnthropicCtor({ apiKey })
+      const AnthropicCtor = (sdk as { default: new (opts: { apiKey: string; baseURL?: string }) => AnthropicClient })
+        .default
+      // Multi-provider seam: an OpenAI-compatible / proxy endpoint can be
+      // targeted via ANTHROPIC_BASE_URL without changing this adapter. Anthropic
+      // remains the shipped implementation; the base URL is the swap point.
+      const baseURL = process.env.ANTHROPIC_BASE_URL || undefined
+      const client = new AnthropicCtor({ apiKey, baseURL })
       const response = await client.messages.create({
         model: req.model ?? DEFAULT_ANTHROPIC_MODEL,
         max_tokens: req.maxTokens ?? 1024,

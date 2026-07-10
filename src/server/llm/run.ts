@@ -185,9 +185,42 @@ export async function runLLMTask(req: LLMRequest, opts: RunLLMTaskOptions): Prom
       validation: null,
     }
   }
-  const latencyMs = Date.now() - startedAt
+  let latencyMs = Date.now() - startedAt
 
-  const validation = validateLLMOutput(response.text, opts.validate ?? {})
+  let validation = validateLLMOutput(response.text, opts.validate ?? {})
+
+  // JSON repair: ONE bounded retry when the ONLY failure is malformed
+  // structure (schema invalid) and a schema was supplied. Prohibited-language
+  // and grounding failures are NEVER repaired — those are hard rejects, and a
+  // "repair" that scrubbed advice language into passing would defeat the
+  // guard. The repair re-prompts the same provider to emit valid JSON for the
+  // schema; the result is re-validated through the full gate (advice +
+  // grounding still enforced). Only reached with a live provider.
+  const schemaOnlyFailure =
+    validation.validationStatus === 'FAILED' &&
+    !validation.schemaValid &&
+    !validation.prohibitedLanguageDetected &&
+    !validation.unsupportedClaimsDetected &&
+    !!opts.validate?.schema
+  if (schemaOnlyFailure) {
+    try {
+      const repairReq: LLMRequest = {
+        ...routedReq,
+        system: 'You repair malformed JSON. Return ONLY valid JSON matching the required shape — no prose, no code fences.',
+        prompt: `The following output was not valid JSON for the required schema. Return a corrected JSON object only:\n\n${response.text}`,
+      }
+      const repaired = await provider.generate(repairReq)
+      const repairedValidation = validateLLMOutput(repaired.text, opts.validate ?? {})
+      if (repairedValidation.validationStatus === 'PASSED') {
+        response = { text: repaired.text, tokensIn: response.tokensIn + repaired.tokensIn, tokensOut: response.tokensOut + repaired.tokensOut }
+        validation = repairedValidation
+        latencyMs = Date.now() - startedAt
+      }
+    } catch {
+      // Repair attempt failed — keep the original rejection, fail closed.
+    }
+  }
+
   const finalStatus: LLMRunStatus = validation.validationStatus === 'PASSED' ? 'SUCCEEDED' : 'REJECTED_VALIDATION'
   // Rejected output may contain the very prohibited/advice content we blocked —
   // redact it from the audit row rather than retaining the snippet verbatim.
