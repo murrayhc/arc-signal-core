@@ -4,6 +4,41 @@
 **Companion:** `docs/claude-fable-5-archlight-audit.md` (findings T1–T3, R1–R9 —
 referenced throughout).
 
+---
+
+## STATUS: COMPLETE — Stages 0–10 shipped (2026-07-09)
+
+All eleven stages landed on `origin/main`, each a separately-committed,
+test-pinned unit. **573/573 tests green** (up from the 453 baseline — 120 new),
+typecheck clean, `next build` clean, deterministic-scan invariant intact
+(AI/embeddings/market/search all still dormant by default).
+
+| Stage | What shipped | Audit findings closed |
+|---|---|---|
+| 0 | Truth & hygiene: router `enabled` semantics + `SKIPPED_UNROUTED`; token-priced daily **monetary** budget; grounded+re-guarded enrichment; collectorStatus/error-detail truth; doc-drift fixes; dead-code/route removal | R8, R9, M-1 |
+| 1 | Reliability maths: publisher **independence groups**, SimHash **document fingerprints**, **manipulation-risk** (copy-burst), origin-confidence into reliability, factuality rollup | R5, +manipulation-risk (was MISSING) |
+| 2 | **Spine unification** — events now driven by canonical-claim reliability; RECYCLED/CONTRADICTED **quarantined**; publisher-group diversity; first-class commodities/instruments/momentum; continuous novelty | **T1/R1** (the structural fix) |
+| 3 | Source depth: Atom/RDF + conditional GET; **5 live source categories** (news/regulator/gov/procurement/GDELT); per-source cadence + backoff; **scan worker**; recency-gated LIVE | **T2**, B8, B9 |
+| 4 | Investigation loop **live + bounded**: runtime/cost/source-type limits enforced; **GDELT** search adapter; LLM query-gen reachable; interrogate→investigate bridge | **R4**, +T3 (partial) |
+| 5 | **Entity resolution**: legal-suffix folding, alias/keyword classification, honest UNKNOWN excluded from named impacts; join tables populated | **R3**, B4 |
+| 6 | **Review queue**: 5 producers, `/review` UI + API, approve/reject/needs-more | +review-queue (was MISSING) |
+| 7 | Synthesis depth: event-specific scenario narratives, **historic-analogue retrieval**, genuinely differentiated report types, confidence-movement panel | B7, report-diff |
+| 8 | **Embedding seam** (removes the Jaccard ceiling, dormant); multi-provider base-URL; JSON-repair retry | (semantic-similarity ceiling) |
+| 9 | **Arc caching** (no write-on-GET); dashboard source-category coverage + review count | M-2 |
+| 10 | Guardrail sweep (full brief forbidden-list at runtime) + **cross-stage acceptance proof** (disputed-claim-caught + corroborated-claim-drives-named-exposure) + 6-degree arc assertion | I-2, M-4 (hardened) |
+
+**Owner-gated, still off by design** (activation is a cost decision, all
+plumbing built + tested): the LLM provider, the embedding provider, and the
+market-data adapter. Turning any on is env-only; deterministic output is the
+floor, never gated on them.
+
+**Net effect vs the audit's three structural truths:** T1 (deep layer didn't
+drive events) — CLOSED. T2 (one lighthouse, manual) — CLOSED (5 categories,
+scheduler). T3 (every amplifier off) — the investigation loop is now live and
+bounded; the LLM/embedding/market layers remain owner-gated by design.
+
+---
+
 ## Ordering rationale (where this differs from the brief's suggested stages)
 
 The brief suggests starting with source depth. The audit changes the order in one

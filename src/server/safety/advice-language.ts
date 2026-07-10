@@ -35,6 +35,13 @@ const PROHIBITED_ADVICE_PATTERNS: RegExp[] = [
   /\b(certain|guaranteed)\s+(return|returns|profit|gains?)\b/i, // "certain return"
   /\bportfolio\s+allocation\b/i,
   /\binvestment\s+recommendation\b/i,
+  // Stage 10 (guardrail sweep) — analyst rating register that slipped the
+  // buy/sell/hold-focused patterns above:
+  /\b(over|under)weight\s+(rating|this|the)\b/i, // "overweight rating", "underweight this"
+  /\b(accumulate|reduce)\s+(rating|position)\b/i, // broker action ratings
+  /\b(buy|sell|hold|overweight|underweight)[-\s]rated\b/i, // "buy-rated"
+  /\bconviction\s+(buy|sell)\b/i, // "conviction buy" (GS-style)
+  /\b(top|best)\s+(pick|stock|buy|trade)\b/i, // "top pick", "best buy"
 ]
 
 export function findAdviceLanguage(text: string): string[] {
