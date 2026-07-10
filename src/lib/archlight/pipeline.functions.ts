@@ -940,6 +940,7 @@ export const runScan = createServerFn({ method: "POST" }).handler(async () => {
     predictions_frozen: predictionsFrozen,
     predictions_resolved: predictionsResolved,
     predictions_pending_review: predictionsPendingReview,
+    source_suggestions: sourceSuggestions,
     notes,
   };
 
