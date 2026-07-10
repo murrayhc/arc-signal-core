@@ -19,6 +19,7 @@ const TYPE_LABELS: Record<string, string> = {
   AMBIGUOUS_ENTITY: 'Ambiguous entity',
   CONTRADICTION_SPIKE: 'Contradiction spike',
   MANIPULATION_ALERT: 'Manipulation alert',
+  PREDICTION_RESOLUTION: 'Prediction verdict',
 }
 
 function severityColour(severity: number): string {
@@ -31,13 +32,13 @@ export function ReviewQueue({ initialItems }: { initialItems: ReviewItem[] }) {
   const [items, setItems] = useState<ReviewItem[]>(initialItems)
   const [busy, setBusy] = useState<string | null>(null)
 
-  async function decide(id: string, status: string) {
+  async function decide(id: string, status: string, verdict?: string) {
     setBusy(id)
     try {
       const res = await fetch(`/api/review/${id}`, {
         method: 'PATCH',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify(verdict ? { status, verdict } : { status }),
       })
       if (res.ok) setItems((prev) => prev.filter((i) => i.id !== id))
     } finally {
@@ -71,27 +72,62 @@ export function ReviewQueue({ initialItems }: { initialItems: ReviewItem[] }) {
               )}
             </div>
             <div className="flex shrink-0 flex-col gap-1">
-              <button
-                onClick={() => decide(item.id, 'APPROVED')}
-                disabled={busy === item.id}
-                className="rounded border border-teal-700 px-2 py-1 text-[11px] text-teal-300 hover:bg-teal-950 disabled:opacity-50"
-              >
-                Approve
-              </button>
-              <button
-                onClick={() => decide(item.id, 'REJECTED')}
-                disabled={busy === item.id}
-                className="rounded border border-rose-800 px-2 py-1 text-[11px] text-rose-300 hover:bg-rose-950 disabled:opacity-50"
-              >
-                Reject
-              </button>
-              <button
-                onClick={() => decide(item.id, 'NEEDS_MORE_EVIDENCE')}
-                disabled={busy === item.id}
-                className="rounded border border-slate-700 px-2 py-1 text-[11px] text-slate-300 hover:bg-slate-800 disabled:opacity-50"
-              >
-                Needs more
-              </button>
+              {item.itemType === 'PREDICTION_RESOLUTION' ? (
+                <>
+                  <button
+                    onClick={() => decide(item.id, 'APPROVED', 'HAPPENED')}
+                    disabled={busy === item.id}
+                    className="rounded border border-teal-700 px-2 py-1 text-[11px] text-teal-300 hover:bg-teal-950 disabled:opacity-50"
+                  >
+                    Happened
+                  </button>
+                  <button
+                    onClick={() => decide(item.id, 'REJECTED', 'DID_NOT_HAPPEN')}
+                    disabled={busy === item.id}
+                    className="rounded border border-rose-800 px-2 py-1 text-[11px] text-rose-300 hover:bg-rose-950 disabled:opacity-50"
+                  >
+                    Didn&apos;t happen
+                  </button>
+                  <button
+                    onClick={() => decide(item.id, 'REJECTED', 'UNRESOLVABLE')}
+                    disabled={busy === item.id}
+                    className="rounded border border-slate-700 px-2 py-1 text-[11px] text-slate-300 hover:bg-slate-800 disabled:opacity-50"
+                  >
+                    Unresolvable
+                  </button>
+                  <button
+                    onClick={() => decide(item.id, 'NEEDS_MORE_EVIDENCE')}
+                    disabled={busy === item.id}
+                    className="rounded border border-slate-700 px-2 py-1 text-[11px] text-slate-300 hover:bg-slate-800 disabled:opacity-50"
+                  >
+                    Needs more
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={() => decide(item.id, 'APPROVED')}
+                    disabled={busy === item.id}
+                    className="rounded border border-teal-700 px-2 py-1 text-[11px] text-teal-300 hover:bg-teal-950 disabled:opacity-50"
+                  >
+                    Approve
+                  </button>
+                  <button
+                    onClick={() => decide(item.id, 'REJECTED')}
+                    disabled={busy === item.id}
+                    className="rounded border border-rose-800 px-2 py-1 text-[11px] text-rose-300 hover:bg-rose-950 disabled:opacity-50"
+                  >
+                    Reject
+                  </button>
+                  <button
+                    onClick={() => decide(item.id, 'NEEDS_MORE_EVIDENCE')}
+                    disabled={busy === item.id}
+                    className="rounded border border-slate-700 px-2 py-1 text-[11px] text-slate-300 hover:bg-slate-800 disabled:opacity-50"
+                  >
+                    Needs more
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </li>
