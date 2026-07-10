@@ -16,6 +16,7 @@ import { persistEventMomentum, recordGraphEvents } from '@/server/graph/timeline
 import { runEvidenceDepth } from '@/server/evidence/depth-pipeline'
 import { runConsequenceSynthesis } from '@/server/consequence/consequence-pipeline'
 import { produceEventReviews, produceQuarantineReviews } from '@/server/review/producers'
+import { runOutcomeResolution } from '@/server/outcome/outcome-pipeline'
 import type { PipelineError } from './types'
 
 export type ScanSummary = {
@@ -50,6 +51,10 @@ export type ScanSummary = {
     futureScenariosCreated: number
     signalsQuarantined: number
     reviewItemsCreated: number
+    predictionsCreated: number
+    predictionsResolved: number
+    predictionsPendingReview: number
+    weightSuggestionsCreated: number
   }
   errors: PipelineError[]
   warnings: PipelineError[]
@@ -90,6 +95,10 @@ export async function runFullScan(
     futureScenariosCreated: 0,
     signalsQuarantined: 0,
     reviewItemsCreated: 0,
+    predictionsCreated: 0,
+    predictionsResolved: 0,
+    predictionsPendingReview: 0,
+    weightSuggestionsCreated: 0,
   }
 
   try {
@@ -238,6 +247,21 @@ export async function runFullScan(
       }
     } catch (err) {
       errors.push({ stage: 'review', message: err instanceof Error ? err.message : String(err) })
+    }
+
+    // 15d. Outcome-resolution engine (Stage 11, non-fatal): freeze prediction
+    // receipts for this scan's events, drift final probabilities, and resolve
+    // any open prediction the new evidence (or a passed deadline) settles —
+    // including predictions from earlier scans, so deadlines need no cron.
+    try {
+      const outcome = await runOutcomeResolution(allEvents, scanRun.id)
+      errors.push(...outcome.errors)
+      counts.predictionsCreated = outcome.counts.predictionsCreated
+      counts.predictionsResolved = outcome.counts.predictionsResolved
+      counts.predictionsPendingReview = outcome.counts.predictionsPendingReview
+      counts.weightSuggestionsCreated = outcome.counts.weightSuggestionsCreated
+    } catch (err) {
+      errors.push({ stage: 'outcome', message: err instanceof Error ? err.message : String(err) })
     }
 
     const status = errors.length > 0 ? 'COMPLETED_WITH_ERRORS' : 'COMPLETED'
