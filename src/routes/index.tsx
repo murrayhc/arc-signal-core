@@ -19,8 +19,8 @@ export const Route = createFileRoute("/")({
     meta: [
       { title: "Archlight · Live Intelligence Dashboard" },
       { name: "description", content: "Archlight watches public information, maps consequence, and surfaces strategic openings before they become obvious." },
-      { property: "og:title", content: "Archlight · Live Intelligence Engine" },
-      { property: "og:description", content: "A living public intelligence engine that traces claims to origin, scores evidence, and surfaces risks and opportunities." },
+      { property: "og:title", content: "Archlight · Live Intelligence Dashboard" },
+      { property: "og:description", content: "Archlight watches public information, maps consequence, and surfaces strategic openings before they become obvious." },
     ],
   }),
   loader: ({ context }) => {
