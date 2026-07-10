@@ -553,7 +553,7 @@ export const runScan = createServerFn({ method: "POST" }).handler(async () => {
         const reason = !synth.ok
           ? `synth call failed (${synth.error ?? "unknown"})`
           : "synth returned no event object";
-        notes.push(`Synthesis dropped (${key}, ${group.length} claims / ${new Set(group.map((g) => g.source_id)).size} src): ${reason}`);
+        notes.push(`Synthesis dropped (${key}, ${group.length} claims / ${new Set(group.map((g) => g.source_group || g.source_id)).size} publisher(s)): ${reason}`);
         eventsSkipped++;
         continue;
       }
