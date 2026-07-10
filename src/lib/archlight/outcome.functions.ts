@@ -132,12 +132,14 @@ export const freezePredictions = createServerFn({ method: "POST" })
         const prob = clamp01(ev.probability);
         const baseline = {
           groups,
+          group_ids: groupIds,
           entity_ids: entityIds,
           contradiction_count: contradictionCount,
           support_days: supportDays,
           leading_indicators: [],
           contradicting_signals: [],
         };
+
         const { error } = await db.from("outcome_predictions").insert({
           subject_kind: "event",
           event_candidate_id: ev.id,
