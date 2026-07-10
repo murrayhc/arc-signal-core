@@ -797,3 +797,18 @@ export const applyPredictionVerdict = createServerFn({ method: "POST" })
     return { ok: true, status: "resolved", outcome };
   });
 
+
+export const getEventPredictions = createServerFn({ method: "GET" })
+  .inputValidator((d: unknown) => z.object({ eventId: z.string().uuid() }).parse(d))
+  .handler(async ({ data }: { data: { eventId: string } }) => {
+    const db = await admin();
+    const { data: rows } = await db
+      .from("outcome_predictions")
+      .select(
+        "id, subject_kind, horizon, prediction_text, predicted_probability, final_probability, predicted_at, deadline, status, outcome, observed_path, resolved_by, resolved_at, resolution_rationale, brier_first, lead_time_days, scenario_projection_id",
+      )
+      .eq("event_candidate_id", data.eventId)
+      .order("subject_kind", { ascending: true })
+      .order("deadline", { ascending: true });
+    return { predictions: rows ?? [] };
+  });
