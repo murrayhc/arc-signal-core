@@ -123,7 +123,7 @@ function SourcesPage() {
           <table className="w-full text-xs">
             <thead className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground bg-background/40">
               <tr>
-                <Th>Name</Th><Th>Type</Th><Th>Status</Th><Th>Reliability</Th><Th>Health</Th><Th>Cadence</Th><Th>Last success</Th><Th>Last failure</Th>
+                <Th>Name</Th><Th>Publisher</Th><Th>Type</Th><Th>Status</Th><Th>Reliability</Th><Th>Health</Th><Th>Cadence</Th><Th>Last success</Th><Th>Last failure</Th>
               </tr>
             </thead>
             <tbody>
@@ -133,6 +133,7 @@ function SourcesPage() {
                     <Link to="/sources/$id" params={{ id: s.id }} className="font-display text-sm hover:text-[color:var(--color-signal)]">{s.name}</Link>
                     {s.base_url && <div className="text-[10px] font-mono text-muted-foreground truncate max-w-[280px]">{s.base_url}</div>}
                   </Td>
+                  <Td className="font-mono text-[10px] text-muted-foreground">{(s as { independence_group?: string | null }).independence_group ?? "—"}</Td>
                   <Td><Badge>{s.source_type}</Badge></Td>
                   <Td><StatusBadge s={s.status}/></Td>
                   <Td><Bar v={Number(s.reliability_score)} c="var(--color-signal)"/></Td>
