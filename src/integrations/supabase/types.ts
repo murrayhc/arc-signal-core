@@ -1720,6 +1720,62 @@ export type Database = {
           },
         ]
       }
+      source_reliability_suggestions: {
+        Row: {
+          accuracy_score: number
+          applied_at: string | null
+          claims_confirmed: number
+          claims_contested: number
+          claims_seen: number
+          created_at: string
+          current_score: number
+          id: string
+          rationale: string
+          source_id: string
+          status: string
+          suggested_score: number
+          updated_at: string
+        }
+        Insert: {
+          accuracy_score: number
+          applied_at?: string | null
+          claims_confirmed?: number
+          claims_contested?: number
+          claims_seen?: number
+          created_at?: string
+          current_score: number
+          id?: string
+          rationale: string
+          source_id: string
+          status?: string
+          suggested_score: number
+          updated_at?: string
+        }
+        Update: {
+          accuracy_score?: number
+          applied_at?: string | null
+          claims_confirmed?: number
+          claims_contested?: number
+          claims_seen?: number
+          created_at?: string
+          current_score?: number
+          id?: string
+          rationale?: string
+          source_id?: string
+          status?: string
+          suggested_score?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "source_reliability_suggestions_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sources: {
         Row: {
           access_method: string
