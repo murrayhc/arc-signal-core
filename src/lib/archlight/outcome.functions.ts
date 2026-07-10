@@ -270,3 +270,523 @@ function clamp01(n: unknown): number {
   if (!Number.isFinite(v)) return 0.5;
   return Math.max(0, Math.min(1, v));
 }
+
+// ============================================================================
+// RESOLUTION ENGINE
+// ============================================================================
+
+type Baseline = {
+  groups: number;
+  entity_ids: string[];
+  contradiction_count: number;
+  support_days: number;
+  leading_indicators: string[];
+  contradicting_signals: string[];
+  // Persisted set of frozen source ids (added on subsequent scans if missing).
+  group_ids?: string[];
+};
+
+type PredictionRow = {
+  id: string;
+  subject_kind: string;
+  event_candidate_id: string;
+  scenario_projection_id: string | null;
+  predicted_probability: number;
+  final_probability: number;
+  predicted_at: string;
+  deadline: string;
+  horizon: string | null;
+  evidence_canonical_ids: string[];
+  baseline: Baseline;
+};
+
+type EvidenceSnapshot = {
+  canonicalIds: string[];
+  bySource: Map<string, { source_id: string; published_at: string | null; url: string | null; canonicalId: string }[]>;
+  contradictionCount: number;
+  atomicTexts: { text: string; published_at: string | null; source_id: string }[];
+};
+
+async function loadEventEvidence(
+  db: Awaited<ReturnType<typeof admin>>,
+  eventId: string,
+): Promise<EvidenceSnapshot> {
+  const { data: impactRows } = await db
+    .from("company_impacts")
+    .select("evidence_ids")
+    .eq("event_candidate_id", eventId);
+  const atomicIds = Array.from(
+    new Set((impactRows ?? []).flatMap((r) => (r.evidence_ids ?? []) as string[])),
+  ).slice(0, 400);
+  if (atomicIds.length === 0) {
+    return { canonicalIds: [], bySource: new Map(), contradictionCount: 0, atomicTexts: [] };
+  }
+  const { data: atomics } = await db
+    .from("atomic_claims")
+    .select("id, claim_text, canonical_claim_id, source_id, document_id")
+    .in("id", atomicIds);
+  const rows = atomics ?? [];
+  const canonicalIds = Array.from(
+    new Set(rows.map((a) => a.canonical_claim_id).filter((x): x is string => !!x)),
+  );
+  let contradictionCount = 0;
+  const bySource = new Map<string, { source_id: string; published_at: string | null; url: string | null; canonicalId: string }[]>();
+  if (canonicalIds.length) {
+    const [{ data: cans }, { data: lineage }] = await Promise.all([
+      db.from("canonical_claims").select("id, contradiction_count").in("id", canonicalIds),
+      db
+        .from("claim_lineage")
+        .select("canonical_claim_id, source_id, published_at, url")
+        .in("canonical_claim_id", canonicalIds),
+    ]);
+    contradictionCount = (cans ?? []).reduce((a, c) => a + Number(c.contradiction_count ?? 0), 0);
+    for (const l of lineage ?? []) {
+      if (!l.source_id) continue;
+      const key = String(l.source_id);
+      if (!bySource.has(key)) bySource.set(key, []);
+      bySource.get(key)!.push({
+        source_id: key,
+        published_at: l.published_at,
+        url: l.url,
+        canonicalId: l.canonical_claim_id,
+      });
+    }
+  }
+  // Recent atomic-claim texts for scenario grading.
+  const docIds = Array.from(new Set(rows.map((r) => r.document_id).filter((x): x is string => !!x)));
+  const pubMap = new Map<string, string | null>();
+  if (docIds.length) {
+    const { data: docs } = await db
+      .from("documents")
+      .select("id, published_at")
+      .in("id", docIds);
+    for (const d of docs ?? []) pubMap.set(d.id, d.published_at ?? null);
+  }
+  const atomicTexts = rows
+    .map((r) => ({
+      text: r.claim_text ?? "",
+      published_at: pubMap.get(r.document_id) ?? null,
+      source_id: r.source_id ?? "",
+    }))
+    .filter((r) => r.text.trim().length > 0);
+  return { canonicalIds, bySource, contradictionCount, atomicTexts };
+}
+
+function safeRationale(s: string): string {
+  const guard = guardFinancialAdvice(s);
+  if (!guard.ok) return `Resolution recorded on ${new Date().toISOString().slice(0, 10)}.`;
+  return s.slice(0, 900);
+}
+
+function brier(prob: number, y: 0 | 1): number {
+  return Number(Math.pow(prob - y, 2).toFixed(6));
+}
+
+async function enqueueReview(
+  db: Awaited<ReturnType<typeof admin>>,
+  predictionId: string,
+  reason: string,
+): Promise<boolean> {
+  const { data: existing } = await db
+    .from("review_queue")
+    .select("id")
+    .eq("item_type", "prediction_resolution")
+    .eq("item_id", predictionId)
+    .eq("status", "pending")
+    .limit(1);
+  if (existing && existing.length > 0) return false;
+  const { error } = await db.from("review_queue").insert({
+    item_type: "prediction_resolution",
+    item_id: predictionId,
+    reason: reason.slice(0, 500),
+    status: "pending",
+  });
+  return !error;
+}
+
+interface GradeScenarioResult {
+  scenario_projection_id: string;
+  classification: "borne_out" | "partial" | "refuted" | "none";
+  matched_indicators: string[];
+  matched_contradictions: string[];
+}
+
+async function gradeScenariosViaAI(
+  eventTitle: string,
+  atomicTexts: { text: string; published_at: string | null }[],
+  scenarios: { scenario_projection_id: string; label: string; leading: string[]; contradicting: string[] }[],
+): Promise<GradeScenarioResult[] | null> {
+  if (scenarios.length === 0) return [];
+  const recent = atomicTexts
+    .filter((t) => t.text)
+    .sort((a, b) => (b.published_at ?? "").localeCompare(a.published_at ?? ""))
+    .slice(0, 40)
+    .map((t, i) => `[${i + 1}] ${t.text.slice(0, 300)}`)
+    .join("\n");
+  const scenarioList = scenarios.map((s, i) => ({
+    idx: i,
+    id: s.scenario_projection_id,
+    label: s.label,
+    leading: s.leading.slice(0, 8),
+    contradicting: s.contradicting.slice(0, 8),
+  }));
+  const user = `Event: ${eventTitle}\n\nLater supporting evidence (recent atomic claims):\n${recent || "(none)"}\n\nScenarios to grade:\n${JSON.stringify(scenarioList, null, 2)}\n\nFor each scenario, decide which of its OWN frozen leading_indicators occurred and which contradicting_signals occurred, based ONLY on the evidence above. Then classify:\n- borne_out: majority of leading indicators occurred; no contradictions.\n- partial: some leading indicators occurred OR mixed with contradictions.\n- refuted: majority of contradicting signals occurred and few/no leading indicators.\n- none: not enough evidence to decide either way.\n\nReturn STRICT JSON: {"results":[{"scenario_projection_id":"...","classification":"borne_out|partial|refuted|none","matched_indicators":["..."],"matched_contradictions":["..."]}]}`;
+  const res = await callJson<{ results?: GradeScenarioResult[] }>({
+    task: "contradiction_analysis",
+    system: "You grade scenario outcomes strictly from provided evidence. Be conservative. Never speculate. Output ONLY valid JSON.",
+    user,
+  });
+  if (!res.ok || !res.data?.results) return null;
+  return res.data.results.filter((r) => r && r.scenario_projection_id);
+}
+
+export const resolveOutcomes = createServerFn({ method: "POST" }).handler(async () => {
+  const db = await admin();
+  let resolved = 0;
+  let pending = 0;
+
+  const { data: openRows } = await db
+    .from("outcome_predictions")
+    .select(
+      "id, subject_kind, event_candidate_id, scenario_projection_id, predicted_probability, final_probability, predicted_at, deadline, horizon, evidence_canonical_ids, baseline",
+    )
+    .eq("status", "open");
+  const openList = (openRows ?? []) as unknown as PredictionRow[];
+  if (openList.length === 0) return { predictions_resolved: 0, predictions_pending_review: 0 };
+
+  // Group receipts by event.
+  const byEvent = new Map<string, PredictionRow[]>();
+  for (const r of openList) {
+    if (!byEvent.has(r.event_candidate_id)) byEvent.set(r.event_candidate_id, []);
+    byEvent.get(r.event_candidate_id)!.push(r);
+  }
+
+  const eventIds = Array.from(byEvent.keys());
+  const { data: evRows } = await db
+    .from("event_candidates")
+    .select("id, title, status, first_detected_at")
+    .in("id", eventIds);
+  const evMap = new Map((evRows ?? []).map((e) => [e.id, e] as const));
+  const now = new Date();
+
+  for (const [eventId, receipts] of byEvent.entries()) {
+    const ev = evMap.get(eventId);
+    if (!ev) continue;
+    const snap = await loadEventEvidence(db, eventId);
+
+    // Look up source reliability for CURRENT groups (used for primary_corroboration).
+    const currentGroupIds = Array.from(snap.bySource.keys());
+    const srcMap = new Map<string, { reliability_score: number; is_synthetic: boolean }>();
+    if (currentGroupIds.length) {
+      const { data: srcs } = await db
+        .from("sources")
+        .select("id, reliability_score, is_synthetic")
+        .in("id", currentGroupIds);
+      for (const s of srcs ?? []) srcMap.set(s.id, { reliability_score: Number(s.reliability_score ?? 0), is_synthetic: !!s.is_synthetic });
+    }
+
+    // Min reliability across canonicals.
+    let minReliability = 1;
+    if (snap.canonicalIds.length) {
+      const { data: cans } = await db
+        .from("canonical_claims")
+        .select("reliability_score")
+        .in("id", snap.canonicalIds);
+      for (const c of cans ?? []) {
+        const v = Number(c.reliability_score ?? 1);
+        if (Number.isFinite(v) && v < minReliability) minReliability = v;
+      }
+    }
+
+    // Split event / scenario receipts.
+    const eventReceipt = receipts.find((r) => r.subject_kind === "event");
+    const scenarioReceipts = receipts.filter((r) => r.subject_kind === "scenario");
+
+    let eventOutcome: "happened" | "did_not_happen" | null = null;
+    let eventResolvedBy: "auto_evidence" | "auto_deadline" | "review" | null = null;
+
+    if (eventReceipt) {
+      const baseGroups = new Set<string>(
+        Array.isArray(eventReceipt.baseline?.group_ids)
+          ? (eventReceipt.baseline!.group_ids as string[])
+          : [],
+      );
+      const newSourceIds = currentGroupIds.filter((s) => !baseGroups.has(s));
+      const newGroups = newSourceIds.length;
+      const newContradictions = Math.max(0, snap.contradictionCount - Number(eventReceipt.baseline?.contradiction_count ?? 0));
+      const primaryCorroboration = newSourceIds.some((sid) => {
+        const s = srcMap.get(sid);
+        return !!s && s.reliability_score > 0.8 && !s.is_synthetic;
+      });
+      const deadlinePassed = new Date(eventReceipt.deadline).getTime() < now.getTime();
+      const eventDismissed = ev.status === "dismissed";
+      const evidenceUrls = Array.from(
+        new Set(
+          newSourceIds
+            .flatMap((sid) => (snap.bySource.get(sid) ?? []).map((l) => l.url ?? ""))
+            .filter(Boolean),
+        ),
+      ).slice(0, 20);
+      const newCanonicalIds = Array.from(
+        new Set(
+          newSourceIds.flatMap((sid) => (snap.bySource.get(sid) ?? []).map((l) => l.canonicalId)),
+        ),
+      ).slice(0, 20);
+
+      let decision: { outcome: "happened" | "did_not_happen"; by: "auto_evidence" | "auto_deadline"; rationale: string } | null = null;
+      let queueReason: string | null = null;
+
+      if (primaryCorroboration || (newGroups >= 2 && newContradictions === 0)) {
+        decision = {
+          outcome: "happened",
+          by: "auto_evidence",
+          rationale: primaryCorroboration
+            ? `Confirmed by ${newGroups} new source(s), including at least one high-reliability primary source (reliability > 0.8, non-synthetic). Minimum canonical reliability ${minReliability.toFixed(2)}.`
+            : `Confirmed by ${newGroups} new independent source(s) with no new contradictions.`,
+        };
+      } else if (newContradictions >= 2 || (newContradictions >= 1 && newGroups === 0)) {
+        decision = {
+          outcome: "did_not_happen",
+          by: "auto_evidence",
+          rationale: `Contradicted: ${newContradictions} new contradiction(s) vs ${newGroups} new supporting source(s).`,
+        };
+      } else if (eventDismissed) {
+        queueReason = `Underlying event was dismissed while receipt was open.`;
+      } else if (deadlinePassed && newGroups === 0 && newContradictions === 0) {
+        decision = {
+          outcome: "did_not_happen",
+          by: "auto_deadline",
+          rationale: `Deadline (${eventReceipt.deadline.slice(0, 10)}) passed without any new supporting evidence or contradictions.`,
+        };
+      } else if (deadlinePassed && newGroups >= 1 && newContradictions >= 1) {
+        queueReason = `Past deadline with mixed evidence: ${newGroups} new supporter(s) and ${newContradictions} new contradiction(s).`;
+      }
+
+      if (decision) {
+        const y: 0 | 1 = decision.outcome === "happened" ? 1 : 0;
+        // lead_time_days only when event+happened AND a non-synthetic supporting source published_at > first_detected_at.
+        let leadTimeDays: number | null = null;
+        if (decision.outcome === "happened" && ev.first_detected_at) {
+          const firstDetected = new Date(ev.first_detected_at).getTime();
+          const candidates: number[] = [];
+          for (const sid of newSourceIds) {
+            const meta = srcMap.get(sid);
+            if (!meta || meta.is_synthetic) continue;
+            for (const l of snap.bySource.get(sid) ?? []) {
+              if (!l.published_at) continue;
+              const ts = new Date(l.published_at).getTime();
+              if (!Number.isFinite(ts) || ts <= firstDetected) continue;
+              candidates.push(ts);
+            }
+          }
+          if (candidates.length) {
+            const earliest = Math.min(...candidates);
+            leadTimeDays = Math.max(0, Math.round((earliest - firstDetected) / DAY_MS));
+          }
+        }
+        const { error } = await db
+          .from("outcome_predictions")
+          .update({
+            status: "resolved",
+            outcome: decision.outcome,
+            resolved_by: decision.by,
+            resolved_at: new Date().toISOString(),
+            resolution_rationale: safeRationale(decision.rationale),
+            resolution_evidence: { new_canonical_ids: newCanonicalIds, urls: evidenceUrls },
+            brier_first: brier(Number(eventReceipt.predicted_probability), y),
+            brier_final: brier(Number(eventReceipt.final_probability), y),
+            lead_time_days: leadTimeDays,
+          })
+          .eq("id", eventReceipt.id);
+        if (!error) {
+          resolved++;
+          eventOutcome = decision.outcome;
+          eventResolvedBy = decision.by;
+        }
+      } else if (queueReason) {
+        if (await enqueueReview(db, eventReceipt.id, queueReason)) pending++;
+      }
+    }
+
+    // Scenario grading: trigger when scenario deadline has passed OR event auto-resolved 'did_not_happen' (by contradiction path only).
+    const contradictionResolved = eventOutcome === "did_not_happen" && eventResolvedBy === "auto_evidence";
+    const scenariosToGrade = scenarioReceipts.filter((s) => {
+      const pastDeadline = new Date(s.deadline).getTime() < now.getTime();
+      return pastDeadline || contradictionResolved;
+    });
+    if (scenariosToGrade.length === 0) continue;
+    const graded = await gradeScenariosViaAI(
+      String(ev.title ?? "Event"),
+      snap.atomicTexts,
+      scenariosToGrade.map((s) => ({
+        scenario_projection_id: s.scenario_projection_id!,
+        label: s.evidence_canonical_ids?.length ? `receipt ${s.id.slice(0, 8)}` : `receipt ${s.id.slice(0, 8)}`,
+        leading: (s.baseline?.leading_indicators ?? []) as string[],
+        contradicting: (s.baseline?.contradicting_signals ?? []) as string[],
+      })),
+    );
+    if (!graded) continue; // AI failed — leave open, retry next scan.
+    const gradeMap = new Map(graded.map((g) => [g.scenario_projection_id, g] as const));
+    const byMethod: "auto_evidence" | "auto_deadline" = contradictionResolved ? "auto_evidence" : "auto_deadline";
+    for (const rec of scenariosToGrade) {
+      const g = gradeMap.get(rec.scenario_projection_id!);
+      if (!g) continue;
+      const observed = g.classification;
+      const outcome: "happened" | "did_not_happen" = observed === "borne_out" ? "happened" : "did_not_happen";
+      const y: 0 | 1 = observed === "borne_out" ? 1 : 0;
+      const parts: string[] = [];
+      if (g.matched_indicators.length) parts.push(`Leading indicators observed: ${g.matched_indicators.slice(0, 6).join("; ")}`);
+      if (g.matched_contradictions.length) parts.push(`Contradicting signals observed: ${g.matched_contradictions.slice(0, 6).join("; ")}`);
+      if (!parts.length) parts.push(`No frozen indicators clearly matched the later evidence.`);
+      const rationale = `Scenario ${observed}. ${parts.join(" | ")}`;
+      const { error } = await db
+        .from("outcome_predictions")
+        .update({
+          status: "resolved",
+          outcome,
+          observed_path: observed,
+          resolved_by: byMethod,
+          resolved_at: new Date().toISOString(),
+          resolution_rationale: safeRationale(rationale),
+          resolution_evidence: { matched_indicators: g.matched_indicators, matched_contradictions: g.matched_contradictions },
+          brier_first: brier(Number(rec.predicted_probability), y),
+          brier_final: brier(Number(rec.final_probability), y),
+        })
+        .eq("id", rec.id);
+      if (!error) resolved++;
+    }
+  }
+
+  return { predictions_resolved: resolved, predictions_pending_review: pending };
+});
+
+// Human verdict from the review queue.
+interface VerdictInput {
+  predictionId: string;
+  verdict: "happened" | "did_not_happen" | "unresolvable" | "needs_more";
+  note?: string;
+}
+
+export const applyPredictionVerdict = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        predictionId: z.string().uuid(),
+        verdict: z.enum(["happened", "did_not_happen", "unresolvable", "needs_more"]),
+        note: z.string().max(500).optional(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }: { data: VerdictInput }) => {
+    const db = await admin();
+    const { data: rec } = await db
+      .from("outcome_predictions")
+      .select(
+        "id, subject_kind, event_candidate_id, scenario_projection_id, predicted_probability, final_probability, baseline",
+      )
+      .eq("id", data.predictionId)
+      .maybeSingle();
+    if (!rec) throw new Error("Prediction not found");
+
+    const noteSuffix = data.note ? ` — ${data.note.slice(0, 300)}` : "";
+
+    if (data.verdict === "needs_more") {
+      await db
+        .from("outcome_predictions")
+        .update({ status: "open" })
+        .eq("id", rec.id);
+      await db
+        .from("review_queue")
+        .update({ status: "needs_more_evidence" })
+        .eq("item_type", "prediction_resolution")
+        .eq("item_id", rec.id)
+        .eq("status", "pending");
+      return { ok: true, status: "reopened" };
+    }
+
+    const outcome = data.verdict; // happened | did_not_happen | unresolvable
+    const y: 0 | 1 | null = outcome === "happened" ? 1 : outcome === "did_not_happen" ? 0 : null;
+    const rationale = safeRationale(`Human verdict: ${outcome}${noteSuffix}`);
+    const { error } = await db
+      .from("outcome_predictions")
+      .update({
+        status: "resolved",
+        outcome,
+        resolved_by: "review",
+        resolved_at: new Date().toISOString(),
+        resolution_rationale: rationale,
+        brier_first: y == null ? null : brier(Number(rec.predicted_probability), y),
+        brier_final: y == null ? null : brier(Number(rec.final_probability), y),
+      })
+      .eq("id", rec.id);
+    if (error) throw new Error(error.message);
+
+    const reviewStatus: "approved" | "rejected" = outcome === "happened" ? "approved" : "rejected";
+    await db
+      .from("review_queue")
+      .update({ status: reviewStatus, reviewer_notes: data.note ?? null })
+      .eq("item_type", "prediction_resolution")
+      .eq("item_id", rec.id)
+      .eq("status", "pending");
+
+    // If this was an event receipt, grade its still-open scenarios.
+    if (rec.subject_kind === "event") {
+      const { data: ev } = await db
+        .from("event_candidates")
+        .select("id, title")
+        .eq("id", rec.event_candidate_id)
+        .maybeSingle();
+      const { data: scRows } = await db
+        .from("outcome_predictions")
+        .select(
+          "id, scenario_projection_id, predicted_probability, final_probability, baseline",
+        )
+        .eq("event_candidate_id", rec.event_candidate_id)
+        .eq("subject_kind", "scenario")
+        .eq("status", "open");
+      const scList = (scRows ?? []) as unknown as PredictionRow[];
+      if (ev && scList.length) {
+        const snap = await loadEventEvidence(db, rec.event_candidate_id);
+        const graded = await gradeScenariosViaAI(
+          String(ev.title ?? "Event"),
+          snap.atomicTexts,
+          scList.map((s) => ({
+            scenario_projection_id: s.scenario_projection_id!,
+            label: `receipt ${s.id.slice(0, 8)}`,
+            leading: (s.baseline?.leading_indicators ?? []) as string[],
+            contradicting: (s.baseline?.contradicting_signals ?? []) as string[],
+          })),
+        );
+        if (graded) {
+          const gradeMap = new Map(graded.map((g) => [g.scenario_projection_id, g] as const));
+          for (const s of scList) {
+            const g = gradeMap.get(s.scenario_projection_id!);
+            if (!g) continue;
+            const scOutcome: "happened" | "did_not_happen" = g.classification === "borne_out" ? "happened" : "did_not_happen";
+            const yy: 0 | 1 = g.classification === "borne_out" ? 1 : 0;
+            const parts: string[] = [];
+            if (g.matched_indicators.length) parts.push(`Leading indicators observed: ${g.matched_indicators.slice(0, 6).join("; ")}`);
+            if (g.matched_contradictions.length) parts.push(`Contradicting signals observed: ${g.matched_contradictions.slice(0, 6).join("; ")}`);
+            if (!parts.length) parts.push(`No frozen indicators clearly matched the later evidence.`);
+            await db
+              .from("outcome_predictions")
+              .update({
+                status: "resolved",
+                outcome: scOutcome,
+                observed_path: g.classification,
+                resolved_by: "review",
+                resolved_at: new Date().toISOString(),
+                resolution_rationale: safeRationale(`Scenario ${g.classification} (graded after human verdict on event). ${parts.join(" | ")}`),
+                resolution_evidence: { matched_indicators: g.matched_indicators, matched_contradictions: g.matched_contradictions },
+                brier_first: brier(Number(s.predicted_probability), yy),
+                brier_final: brier(Number(s.final_probability), yy),
+              })
+              .eq("id", s.id);
+          }
+        }
+      }
+    }
+
+    return { ok: true, status: "resolved", outcome };
+  });
+
