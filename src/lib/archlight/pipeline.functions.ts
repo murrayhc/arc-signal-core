@@ -852,6 +852,9 @@ export const runScan = createServerFn({ method: "POST" }).handler(async () => {
     predictions_resolved: predictionsResolved,
     predictions_pending_review: predictionsPendingReview,
     source_suggestions: sourceSuggestions,
+    investigation_events: investigationEvents,
+    investigation_ingested: investigationIngested,
+    investigation_claims: investigationClaims,
     notes,
   };
 
