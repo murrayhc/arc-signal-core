@@ -287,6 +287,7 @@ export const runScan = createServerFn({ method: "POST" }).handler(async () => {
         documentsCollected++;
         atomicClaimsCreated += ing.atomicsCreated;
         for (const c of ing.newClaims) newClaims.push(c);
+        sourceProducedAtLeastOne = true;
       }
 
       if (!sourceProducedAtLeastOne) throw new Error("no usable docs from source");
