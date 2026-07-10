@@ -145,11 +145,10 @@ export const writeTrackRecordSnapshot = createServerFn({ method: "POST" })
       mean_brier_final: tr.mean_brier_final,
       base_rate: tr.base_rate,
       calibration: JSON.parse(JSON.stringify(tr.calibration)),
-      by_horizon_placeholder_removed: undefined as never,
       mean_lead_time_days: tr.mean_lead_time_days,
       scenario_count: tr.scenario_count,
       scenario_mean_brier: tr.scenario_mean_brier,
-      by_horizon: tr.by_horizon,
+      by_horizon: JSON.parse(JSON.stringify(tr.by_horizon)),
     });
     if (error) throw new Error(error.message);
     return { ok: true };
