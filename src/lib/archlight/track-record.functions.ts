@@ -144,7 +144,7 @@ export const writeTrackRecordSnapshot = createServerFn({ method: "POST" })
       mean_brier_first: tr.mean_brier_first,
       mean_brier_final: tr.mean_brier_final,
       base_rate: tr.base_rate,
-      calibration: tr.calibration,
+      calibration: tr.calibration as unknown as Record<string, unknown>[],
       mean_lead_time_days: tr.mean_lead_time_days,
       scenario_count: tr.scenario_count,
       scenario_mean_brier: tr.scenario_mean_brier,
