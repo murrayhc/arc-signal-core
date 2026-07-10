@@ -238,17 +238,22 @@ export async function ingestDocument(db: DbAdmin, opts: IngestOpts): Promise<Ing
           origin_confidence: canonical.first_seen_source_id === src.id ? 0.8 : (isLikelyCopy ? 0.2 : 0.55),
         });
 
-        // Recompute independent_source_count as distinct publisher GROUPS
-        // across all lineage rows for this canonical (contradictions excluded).
+        // Recompute independent_source_count (distinct publisher groups) and
+        // manipulation_risk_score (copy_fraction × burst_factor) from ALL
+        // lineage rows for this canonical.
         const { data: linRows } = await db
           .from("claim_lineage")
-          .select("source_id, relation_to_origin")
+          .select("source_id, relation_to_origin, is_likely_copy, published_at")
           .eq("canonical_claim_id", canonical.id);
+        const allRows = (linRows ?? []) as Array<{
+          source_id: string | null;
+          relation_to_origin: string | null;
+          is_likely_copy: boolean | null;
+          published_at: string | null;
+        }>;
+        const supportingRows = allRows.filter((l) => l.relation_to_origin !== "contradiction");
         const linSrcIds = Array.from(new Set(
-          (linRows ?? [])
-            .filter((l) => l.relation_to_origin !== "contradiction")
-            .map((l) => l.source_id)
-            .filter((x): x is string => !!x),
+          supportingRows.map((l) => l.source_id).filter((x): x is string => !!x),
         ));
         let groupCount = 0;
         if (linSrcIds.length) {
@@ -265,9 +270,70 @@ export async function ingestDocument(db: DbAdmin, opts: IngestOpts): Promise<Ing
           }
           groupCount = gset.size;
         }
+
+        // Manipulation risk: coordinated amplification signal.
+        const total = supportingRows.length;
+        const copies = supportingRows.filter((l) => l.is_likely_copy).length;
+        const copyFraction = total > 0 ? copies / total : 0;
+        // Burst factor: fraction of supporting rows landing within 48h of the
+        // earliest supporting row. Tight burst → 1; spread over weeks → ~0.2.
+        // Requires >= 2 rows so a single item is never flagged.
+        let burstFactor = 0;
+        if (total >= 2) {
+          const stamps = supportingRows
+            .map((l) => (l.published_at ? Date.parse(l.published_at) : NaN))
+            .filter((n) => Number.isFinite(n)) as number[];
+          if (stamps.length >= 2) {
+            stamps.sort((a, b) => a - b);
+            const earliest = stamps[0];
+            const windowMs = 48 * 60 * 60 * 1000;
+            const within = stamps.filter((t) => t - earliest <= windowMs).length;
+            burstFactor = Math.max(0, Math.min(1, within / stamps.length));
+          }
+        }
+        const manipulationRiskScore = Math.max(0, Math.min(1, copyFraction * burstFactor));
+
+        // Reliability penalty: multiplicative, matching how copy-loop is
+        // already handled. Amplification can only LOWER confidence.
+        const penalisedRel = Math.max(0, Math.min(1, rel * (1 - 0.3 * manipulationRiskScore)));
+
         await db.from("canonical_claims").update({
           independent_source_count: groupCount,
+          manipulation_risk_score: Number(manipulationRiskScore.toFixed(3)),
+          reliability_score: Number(penalisedRel.toFixed(3)),
         }).eq("id", canonical.id);
+
+        // Alert: if a canonical crosses the 0.5 manipulation threshold and
+        // sits behind an existing event, open one pending review_queue row.
+        // Idempotent — no duplicate open alert per canonical.
+        if (manipulationRiskScore >= 0.5) {
+          try {
+            const { data: existingAlert } = await db
+              .from("review_queue")
+              .select("id")
+              .eq("item_type", "manipulation_alert")
+              .eq("item_id", canonical.id)
+              .eq("status", "pending")
+              .maybeSingle();
+            if (!existingAlert) {
+              const reasonRaw =
+                `Coordinated amplification suspected on claim "${(canonical.claim_text ?? "").slice(0, 140)}": ` +
+                `${copies}/${total} lineage rows flagged as likely copies, ` +
+                `${Math.round(burstFactor * 100)}% of supporting evidence landed within 48h of the first mention. ` +
+                `Reliability docked to ${penalisedRel.toFixed(2)} pending review.`;
+              const reasonGuarded = guardFinancialAdvice(reasonRaw).ok
+                ? reasonRaw
+                : `Coordinated amplification suspected: ${copies}/${total} copies, tight burst.`;
+              await db.from("review_queue").insert({
+                item_type: "manipulation_alert",
+                item_id: canonical.id,
+                status: "pending",
+                reason: reasonGuarded.slice(0, 1000),
+              });
+            }
+          } catch { /* best-effort */ }
+        }
+
 
         newClaims.push({
           id: atomic.id,
