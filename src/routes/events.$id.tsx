@@ -165,6 +165,48 @@ function EventDetailPage() {
               )}
             </section>
 
+            {/* Predictions ledger */}
+            <section className="glass-panel rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Target className="h-4 w-4" style={{ color: "var(--color-signal)" }}/>
+                <h2 className="font-display text-sm">Predictions</h2>
+                <span className="ml-auto text-[10px] font-mono text-muted-foreground">
+                  {preds.data?.predictions?.length ?? 0} receipt{(preds.data?.predictions?.length ?? 0) === 1 ? "" : "s"} · frozen at scan time
+                </span>
+              </div>
+              {(!preds.data?.predictions?.length) && (
+                <Empty>No receipts frozen for this event yet — they are created at the end of the scan that produced the event.</Empty>
+              )}
+              {(preds.data?.predictions?.length ?? 0) > 0 && (
+                <ul className="space-y-2">
+                  {preds.data!.predictions.map((p) => (
+                    <li key={p.id} className="rounded-lg border border-border/50 bg-background/30 p-3">
+                      <div className="flex items-start justify-between gap-2 flex-wrap">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded border border-border/60 uppercase tracking-widest">{p.subject_kind}</span>
+                          {p.horizon && <span className="text-[10px] font-mono px-1.5 py-0.5 rounded border border-border/60 uppercase tracking-widest text-muted-foreground">{p.horizon}</span>}
+                          <PredictionStatusBadge status={p.status} outcome={p.outcome}/>
+                          {p.resolved_by && <span className="text-[10px] font-mono text-muted-foreground">via · {p.resolved_by}</span>}
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0 text-[10px] font-mono">
+                          <span className="px-1.5 py-0.5 rounded border border-border/60 text-muted-foreground">stated {pct(p.predicted_probability)}%</span>
+                          <span className="px-1.5 py-0.5 rounded border border-border/60 text-muted-foreground">live {pct(p.final_probability)}%</span>
+                          <span className="text-muted-foreground">by {new Date(p.deadline).toISOString().slice(0, 10)}</span>
+                        </div>
+                      </div>
+                      <p className="text-sm mt-2">{p.prediction_text}</p>
+                      {p.resolution_rationale && (
+                        <p className="text-[11px] mt-1 text-muted-foreground"><span className="text-foreground/80">Rationale:</span> {p.resolution_rationale}</p>
+                      )}
+                      {p.brier_first != null && (
+                        <div className="mt-1 text-[10px] font-mono text-muted-foreground">brier · {Number(p.brier_first).toFixed(3)}{p.lead_time_days != null ? ` · lead ${Number(p.lead_time_days).toFixed(1)}d` : ""}</div>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+
             {/* Propagated impacts */}
             {propagated.length > 0 && (
               <section className="glass-panel rounded-xl p-4">
