@@ -1786,6 +1786,7 @@ export type Database = {
           feed_url: string | null
           health_score: number
           id: string
+          independence_group: string | null
           is_synthetic: boolean
           last_failure_at: string | null
           last_success_at: string | null
@@ -1806,6 +1807,7 @@ export type Database = {
           feed_url?: string | null
           health_score?: number
           id?: string
+          independence_group?: string | null
           is_synthetic?: boolean
           last_failure_at?: string | null
           last_success_at?: string | null
@@ -1826,6 +1828,7 @@ export type Database = {
           feed_url?: string | null
           health_score?: number
           id?: string
+          independence_group?: string | null
           is_synthetic?: boolean
           last_failure_at?: string | null
           last_success_at?: string | null
@@ -2024,7 +2027,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      derive_independence_group: {
+        Args: {
+          p_base_url: string
+          p_feed_url: string
+          p_id: string
+          p_is_synthetic: boolean
+          p_name: string
+        }
+        Returns: string
+      }
     }
     Enums: {
       claim_type:

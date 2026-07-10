@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { callAI, callJson, callEmbedding, guardFinancialAdvice, pickModel } from "./ai-gateway.server";
-import { shingles, jaccard, shingleSignature, cosine, centroid, fetchFeed } from "./text.server";
+import { shingles, jaccard, shingleSignature, cosine, centroid, fetchFeed, deriveIndependenceGroup } from "./text.server";
 import { DEFAULT_SCAN_SETTINGS, type ScanSettings } from "./settings.defaults";
 
 const SCAN_RUNTIME_BUDGET_MS = 4 * 60 * 1000;
@@ -184,6 +184,7 @@ export const runScan = createServerFn({ method: "POST" }).handler(async () => {
     canonical_id: string | null;
     source_id: string;
     source_name: string;
+    source_group: string;
     reliability: number;
     doc_id: string;
     doc_url: string;
@@ -341,10 +342,12 @@ export const runScan = createServerFn({ method: "POST" }).handler(async () => {
               if (Array.isArray(existing)) embedding = existing as number[];
             }
 
+            const srcGroup = ((src as { independence_group?: string | null }).independence_group ?? "").trim() ||
+              deriveIndependenceGroup(src.base_url ?? src.feed_url ?? null, src.name, !!src.is_synthetic, src.id);
+
             if (canonical) {
               await db.from("canonical_claims").update({
                 repeat_count: (canonical.repeat_count ?? 0) + 1,
-                independent_source_count: (canonical.independent_source_count ?? 0) + (canonical.first_seen_source_id === src.id ? 0 : 1),
                 support_score: Math.min(1, Number(canonical.support_score ?? 0) + 0.1),
                 updated_at: new Date().toISOString(),
               }).eq("id", canonical.id);
@@ -378,6 +381,37 @@ export const runScan = createServerFn({ method: "POST" }).handler(async () => {
                 origin_confidence: canonical.first_seen_source_id === src.id ? 0.8 : (isLikelyCopy ? 0.2 : 0.55),
               });
 
+              // Recompute independent_source_count as distinct publisher GROUPS
+              // across all lineage rows for this canonical (contradictions excluded).
+              const { data: linRows } = await db
+                .from("claim_lineage")
+                .select("source_id, relation_to_origin")
+                .eq("canonical_claim_id", canonical.id);
+              const linSrcIds = Array.from(new Set(
+                (linRows ?? [])
+                  .filter((l) => l.relation_to_origin !== "contradiction")
+                  .map((l) => l.source_id)
+                  .filter((x): x is string => !!x),
+              ));
+              let groupCount = 0;
+              if (linSrcIds.length) {
+                const { data: srcRows } = await db
+                  .from("sources")
+                  .select("id, independence_group, base_url, feed_url, name, is_synthetic")
+                  .in("id", linSrcIds);
+                const gset = new Set<string>();
+                for (const s of srcRows ?? []) {
+                  const sr = s as { id: string; independence_group?: string | null; base_url: string | null; feed_url: string | null; name: string; is_synthetic: boolean };
+                  const g = (sr.independence_group ?? "").trim() ||
+                    deriveIndependenceGroup(sr.base_url ?? sr.feed_url, sr.name, !!sr.is_synthetic, sr.id);
+                  if (g) gset.add(g);
+                }
+                groupCount = gset.size;
+              }
+              await db.from("canonical_claims").update({
+                independent_source_count: groupCount,
+              }).eq("id", canonical.id);
+
               newClaims.push({
                 id: atomic.id,
                 text: c.claim_text,
@@ -389,6 +423,7 @@ export const runScan = createServerFn({ method: "POST" }).handler(async () => {
                 canonical_id: canonical.id,
                 source_id: src.id,
                 source_name: src.name,
+                source_group: srcGroup,
                 reliability: rel,
                 doc_id: doc.id,
                 doc_url: doc.url ?? "",
@@ -472,7 +507,7 @@ export const runScan = createServerFn({ method: "POST" }).handler(async () => {
 
   const prioritisedClusters = merged
     .map((cluster) => {
-      const sourceCount = new Set(cluster.members.map((m) => m.source_id)).size;
+      const sourceCount = new Set(cluster.members.map((m) => m.source_group || m.source_id)).size;
       const avgReliability = cluster.members.reduce((a, m) => a + m.reliability, 0) / Math.max(1, cluster.members.length);
       return { ...cluster, score: (sourceCount * 4) + cluster.members.length + avgReliability };
     })
@@ -494,7 +529,7 @@ export const runScan = createServerFn({ method: "POST" }).handler(async () => {
       const entities = Array.from(new Set(group.flatMap((g) => g.entities))).slice(0, 6);
       const commodities = Array.from(new Set(group.flatMap((g) => g.commodities))).slice(0, 4);
       const avgRel = group.reduce((a, g) => a + g.reliability, 0) / group.length;
-      const sourceDiv = new Set(group.map((g) => g.source_id)).size;
+      const sourceDiv = new Set(group.map((g) => g.source_group || g.source_id)).size;
       const type = primaryType;
       const sector = primarySector;
 
@@ -510,7 +545,7 @@ export const runScan = createServerFn({ method: "POST" }).handler(async () => {
         model: "google/gemini-2.5-flash",
         maxTokens: 2200,
         system: "You are Archlight scan synthesis. Return ONLY strict JSON. Required shape: {\"event\":{\"title\":string,\"event_type\":string,\"event_class\":\"risk\"|\"opportunity\"|\"mixed\"|\"watch\"|\"unknown\",\"summary\":string,\"severity\":\"low\"|\"moderate\"|\"high\"|\"critical\",\"probability\":number,\"confidence\":number,\"risk_score\":number,\"opportunity_score\":number},\"impacts\":[{\"company\":string,\"impact_type\":\"beneficiary\"|\"harmed\"|\"mixed\"|\"exposed\"|\"watch_only\"|\"unknown\",\"pathway\":string,\"risk_score\":number,\"opportunity_score\":number,\"watch_signals\":string[],\"confidence\":number}],\"opportunity\":object|null,\"positioning\":object|null,\"contradictions\":string[]}. Be hedged (may, could, appears). NEVER give financial advice: no buy/sell/hold, no target price, no portfolio allocation.",
-        user: `Cluster type: ${type}. Sector: ${sector}. Region: ${region}. Entities: ${entities.join(", ") || "n/a"}. Commodities: ${commodities.join(", ") || "n/a"}. Sources: ${group.length} claims from ${sourceDiv} distinct source(s), avg reliability ${avgRel.toFixed(2)}.\n\nClaims:\n${group.map((g, i) => `[${i+1}] (${g.source_name}) ${g.text}`).join("\n")}\n\nReturn JSON with keys: event, impacts (array), opportunity (or null), positioning (or null), contradictions (array of strings).`,
+        user: `Cluster type: ${type}. Sector: ${sector}. Region: ${region}. Entities: ${entities.join(", ") || "n/a"}. Commodities: ${commodities.join(", ") || "n/a"}. Sources: ${group.length} claims from ${sourceDiv} distinct publisher(s), avg reliability ${avgRel.toFixed(2)}.\n\nClaims:\n${group.map((g, i) => `[${i+1}] (${g.source_name}) ${g.text}`).join("\n")}\n\nReturn JSON with keys: event, impacts (array), opportunity (or null), positioning (or null), contradictions (array of strings).`,
       });
       await logTask(db, "company_impact_analysis", synth, `cluster:${key}`);
 
@@ -518,7 +553,7 @@ export const runScan = createServerFn({ method: "POST" }).handler(async () => {
         const reason = !synth.ok
           ? `synth call failed (${synth.error ?? "unknown"})`
           : "synth returned no event object";
-        notes.push(`Synthesis dropped (${key}, ${group.length} claims / ${new Set(group.map((g) => g.source_id)).size} src): ${reason}`);
+        notes.push(`Synthesis dropped (${key}, ${group.length} claims / ${new Set(group.map((g) => g.source_group || g.source_id)).size} publisher(s)): ${reason}`);
         eventsSkipped++;
         continue;
       }
