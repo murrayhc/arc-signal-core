@@ -514,15 +514,16 @@ export const resolveOutcomes = createServerFn({ method: "POST" }).handler(async 
     if (!ev) continue;
     const snap = await loadEventEvidence(db, eventId);
 
-    // Look up source reliability for CURRENT groups (used for primary_corroboration).
-    const currentGroupIds = Array.from(snap.bySource.keys());
-    const srcMap = new Map<string, { reliability_score: number; is_synthetic: boolean }>();
-    if (currentGroupIds.length) {
-      const { data: srcs } = await db
-        .from("sources")
-        .select("id, reliability_score, is_synthetic")
-        .in("id", currentGroupIds);
-      for (const s of srcs ?? []) srcMap.set(s.id, { reliability_score: Number(s.reliability_score ?? 0), is_synthetic: !!s.is_synthetic });
+    // Per-source metadata (reliability, is_synthetic, publisher group) for
+    // every CURRENT supporting source. Kept per-source so lead-time and
+    // primary-corroboration still see individual reliability, while
+    // independence tallies only count distinct PUBLISHER GROUPS.
+    const currentSourceIds = Array.from(snap.bySource.keys());
+    const srcMap = await loadSourceMetaMap(db, currentSourceIds);
+    const currentGroups = new Set<string>();
+    for (const sid of currentSourceIds) {
+      const g = srcMap.get(sid)?.group;
+      if (g) currentGroups.add(g);
     }
 
     // Min reliability across canonicals.
@@ -546,14 +547,24 @@ export const resolveOutcomes = createServerFn({ method: "POST" }).handler(async 
     let eventResolvedBy: "auto_evidence" | "auto_deadline" | "review" | null = null;
 
     if (eventReceipt) {
+      // Baseline stores frozen PUBLISHER GROUPS (not raw source_ids).
       const baseGroups = new Set<string>(
         Array.isArray(eventReceipt.baseline?.group_ids)
           ? (eventReceipt.baseline!.group_ids as string[])
           : [],
       );
-      const newSourceIds = currentGroupIds.filter((s) => !baseGroups.has(s));
-      const newGroups = newSourceIds.length;
+      const newGroupIds = Array.from(currentGroups).filter((g) => !baseGroups.has(g));
+      const newGroups = newGroupIds.length;
+      // Source_ids that belong to at least one NEW group — used for URLs,
+      // canonicals, and lead-time (per-source data still matters here).
+      const newGroupSet = new Set(newGroupIds);
+      const newSourceIds = currentSourceIds.filter((sid) => {
+        const g = srcMap.get(sid)?.group;
+        return !!g && newGroupSet.has(g);
+      });
       const newContradictions = Math.max(0, snap.contradictionCount - Number(eventReceipt.baseline?.contradiction_count ?? 0));
+      // Primary corroboration: at least one NEW GROUP contains a
+      // high-reliability, non-synthetic source.
       const primaryCorroboration = newSourceIds.some((sid) => {
         const s = srcMap.get(sid);
         return !!s && s.reliability_score > 0.8 && !s.is_synthetic;
