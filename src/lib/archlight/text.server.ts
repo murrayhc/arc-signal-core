@@ -108,7 +108,7 @@ export async function fetchFeed(url: string, timeoutMs = 8000): Promise<FeedItem
   const controller = new AbortController();
   const t = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const res = await fetch(url, { signal: controller.signal, headers: { "User-Agent": "ArchlightBot/0.1 (+public-signals)" } });
+    const res = await fetch(url, { signal: controller.signal, headers: { "User-Agent": "Mozilla/5.0 (compatible; ArchlightBot/1.0; +https://arc-signal-core.lovable.app)", "Accept": "application/rss+xml, application/atom+xml, application/xml;q=0.9, */*;q=0.8" } });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const xml = await res.text();
     return parseRss(xml);
