@@ -1,0 +1,171 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-signal: var(--signal);
+  --color-signal-glow: var(--signal-glow);
+  --color-risk: var(--risk);
+  --color-risk-strong: var(--risk-strong);
+  --color-opportunity: var(--opportunity);
+  --color-opportunity-alt: var(--opportunity-alt);
+  --color-growth: var(--growth);
+  --color-reason: var(--reason);
+  --color-weak: var(--weak);
+  --color-panel: var(--panel);
+  --color-panel-2: var(--panel-2);
+  --color-grid: var(--grid);
+
+  --font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+}
+
+:root {
+  --radius: 0.5rem;
+
+  /* Deep navy / near black premium intel */
+  --background: oklch(0.14 0.03 260);
+  --foreground: oklch(0.96 0.01 240);
+  --card: oklch(0.18 0.035 260);
+  --card-foreground: oklch(0.96 0.01 240);
+  --popover: oklch(0.16 0.035 260);
+  --popover-foreground: oklch(0.96 0.01 240);
+  --primary: oklch(0.72 0.19 245);
+  --primary-foreground: oklch(0.1 0.02 260);
+  --secondary: oklch(0.24 0.04 260);
+  --secondary-foreground: oklch(0.96 0.01 240);
+  --muted: oklch(0.22 0.03 260);
+  --muted-foreground: oklch(0.65 0.02 250);
+  --accent: oklch(0.28 0.06 250);
+  --accent-foreground: oklch(0.96 0.01 240);
+  --destructive: oklch(0.63 0.24 27);
+  --destructive-foreground: oklch(0.98 0.01 240);
+  --border: oklch(0.28 0.04 260 / 60%);
+  --input: oklch(0.28 0.04 260);
+  --ring: oklch(0.72 0.19 245);
+
+  /* Archlight semantic */
+  --signal: oklch(0.72 0.2 245);         /* electric blue */
+  --signal-glow: oklch(0.82 0.18 230);
+  --risk: oklch(0.75 0.18 55);           /* amber */
+  --risk-strong: oklch(0.65 0.24 27);    /* red */
+  --opportunity: oklch(0.82 0.16 90);    /* gold */
+  --opportunity-alt: oklch(0.75 0.14 180); /* teal */
+  --growth: oklch(0.72 0.16 165);        /* teal-green */
+  --reason: oklch(0.68 0.19 305);        /* purple */
+  --weak: oklch(0.5 0.02 260);
+  --panel: oklch(0.19 0.035 260 / 85%);
+  --panel-2: oklch(0.22 0.04 260 / 70%);
+  --grid: oklch(0.4 0.04 260 / 25%);
+
+  --chart-1: var(--signal);
+  --chart-2: var(--opportunity);
+  --chart-3: var(--risk);
+  --chart-4: var(--reason);
+  --chart-5: var(--growth);
+}
+
+.dark { color-scheme: dark; }
+
+@layer base {
+  * { border-color: var(--color-border); }
+  html, body { background: var(--background); color: var(--foreground); font-family: var(--font-sans); }
+  body {
+    background-image:
+      radial-gradient(ellipse 80% 60% at 20% 0%, oklch(0.28 0.12 260 / 0.35), transparent 60%),
+      radial-gradient(ellipse 60% 50% at 100% 20%, oklch(0.3 0.14 245 / 0.25), transparent 60%),
+      radial-gradient(ellipse 60% 50% at 50% 100%, oklch(0.22 0.1 280 / 0.25), transparent 70%),
+      linear-gradient(180deg, oklch(0.12 0.03 260), oklch(0.1 0.02 260));
+    background-attachment: fixed;
+    min-height: 100vh;
+  }
+  h1,h2,h3,h4 { font-family: var(--font-display); letter-spacing: -0.01em; }
+}
+
+@utility glass-panel {
+  background:
+    linear-gradient(180deg, oklch(0.24 0.04 260 / 0.55), oklch(0.16 0.03 260 / 0.55));
+  border: 1px solid oklch(0.6 0.05 250 / 0.15);
+  backdrop-filter: blur(14px) saturate(140%);
+  box-shadow:
+    0 1px 0 oklch(1 0 0 / 0.04) inset,
+    0 30px 60px -30px oklch(0 0 0 / 0.6);
+}
+
+@utility grid-bg {
+  background-image:
+    linear-gradient(oklch(0.5 0.05 250 / 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, oklch(0.5 0.05 250 / 0.08) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+@utility text-glow-signal {
+  text-shadow: 0 0 12px oklch(0.72 0.2 245 / 0.5);
+}
+
+@utility ring-signal {
+  box-shadow: 0 0 0 1px oklch(0.72 0.2 245 / 0.4), 0 0 20px oklch(0.72 0.2 245 / 0.35);
+}
+
+@keyframes pulse-node {
+  0%,100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.35); opacity: 0.7; }
+}
+@keyframes dash-flow {
+  to { stroke-dashoffset: -40; }
+}
+@keyframes ticker-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+@keyframes scan-sweep {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(400%); }
+}
+
+/* Slim dark scrollbar for side panels */
+.slim-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: oklch(0.35 0.02 260 / 0.7) transparent;
+}
+.slim-scroll::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.slim-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.slim-scroll::-webkit-scrollbar-thumb {
+  background: oklch(0.3 0.02 260 / 0.7);
+  border-radius: 3px;
+}
+.slim-scroll::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.45 0.03 260 / 0.9);
+}
