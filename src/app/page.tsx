@@ -279,6 +279,9 @@ export default async function DashboardPage() {
                 <Link href="/review" className="underline hover:text-ink">
                   Review queue
                 </Link>
+                <Link href="/track-record" className="underline hover:text-ink">
+                  Track record
+                </Link>
               </p>
             </Drawer>
           </div>

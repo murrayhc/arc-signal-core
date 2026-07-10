@@ -1,5 +1,6 @@
 import { freezePredictions, updateOpenFinalProbabilities } from './ledger'
 import { evaluateOpenPredictions } from './resolution'
+import { writeTrackRecordSnapshot } from './track-record'
 import type { OutcomeCounts, OutcomeError } from './types'
 
 /** Runs the outcome-resolution layer for one scan: freeze receipts for this
@@ -44,6 +45,9 @@ export async function runOutcomeResolution(
   } catch (err) {
     errors.push({ stage: 'outcome:evaluate', message: err instanceof Error ? err.message : String(err) })
   }
+
+  const snapshot = await writeTrackRecordSnapshot(scanRunId)
+  errors.push(...snapshot.errors)
 
   return { counts, errors }
 }

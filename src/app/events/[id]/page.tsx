@@ -7,7 +7,9 @@ import { getEventArc } from '@/server/services/graph'
 import { getConfidenceHistory } from '@/server/graph/timeline'
 import { getEventEvidenceDepth } from '@/server/services/evidence-depth'
 import { getEventDeepReport } from '@/server/services/consequence'
+import { getEventPredictions } from '@/server/services/outcome'
 import { EventActions } from '@/components/EventActions'
+import { PredictionLedgerPanel } from '@/components/PredictionLedgerPanel'
 import { EvidenceArc } from '@/components/EvidenceArc'
 import { EvidenceDepthPanel } from '@/components/EvidenceDepthPanel'
 import { ReplayPanel } from '@/components/ReplayPanel'
@@ -54,12 +56,13 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
   const detail = await getEventDetail(id)
   if (!detail) notFound()
   const { event } = detail
-  const [opportunities, arcResult, evidenceDepth, deep, confidenceHistory] = await Promise.all([
+  const [opportunities, arcResult, evidenceDepth, deep, confidenceHistory, predictions] = await Promise.all([
     getOpportunitiesForEvent(event.id),
     getEventArc(event.id),
     getEventEvidenceDepth(event.id),
     getEventDeepReport(event.id),
     getConfidenceHistory(event.id),
+    getEventPredictions(event.id),
   ])
 
   const overviewNode = (
@@ -242,6 +245,7 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
             ),
           },
           { key: 'scenarios', label: 'Scenarios', node: <ScenariosPanel context={deep.context} scenarios={deep.scenarios} /> },
+          { key: 'predictions', label: 'Predictions', node: <PredictionLedgerPanel predictions={predictions} /> },
           { key: 'positioning', label: 'Positioning', node: <PositioningPanel positioning={deep.positioning} /> },
           {
             key: 'watch',
