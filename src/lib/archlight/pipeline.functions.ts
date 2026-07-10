@@ -871,20 +871,32 @@ export const runScan = createServerFn({ method: "POST" }).handler(async () => {
   // is refreshed for still-open receipts. Any failure here MUST NOT fail the
   // scan.
   let predictionsFrozen = 0;
+  let predictionsResolved = 0;
+  let predictionsPendingReview = 0;
   try {
-    const { freezePredictions, refreshFinalProbabilities } = await import("./outcome.functions");
+    const { freezePredictions, refreshFinalProbabilities, resolveOutcomes } = await import("./outcome.functions");
     const froze = await freezePredictions({ data: { scanRunId: run.id } });
     predictionsFrozen = froze.events_frozen + froze.scenarios_frozen;
     notes.push(`Prediction ledger: froze ${froze.events_frozen} event + ${froze.scenarios_frozen} scenario receipt(s)${froze.skipped.length ? `; ${froze.skipped.length} skipped` : ""}.`);
     const refreshed = await refreshFinalProbabilities();
     if (refreshed.refreshed > 0) notes.push(`Prediction ledger: refreshed final_probability on ${refreshed.refreshed} open receipt(s).`);
+    try {
+      const resv = await resolveOutcomes();
+      predictionsResolved = resv.predictions_resolved;
+      predictionsPendingReview = resv.predictions_pending_review;
+      if (predictionsResolved || predictionsPendingReview) {
+        notes.push(`Prediction ledger: resolved ${predictionsResolved}, pending review ${predictionsPendingReview}.`);
+      }
+    } catch (err) {
+      notes.push(`Prediction resolution skipped: ${err instanceof Error ? err.message : String(err)}`);
+    }
   } catch (err) {
     notes.push(`Prediction ledger skipped: ${err instanceof Error ? err.message : String(err)}`);
   }
 
   // Append prediction-ledger summary into the persisted scan notes (best-effort).
   try {
-    const tailNote = `Predictions frozen: ${predictionsFrozen}`;
+    const tailNote = `Predictions frozen: ${predictionsFrozen} | resolved: ${predictionsResolved} | pending_review: ${predictionsPendingReview}`;
     const { data: cur } = await db.from("scan_runs").select("notes").eq("id", run.id).maybeSingle();
     const merged = `${cur?.notes ?? ""} | ${tailNote}`.slice(0, 2000);
     await db.from("scan_runs").update({ notes: merged }).eq("id", run.id);
@@ -902,8 +914,11 @@ export const runScan = createServerFn({ method: "POST" }).handler(async () => {
     events_skipped: eventsSkipped,
     precognition_processed: precogProcessed,
     predictions_frozen: predictionsFrozen,
+    predictions_resolved: predictionsResolved,
+    predictions_pending_review: predictionsPendingReview,
     notes,
   };
+
 
 
 });
