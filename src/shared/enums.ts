@@ -217,3 +217,17 @@ export const REPORT_TYPES = [
   'MARKET_CONTEXT_BRIEF','COMPANY_EXPOSURE_BRIEF',
 ] as const
 export type ReportType = (typeof REPORT_TYPES)[number]
+
+// ── Review queue (Stage 6, human-in-the-loop) ──────────────────────────────
+
+export const REVIEW_ITEM_TYPES = [
+  'QUARANTINED_CLAIM',    // a recycled/contradicted claim withheld from events
+  'LOW_CONFIDENCE_IMPACT', // a named company impact below the confidence floor
+  'AMBIGUOUS_ENTITY',      // a mention the resolver could not classify
+  'CONTRADICTION_SPIKE',   // an event carrying an unusual density of contradictions
+  'MANIPULATION_ALERT',    // a claim flagged for copy-burst amplification
+] as const
+export type ReviewItemType = (typeof REVIEW_ITEM_TYPES)[number]
+
+export const REVIEW_STATUSES = ['PENDING','APPROVED','REJECTED','NEEDS_MORE_EVIDENCE'] as const
+export type ReviewStatus = (typeof REVIEW_STATUSES)[number]

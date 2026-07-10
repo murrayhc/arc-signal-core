@@ -308,6 +308,7 @@ model ScanRun {
   companyImpactsCreated         Int              @default(0)
   contextSynthesesCreated       Int              @default(0)
   signalsQuarantined            Int              @default(0)
+  reviewItemsCreated            Int              @default(0)
   futureScenariosCreated        Int              @default(0)
   errorsJson                    String           @default("[]")
   warningsJson                  String           @default("[]")
@@ -859,4 +860,34 @@ model FutureScenario {
   updatedAt               DateTime @updatedAt
 
   @@index([eventCandidateId])
+}
+
+// ── Review queue (Stage 6, human-in-the-loop) ──────────────────────────────
+// Nothing sub-threshold silently ships or silently disappears — it queues,
+// visibly. Additive/relation-free (plain string refs), consistent with the
+// evidence-depth and consequence layers.
+model ReviewItem {
+  id             String   @id @default(cuid())
+  itemType       String   // ReviewItemType
+  status         String   @default("PENDING") // ReviewStatus
+  // What produced it + a de-dup key so re-scans update rather than pile up.
+  subjectKind    String   // 'claim' | 'companyImpact' | 'entity' | 'event'
+  subjectId      String
+  dedupeKey      String   @unique
+  title          String
+  reason         String
+  severity       Float    @default(0.5)
+  // Denormalised context for the reviewer (no joins across the additive
+  // boundary): evidence ids, related event, a short human summary.
+  eventCandidateId String?
+  evidenceIdsJson  String  @default("[]")
+  detailJson       String  @default("{}")
+  // Review outcome.
+  reviewerNote   String?
+  reviewedAt     DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([status])
+  @@index([itemType])
 }

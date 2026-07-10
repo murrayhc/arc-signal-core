@@ -14,6 +14,7 @@ import { syncGraphForEvents } from '@/server/graph/builder'
 import { persistEventMomentum, recordGraphEvents } from '@/server/graph/timeline'
 import { runEvidenceDepth } from '@/server/evidence/depth-pipeline'
 import { runConsequenceSynthesis } from '@/server/consequence/consequence-pipeline'
+import { produceEventReviews, produceQuarantineReviews } from '@/server/review/producers'
 import type { PipelineError } from './types'
 
 export type ScanSummary = {
@@ -47,6 +48,7 @@ export type ScanSummary = {
     contextSynthesesCreated: number
     futureScenariosCreated: number
     signalsQuarantined: number
+    reviewItemsCreated: number
   }
   errors: PipelineError[]
   warnings: PipelineError[]
@@ -86,6 +88,7 @@ export async function runFullScan(
     contextSynthesesCreated: 0,
     futureScenariosCreated: 0,
     signalsQuarantined: 0,
+    reviewItemsCreated: 0,
   }
 
   try {
@@ -217,6 +220,19 @@ export async function runFullScan(
     // recency-weighted momentum from its graph-event timeline. Non-fatal.
     const momentum = await persistEventMomentum(allEvents, new Date())
     errors.push(...momentum.errors)
+
+    // 15c. Review queue (non-fatal): turn everything the pipeline withheld or
+    // flagged this scan into visible ReviewItems — quarantined claims,
+    // low-confidence named impacts, ambiguous recurring entities,
+    // contradiction spikes, copy-burst alerts.
+    try {
+      counts.reviewItemsCreated += await produceQuarantineReviews(signals.quarantined)
+      for (const event of allEvents) {
+        counts.reviewItemsCreated += await produceEventReviews(event.id)
+      }
+    } catch (err) {
+      errors.push({ stage: 'review', message: err instanceof Error ? err.message : String(err) })
+    }
 
     const status = errors.length > 0 ? 'COMPLETED_WITH_ERRORS' : 'COMPLETED'
     const completed = await prisma.scanRun.update({
