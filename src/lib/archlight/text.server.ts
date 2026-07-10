@@ -1,5 +1,56 @@
 // Server-only text utilities: shingles, Jaccard, cosine, RSS parsing.
 
+// Multi-part TLDs where the registrable domain uses the last THREE labels.
+// Keep in sync with public.derive_independence_group() in the DB.
+const MULTI_PART_TLDS = new Set<string>([
+  "co.uk","org.uk","gov.uk","ac.uk","me.uk","ltd.uk","plc.uk","net.uk","sch.uk","nhs.uk",
+  "com.au","net.au","org.au","edu.au","gov.au","asn.au","id.au",
+  "co.nz","net.nz","org.nz","govt.nz","ac.nz",
+  "co.jp","ne.jp","or.jp","ac.jp","go.jp","ad.jp","gr.jp",
+  "com.br","net.br","org.br","gov.br","edu.br",
+  "co.in","net.in","org.in","gov.in","ac.in","edu.in",
+  "com.cn","net.cn","org.cn","gov.cn","edu.cn",
+  "com.hk","org.hk","gov.hk","edu.hk","net.hk",
+  "com.sg","edu.sg","gov.sg","org.sg","net.sg",
+  "co.za","org.za","gov.za","ac.za","net.za",
+  "com.mx","gob.mx","org.mx","edu.mx",
+  "com.tr","gov.tr","org.tr","edu.tr",
+  "com.tw","org.tw","gov.tw","edu.tw",
+  "co.kr","or.kr","go.kr","ac.kr",
+  "co.il","org.il","gov.il","ac.il",
+  "com.ar","gov.ar","org.ar","edu.ar",
+  "com.co","gov.co","org.co","edu.co",
+  "co.id","or.id","go.id","ac.id",
+  "com.my","gov.my","org.my","edu.my",
+]);
+
+/**
+ * Publisher-level grouping key so two feeds from the same publisher only
+ * count as one independent voice. Mirrors public.derive_independence_group().
+ */
+export function deriveIndependenceGroup(
+  url: string | null | undefined,
+  name: string | null | undefined,
+  isSynthetic: boolean,
+  id?: string | null,
+): string {
+  if (isSynthetic) return `synthetic:${id ?? ""}`;
+  const raw = (url ?? "").trim();
+  if (!raw) return (name ?? "").toLowerCase();
+  let host = raw.toLowerCase().replace(/^[a-z][a-z0-9+.-]*:\/\//, "");
+  host = host.split("/")[0].split("?")[0].split("#")[0].split(":")[0];
+  if (host.startsWith("www.")) host = host.slice(4);
+  const parts = host.split(".").filter(Boolean);
+  const n = parts.length;
+  if (n < 2) return host || (name ?? "").toLowerCase();
+  if (n >= 3) {
+    const last2 = `${parts[n - 2]}.${parts[n - 1]}`;
+    if (MULTI_PART_TLDS.has(last2)) return `${parts[n - 3]}.${last2}`;
+  }
+  return `${parts[n - 2]}.${parts[n - 1]}`;
+}
+
+
 export function shingles(text: string, size = 5): Set<string> {
   const words = text.toLowerCase().replace(/[^a-z0-9 ]+/g, " ").split(/\s+/).filter(Boolean);
   const out = new Set<string>();
