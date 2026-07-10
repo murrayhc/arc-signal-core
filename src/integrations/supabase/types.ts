@@ -159,6 +159,7 @@ export type Database = {
           first_seen_source_id: string | null
           id: string
           independent_source_count: number
+          manipulation_risk_score: number
           normalised_claim_text: string
           origin_candidate_url: string | null
           reliability_score: number
@@ -178,6 +179,7 @@ export type Database = {
           first_seen_source_id?: string | null
           id?: string
           independent_source_count?: number
+          manipulation_risk_score?: number
           normalised_claim_text: string
           origin_candidate_url?: string | null
           reliability_score?: number
@@ -197,6 +199,7 @@ export type Database = {
           first_seen_source_id?: string | null
           id?: string
           independent_source_count?: number
+          manipulation_risk_score?: number
           normalised_claim_text?: string
           origin_candidate_url?: string | null
           reliability_score?: number
