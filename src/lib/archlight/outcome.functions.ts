@@ -5,6 +5,32 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { callJson, guardFinancialAdvice } from "./ai-gateway.server";
+import { deriveIndependenceGroup } from "./text.server";
+
+type SourceMeta = { reliability_score: number; is_synthetic: boolean; group: string };
+
+async function loadSourceMetaMap(
+  db: Awaited<ReturnType<typeof admin>>,
+  ids: string[],
+): Promise<Map<string, SourceMeta>> {
+  const out = new Map<string, SourceMeta>();
+  if (!ids.length) return out;
+  const { data } = await db
+    .from("sources")
+    .select("id, reliability_score, is_synthetic, independence_group, base_url, feed_url, name")
+    .in("id", ids);
+  for (const s of data ?? []) {
+    const row = s as { id: string; reliability_score: number | null; is_synthetic: boolean | null; independence_group: string | null; base_url: string | null; feed_url: string | null; name: string };
+    const group = (row.independence_group ?? "").trim() ||
+      deriveIndependenceGroup(row.base_url ?? row.feed_url, row.name, !!row.is_synthetic, row.id);
+    out.set(row.id, {
+      reliability_score: Number(row.reliability_score ?? 0),
+      is_synthetic: !!row.is_synthetic,
+      group,
+    });
+  }
+  return out;
+}
 
 
 async function admin() {
