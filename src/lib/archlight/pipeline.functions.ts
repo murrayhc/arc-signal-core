@@ -754,6 +754,28 @@ export const runScan = createServerFn({ method: "POST" }).handler(async () => {
     notes.push(`Precognition pass skipped: ${err instanceof Error ? err.message : String(err)}`);
   }
 
+  // ============ ACTIVE INVESTIGATION (GDELT) ============
+  // For events with OPEN outcome_predictions (nearest deadline first), search
+  // GDELT for corroborating/contradicting coverage and ingest real matches so
+  // new evidence attaches to the event's canonical claims before freeze /
+  // resolve run below. Non-fatal.
+  let investigationEvents = 0;
+  let investigationIngested = 0;
+  let investigationClaims = 0;
+  try {
+    const { runInvestigation } = await import("./investigation.server");
+    const inv = await runInvestigation({ scanRunId: run.id, maxEvents: 8, maxPerEvent: 12 });
+    investigationEvents = inv.events_investigated;
+    investigationIngested = inv.articles_ingested;
+    investigationClaims = inv.claims_created;
+    for (const n of inv.notes) notes.push(n);
+    atomicClaimsCreated += investigationClaims;
+    documentsCollected += investigationIngested;
+  } catch (err) {
+    notes.push(`Investigation pass skipped: ${err instanceof Error ? err.message : String(err)}`);
+  }
+
+
   // ============ PREDICTION LEDGER (freeze receipts) ============
   // Final, non-fatal stage. Freezes an immutable receipt per event + per
   // scenario_projection so we can grade them later. Rolling final_probability
