@@ -53,6 +53,11 @@ function EventDetailPage() {
     queryFn: () => getEventScenarios({ data: { id } }),
     enabled: !!data?.event,
   });
+  const preds = useQuery({
+    queryKey: ["archlight", "event", id, "predictions"],
+    queryFn: () => getEventPredictions({ data: { eventId: id } }),
+    enabled: !!data?.event,
+  });
   const projectMut = useMutation({
     mutationFn: () => projectEventForward({ data: { id } }),
     onSuccess: (r) => {
