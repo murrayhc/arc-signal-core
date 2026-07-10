@@ -894,6 +894,16 @@ export const runScan = createServerFn({ method: "POST" }).handler(async () => {
     notes.push(`Prediction ledger skipped: ${err instanceof Error ? err.message : String(err)}`);
   }
 
+  // ============ TRACK RECORD SNAPSHOT ============
+  // Compute a verified-track-record snapshot from resolved receipts (hard data,
+  // no LLM). Non-fatal.
+  try {
+    const { writeTrackRecordSnapshot } = await import("./track-record.functions");
+    await writeTrackRecordSnapshot({ data: { scanRunId: run.id } });
+  } catch (err) {
+    notes.push(`Track record snapshot skipped: ${err instanceof Error ? err.message : String(err)}`);
+  }
+
   // Append prediction-ledger summary into the persisted scan notes (best-effort).
   try {
     const tailNote = `Predictions frozen: ${predictionsFrozen} | resolved: ${predictionsResolved} | pending_review: ${predictionsPendingReview}`;
