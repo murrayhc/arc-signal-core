@@ -237,6 +237,36 @@ export type EventReplay = {
   freshness: number
 }
 
+export type ConfidencePoint = { at: Date; direction: 'ROSE' | 'FELL'; eventType: string }
+
+/**
+ * Confidence-movement history for an event, reconstructed from the
+ * CONFIDENCE_ROSE / CONFIDENCE_FELL GraphEvents already recorded by the
+ * timeline diff engine. The data existed; the event page just never drew it.
+ * Returns points oldest-first, plus a net direction.
+ */
+export async function getConfidenceHistory(
+  eventCandidateId: string,
+): Promise<{ points: ConfidencePoint[]; net: 'RISING' | 'FALLING' | 'FLAT' }> {
+  const graphNode = await prisma.graphNode.findUnique({
+    where: { refType_refId: { refType: 'event', refId: eventCandidateId } },
+  })
+  if (!graphNode) return { points: [], net: 'FLAT' }
+  const rows = await prisma.graphEvent.findMany({
+    where: { graphNodeId: graphNode.id, eventType: { in: ['CONFIDENCE_ROSE', 'CONFIDENCE_FELL'] } },
+    orderBy: { occurredAt: 'asc' },
+  })
+  const points: ConfidencePoint[] = rows.map((r) => ({
+    at: r.occurredAt,
+    direction: r.eventType === 'CONFIDENCE_ROSE' ? 'ROSE' : 'FELL',
+    eventType: r.eventType,
+  }))
+  const rose = points.filter((p) => p.direction === 'ROSE').length
+  const fell = points.filter((p) => p.direction === 'FELL').length
+  const net = rose > fell ? 'RISING' : fell > rose ? 'FALLING' : 'FLAT'
+  return { points, net }
+}
+
 /**
  * Persists each event's momentum (recency-weighted graph-event score, 0.5 =
  * neutral) onto EventCandidate.momentumScore so momentum is a first-class

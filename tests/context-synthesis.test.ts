@@ -39,7 +39,7 @@ describe('synthesiseContext', () => {
     const { event } = await makeEventGraph(LAYOFF_BODY, { eventClass: 'RISK', sector: 'manufacturing' })
     await resolveCompanyImpacts(event.id)
     const { synthesis } = await synthesiseContext(event.id)
-    expect(synthesis!.historicContext.toLowerCase()).toContain('no prior')
+    expect(synthesis!.historicContext.toLowerCase()).toContain('no comparable')
   })
 
   it('raises REVERSAL scenario confidence when contradictions are present', async () => {

@@ -4,6 +4,7 @@ import { getEventDetail } from '@/server/services/events'
 import type { EvidenceItem } from '@/server/services/events'
 import { getOpportunitiesForEvent } from '@/server/services/opportunities'
 import { getEventArc } from '@/server/services/graph'
+import { getConfidenceHistory } from '@/server/graph/timeline'
 import { getEventEvidenceDepth } from '@/server/services/evidence-depth'
 import { getEventDeepReport } from '@/server/services/consequence'
 import { EventActions } from '@/components/EventActions'
@@ -53,11 +54,12 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
   const detail = await getEventDetail(id)
   if (!detail) notFound()
   const { event } = detail
-  const [opportunities, arcResult, evidenceDepth, deep] = await Promise.all([
+  const [opportunities, arcResult, evidenceDepth, deep, confidenceHistory] = await Promise.all([
     getOpportunitiesForEvent(event.id),
     getEventArc(event.id),
     getEventEvidenceDepth(event.id),
     getEventDeepReport(event.id),
+    getConfidenceHistory(event.id),
   ])
 
   const overviewNode = (
@@ -206,10 +208,15 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
       <section className="mt-6 grid grid-cols-3 gap-3 sm:grid-cols-6">
         {[
           { label: 'Probability', value: pct(event.probability) },
-          { label: 'Confidence', value: pct(event.confidence) },
+          {
+            label: 'Confidence',
+            // Confidence value with a movement arrow reconstructed from the
+            // event's CONFIDENCE_ROSE/FELL graph-event history.
+            value: `${pct(event.confidence)}${confidenceHistory.net === 'RISING' ? ' ↑' : confidenceHistory.net === 'FALLING' ? ' ↓' : ''}`,
+          },
+          { label: 'Momentum', value: pct(event.momentumScore) },
           { label: 'Severity', value: pct(event.severity) },
           { label: 'Risk', value: pct(event.riskScore) },
-          { label: 'Opportunity', value: pct(event.opportunityScore) },
           { label: 'Src diversity', value: pct(event.sourceDiversityScore) },
         ].map((stat) => (
           <div key={stat.label} className="rounded-lg border border-slate-800 bg-slate-900 p-3 text-center">

@@ -15,6 +15,35 @@ const REPORT_FOCUS: Record<ReportType, string> = {
   COMPANY_EXPOSURE_BRIEF: 'Named company and category exposure with evidence lineage.',
 }
 
+/** Section keys a report can render. */
+type SectionKey =
+  | 'summary'
+  | 'reliability'
+  | 'beneficiaries'
+  | 'harmed'
+  | 'historic'
+  | 'present'
+  | 'future'
+  | 'scenarios'
+  | 'positioning'
+  | 'watch'
+  | 'sources'
+
+/** Per-report-type section SELECTION and ORDERING — this is what makes a
+ *  SALES brief genuinely different from a RISK brief rather than the same body
+ *  under a different header. A sales brief leads with beneficiaries and
+ *  positioning; a risk brief with harmed parties, contradictions and watch
+ *  signals; procurement with suppliers/buyers; etc. Reliability, sources and a
+ *  non-advisory footer appear in every type. */
+const REPORT_SECTIONS: Record<ReportType, SectionKey[]> = {
+  EXECUTIVE_BRIEF: ['summary', 'reliability', 'harmed', 'beneficiaries', 'present', 'future', 'watch', 'sources'],
+  SALES_OPPORTUNITY_BRIEF: ['summary', 'beneficiaries', 'positioning', 'scenarios', 'watch', 'reliability', 'sources'],
+  RISK_BRIEF: ['summary', 'harmed', 'reliability', 'present', 'scenarios', 'watch', 'historic', 'sources'],
+  PROCUREMENT_BRIEF: ['summary', 'beneficiaries', 'harmed', 'present', 'watch', 'reliability', 'sources'],
+  MARKET_CONTEXT_BRIEF: ['summary', 'present', 'historic', 'future', 'scenarios', 'reliability', 'sources'],
+  COMPANY_EXPOSURE_BRIEF: ['summary', 'harmed', 'beneficiaries', 'reliability', 'positioning', 'sources'],
+}
+
 const BENEFICIARY_TYPES = new Set(['BENEFICIARY', 'MIXED'])
 const HARMED_TYPES = new Set(['HARMED', 'MIXED', 'EXPOSED'])
 
@@ -115,45 +144,56 @@ export async function assembleReport(
   const impactLine = (i: { companyName: string; confidence: number; lowConfidence: boolean; impactPathway: string }) =>
     `- **${i.companyName}** (${pct(i.confidence)}${i.lowConfidence ? ', low confidence' : ''}) — ${i.impactPathway}`
 
+  // Each section rendered as [heading, body]; the per-type ordering above
+  // selects and sequences them.
+  const renderSection: Record<SectionKey, () => [string, string]> = {
+    summary: () => ['Summary', narrative?.executive ? `${narrative.executive}\n\n${event.summary}` : event.summary],
+    reliability: () => [
+      'Evidence reliability',
+      `Overall reliability: ${pct(reliability)}. Origin traced to ${originUrls.length} source(s).`,
+    ],
+    beneficiaries: () => [
+      'Who benefits',
+      beneficiaries.length ? beneficiaries.map(impactLine).join('\n') : '- No specific beneficiary identified in the evidence.',
+    ],
+    harmed: () => [
+      'Who is harmed',
+      harmed.length ? harmed.map(impactLine).join('\n') : '- No specific harmed party identified in the evidence.',
+    ],
+    historic: () => ['Historic context', narrative?.historic ?? context?.historicContext ?? 'Not yet synthesised.'],
+    present: () => ['Present context', narrative?.present ?? context?.presentContext ?? 'Not yet synthesised.'],
+    future: () => ['Future outlook', narrative?.future ?? context?.futureContext ?? 'Not yet synthesised.'],
+    scenarios: () => [
+      'Future scenarios',
+      scenarios.length ? scenarios.map((s) => `- **${s.title}** (${pct(s.confidence)}): ${s.summary}`).join('\n') : '- No scenarios generated.',
+    ],
+    positioning: () => [
+      'Strategic positioning examples',
+      positioning.length ? positioning.slice(0, 6).map((p) => `- **${p.title}**: ${p.howItCouldBeUsed}`).join('\n') : '- None generated.',
+    ],
+    watch: () => ['Watch signals', watchSignals.length ? watchSignals.map((w) => `- ${w}`).join('\n') : '- None.'],
+    sources: () => ['Sources', sources.length ? sources.map((s) => `- ${s}`).join('\n') : '- None recorded.'],
+  }
+
+  const orderedSections = REPORT_SECTIONS[reportType]
+  const body = orderedSections
+    .map((key) => {
+      const [heading, content] = renderSection[key]()
+      return `## ${heading}\n${content}`
+    })
+    .join('\n\n')
+
   const markdown = [
     `# ${reportType.replace(/_/g, ' ').toLowerCase()} — ${event.title}`,
     ``,
     `_${REPORT_FOCUS[reportType]}_`,
     ``,
-    `## Summary`,
-    narrative?.executive ? `${narrative.executive}\n\n${event.summary}` : event.summary,
-    ``,
-    `## Evidence reliability`,
-    `Overall reliability: ${pct(reliability)}. Origin traced to ${originUrls.length} source(s).`,
-    ``,
-    `## Who benefits`,
-    beneficiaries.length ? beneficiaries.map(impactLine).join('\n') : '- No specific beneficiary identified in the evidence.',
-    ``,
-    `## Who is harmed`,
-    harmed.length ? harmed.map(impactLine).join('\n') : '- No specific harmed party identified in the evidence.',
-    ``,
-    `## Historic context`,
-    narrative?.historic ?? context?.historicContext ?? 'Not yet synthesised.',
-    ``,
-    `## Present context`,
-    narrative?.present ?? context?.presentContext ?? 'Not yet synthesised.',
-    ``,
-    `## Future scenarios`,
-    scenarios.length ? scenarios.map((s) => `- **${s.title}** (${pct(s.confidence)}): ${s.summary}`).join('\n') : '- No scenarios generated.',
-    ``,
-    `## Strategic positioning examples`,
-    positioning.length ? positioning.slice(0, 6).map((p) => `- **${p.title}**: ${p.howItCouldBeUsed}`).join('\n') : '- None generated.',
-    ``,
-    `## Watch signals`,
-    watchSignals.length ? watchSignals.map((w) => `- ${w}`).join('\n') : '- None.',
-    ``,
-    `## Sources`,
-    sources.length ? sources.map((s) => `- ${s}`).join('\n') : '- None recorded.',
+    body,
     ``,
     `---`,
     `_This is structured intelligence for context only, not investment advice._`,
   ].join('\n')
 
   assertNoAdviceLanguage(markdown, `report:${reportType}`)
-  return { reportType, markdown, sections }
+  return { reportType, markdown, sections: { ...sections, orderedSections } }
 }

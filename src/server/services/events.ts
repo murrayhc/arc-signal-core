@@ -10,7 +10,7 @@ export type EventDetail = {
   event: {
     id: string; title: string; eventType: string; eventClass: string; status: string; summary: string
     severity: number; probability: number; confidence: number; riskScore: number; opportunityScore: number
-    noveltyScore: number; evidenceCount: number; sourceDiversityScore: number
+    noveltyScore: number; momentumScore: number; evidenceCount: number; sourceDiversityScore: number
     affectedSector: string | null; affectedRegion: string | null
     firstDetectedAt: string; lastUpdatedAt: string
     timeWindowStart: string | null; timeWindowEnd: string | null
@@ -89,6 +89,7 @@ export async function getEventDetail(id: string): Promise<EventDetail | null> {
       riskScore: event.riskScore,
       opportunityScore: event.opportunityScore,
       noveltyScore: event.noveltyScore,
+      momentumScore: event.momentumScore,
       evidenceCount: event.evidenceCount,
       sourceDiversityScore: event.sourceDiversityScore,
       affectedSector: event.affectedSector,
