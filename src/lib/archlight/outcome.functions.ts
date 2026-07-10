@@ -130,14 +130,21 @@ export const freezePredictions = createServerFn({ method: "POST" })
             (a, c) => a + Number(c.contradiction_count ?? 0),
             0
           );
-          const groupSet = new Set<string>();
+          const sourceIdSet = new Set<string>();
           const daySet = new Set<string>();
           for (const l of lineage ?? []) {
-            if (l.source_id) groupSet.add(String(l.source_id));
+            if (l.source_id) sourceIdSet.add(String(l.source_id));
             if (l.published_at) {
               const d = new Date(l.published_at);
               if (!isNaN(d.getTime())) daySet.add(d.toISOString().slice(0, 10));
             }
+          }
+          // Publisher groups (independence_group), not raw source rows.
+          const metaMap = await loadSourceMetaMap(db, Array.from(sourceIdSet));
+          const groupSet = new Set<string>();
+          for (const sid of sourceIdSet) {
+            const g = metaMap.get(sid)?.group;
+            if (g) groupSet.add(g);
           }
           groups = groupSet.size;
           supportDays = daySet.size;
