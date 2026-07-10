@@ -904,6 +904,20 @@ export const runScan = createServerFn({ method: "POST" }).handler(async () => {
     notes.push(`Track record snapshot skipped: ${err instanceof Error ? err.message : String(err)}`);
   }
 
+  // ============ SOURCE ACCURACY LEARNING (owner-gated) ============
+  // Compute per-source accuracy from resolved receipts and upsert nudge
+  // suggestions. Nothing changes automatically — the owner applies via UI.
+  let sourceSuggestions = 0;
+  try {
+    const { computeSourceAccuracy } = await import("./source-learning.functions");
+    const r = await computeSourceAccuracy();
+    sourceSuggestions = r.suggestions_upserted;
+    if (sourceSuggestions > 0) notes.push(`Source learning: ${sourceSuggestions} reliability suggestion(s) pending owner review.`);
+  } catch (err) {
+    notes.push(`Source learning skipped: ${err instanceof Error ? err.message : String(err)}`);
+  }
+
+
   // Append prediction-ledger summary into the persisted scan notes (best-effort).
   try {
     const tailNote = `Predictions frozen: ${predictionsFrozen} | resolved: ${predictionsResolved} | pending_review: ${predictionsPendingReview}`;
