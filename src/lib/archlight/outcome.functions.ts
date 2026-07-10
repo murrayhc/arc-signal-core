@@ -592,14 +592,14 @@ export const resolveOutcomes = createServerFn({ method: "POST" }).handler(async 
           outcome: "happened",
           by: "auto_evidence",
           rationale: primaryCorroboration
-            ? `Confirmed by ${newGroups} new source(s), including at least one high-reliability primary source (reliability > 0.8, non-synthetic). Minimum canonical reliability ${minReliability.toFixed(2)}.`
-            : `Confirmed by ${newGroups} new independent source(s) with no new contradictions.`,
+            ? `Confirmed by ${newGroups} new publisher group(s), including at least one high-reliability primary source (reliability > 0.8, non-synthetic). Minimum canonical reliability ${minReliability.toFixed(2)}.`
+            : `Confirmed by ${newGroups} new independent publisher group(s) with no new contradictions.`,
         };
       } else if (newContradictions >= 2 || (newContradictions >= 1 && newGroups === 0)) {
         decision = {
           outcome: "did_not_happen",
           by: "auto_evidence",
-          rationale: `Contradicted: ${newContradictions} new contradiction(s) vs ${newGroups} new supporting source(s).`,
+          rationale: `Contradicted: ${newContradictions} new contradiction(s) vs ${newGroups} new supporting publisher group(s).`,
         };
       } else if (eventDismissed) {
         queueReason = `Underlying event was dismissed while receipt was open.`;
