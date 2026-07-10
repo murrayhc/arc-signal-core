@@ -507,7 +507,7 @@ export const runScan = createServerFn({ method: "POST" }).handler(async () => {
 
   const prioritisedClusters = merged
     .map((cluster) => {
-      const sourceCount = new Set(cluster.members.map((m) => m.source_id)).size;
+      const sourceCount = new Set(cluster.members.map((m) => m.source_group || m.source_id)).size;
       const avgReliability = cluster.members.reduce((a, m) => a + m.reliability, 0) / Math.max(1, cluster.members.length);
       return { ...cluster, score: (sourceCount * 4) + cluster.members.length + avgReliability };
     })
