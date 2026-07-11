@@ -742,6 +742,59 @@ export type Database = {
         }
         Relationships: []
       }
+      distress_cohort: {
+        Row: {
+          company_number: string | null
+          created_at: string
+          entity_id: string
+          flagged_at: string
+          id: string
+          matched_types: Json
+          outcome: string
+          outcome_detail: string | null
+          profile_score: number | null
+          resolved_at: string | null
+          survive_after: string
+          updated_at: string
+        }
+        Insert: {
+          company_number?: string | null
+          created_at?: string
+          entity_id: string
+          flagged_at?: string
+          id?: string
+          matched_types?: Json
+          outcome?: string
+          outcome_detail?: string | null
+          profile_score?: number | null
+          resolved_at?: string | null
+          survive_after: string
+          updated_at?: string
+        }
+        Update: {
+          company_number?: string | null
+          created_at?: string
+          entity_id?: string
+          flagged_at?: string
+          id?: string
+          matched_types?: Json
+          outcome?: string
+          outcome_detail?: string | null
+          profile_score?: number | null
+          resolved_at?: string | null
+          survive_after?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "distress_cohort_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: true
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       distress_signatures: {
         Row: {
           created_at: string
