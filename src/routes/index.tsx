@@ -100,6 +100,8 @@ function Dashboard() {
 
 
       <YourExposuresRail />
+      <RisingStressRail />
+
 
       {/* Lower grid */}
       <div className="grid grid-cols-12 gap-5">
