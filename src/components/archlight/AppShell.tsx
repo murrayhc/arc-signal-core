@@ -31,19 +31,8 @@ function TopNav({ onRunScan, scanning }: { onRunScan?: () => void; scanning?: bo
           </div>
         </Link>
 
-        <nav className="hidden lg:flex items-center gap-1 text-xs">
-          <TopLink to="/" label="Overview"/>
-          <TopLink to="/digest" label="Digest"/>
-          <TopLink to="/interrogate" label="Interrogate"/>
-          <TopLink to="/opportunities" label="Opportunities"/>
-          <TopLink to="/companies" label="Companies"/>
-          <TopLink to="/arcs" label="Arcs"/>
-          <TopLink to="/exposures" label="Exposures"/>
-          <TopLink to="/briefings" label="Briefings"/>
-          <TopLink to="/track-record" label="Track record"/>
-          <TopLink to="/backtest" label="Backtest"/>
-          <TopLink to="/ask-graph" label="Ask graph"/>
-        </nav>
+
+
 
         <div className="flex-1"/>
 
@@ -141,13 +130,17 @@ function IconBtn({ children }: { children: ReactNode }) {
 function SideNav() {
   const items: Array<{ icon: typeof Gauge; label: string; to: string; group?: string }> = [
     { icon: Gauge, label: "Overview", to: "/" },
+    { icon: Layers, label: "Digest", to: "/digest" },
     { icon: Search, label: "Interrogate", to: "/interrogate" },
+    { icon: Compass, label: "Ask graph", to: "/ask-graph" },
     { icon: Sparkles, label: "Opportunities", to: "/opportunities" },
     { icon: Building2, label: "Companies", to: "/companies" },
     { icon: GitBranch, label: "Evidence arcs", to: "/arcs" },
     { icon: Eye, label: "Watchlists", to: "/watchlist" },
     { icon: Crosshair, label: "Exposures", to: "/exposures" },
     { icon: Target, label: "Interrogations", to: "/interrogations" },
+    { icon: Bell, label: "Briefings", to: "/briefings" },
+    { icon: Flame, label: "Track record", to: "/track-record" },
     { icon: FlaskConical, label: "Backtest", to: "/backtest" },
     { icon: Radar, label: "Scans", to: "/scans" },
     { icon: Database, label: "Sources", to: "/sources" },
