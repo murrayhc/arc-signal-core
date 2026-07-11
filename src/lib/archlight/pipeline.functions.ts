@@ -304,6 +304,56 @@ export const runScan = createServerFn({ method: "POST" }).handler(async () => {
     }
   }
 
+  // ============ CONTRACTS FINDER COLLECTOR ============
+  // UK public-sector procurement/award notices (OCDS JSON, no key). Runs
+  // after the RSS/feed loop and before synthesis so its documents flow
+  // through the same extraction → clustering → synthesis path. Non-fatal.
+  let contractsFinderIngested = 0;
+  try {
+    const { fetchContractsFinder, CONTRACTS_FINDER_SOURCE } = await import("./collectors/contracts-finder.server");
+    const { ingestDocument } = await import("./ingest.server");
+    if (!hasBudget()) throw new Error("scan runtime budget reached before Contracts Finder step");
+
+    let { data: cfSrc } = await db.from("sources").select("*").eq("name", CONTRACTS_FINDER_SOURCE.name).maybeSingle();
+    if (!cfSrc) {
+      const ins = await db.from("sources").insert(CONTRACTS_FINDER_SOURCE).select().single();
+      cfSrc = ins.data ?? null;
+      if (ins.error) notes.push(`Contracts Finder: source create failed — ${ins.error.message}`);
+    }
+    if (cfSrc) {
+      const docs = await fetchContractsFinder({ sinceHours: 24, limit: 100, maxPages: 3 });
+      notes.push(`Contracts Finder: fetched ${docs.length} notice(s).`);
+      for (const d of docs) {
+        if (!hasBudget()) { notes.push("Contracts Finder: stopped early — runtime budget reached."); break; }
+        const ing = await ingestDocument(db, {
+          src: cfSrc,
+          title: d.title,
+          body: d.body,
+          url: d.url,
+          publishedAt: d.publishedAt,
+          isSynthetic: false,
+          collectedVia: "api",
+          recentShingleSets,
+          copyLoopJaccard: settings.copy_loop_jaccard,
+          logStage: "contracts_finder",
+        });
+        for (const n of ing.notes) notes.push(n);
+        if (ing.skipped) continue;
+        documentsCollected++;
+        atomicClaimsCreated += ing.atomicsCreated;
+        contractsFinderIngested++;
+        for (const c of ing.newClaims) newClaims.push(c);
+      }
+      if (contractsFinderIngested > 0) {
+        await db.from("sources").update({ last_success_at: new Date().toISOString() }).eq("id", cfSrc.id);
+      }
+    }
+  } catch (err) {
+    notes.push(`Contracts Finder skipped: ${err instanceof Error ? err.message : String(err)}`);
+  }
+
+
+
   // ============ SYNTHESIS PHASE ============
   // Semantic clustering: seed buckets by configurable strategy, then merge
   // buckets whose embedding centroids exceed the configured cosine threshold.
@@ -855,6 +905,8 @@ export const runScan = createServerFn({ method: "POST" }).handler(async () => {
     investigation_events: investigationEvents,
     investigation_ingested: investigationIngested,
     investigation_claims: investigationClaims,
+    contracts_finder_ingested: contractsFinderIngested,
+
     notes,
   };
 
