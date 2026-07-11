@@ -735,6 +735,7 @@ interface VerdictInput {
   predictionId: string;
   verdict: "happened" | "did_not_happen" | "unresolvable" | "needs_more";
   note?: string;
+  reviewer?: string;
 }
 
 export const applyPredictionVerdict = createServerFn({ method: "POST" })
@@ -744,11 +745,13 @@ export const applyPredictionVerdict = createServerFn({ method: "POST" })
         predictionId: z.string().uuid(),
         verdict: z.enum(["happened", "did_not_happen", "unresolvable", "needs_more"]),
         note: z.string().max(500).optional(),
+        reviewer: z.string().max(120).optional(),
       })
       .parse(d),
   )
   .handler(async ({ data }: { data: VerdictInput }) => {
     const db = await admin();
+    const reviewer = (data.reviewer ?? "owner").slice(0, 120);
     const { data: rec } = await db
       .from("outcome_predictions")
       .select(
@@ -767,7 +770,7 @@ export const applyPredictionVerdict = createServerFn({ method: "POST" })
         .eq("id", rec.id);
       await db
         .from("review_queue")
-        .update({ status: "needs_more_evidence" })
+        .update({ status: "needs_more_evidence", reviewed_by: reviewer })
         .eq("item_type", "prediction_resolution")
         .eq("item_id", rec.id)
         .eq("status", "pending");
@@ -792,12 +795,33 @@ export const applyPredictionVerdict = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
 
     const reviewStatus: "approved" | "rejected" = outcome === "happened" ? "approved" : "rejected";
+    const { data: rqRow } = await db
+      .from("review_queue")
+      .select("id")
+      .eq("item_type", "prediction_resolution")
+      .eq("item_id", rec.id)
+      .eq("status", "pending")
+      .maybeSingle();
     await db
       .from("review_queue")
-      .update({ status: reviewStatus, reviewer_notes: data.note ?? null })
+      .update({ status: reviewStatus, reviewer_notes: data.note ?? null, reviewed_by: reviewer })
       .eq("item_type", "prediction_resolution")
       .eq("item_id", rec.id)
       .eq("status", "pending");
+
+    // Attribution: record the verdict as a graded prediction (accrues over time).
+    try {
+      const { recordReviewerVerdict } = await import("./reviewers.functions");
+      await recordReviewerVerdict({
+        reviewer,
+        reviewItemId: rqRow?.id ?? null,
+        itemType: "prediction_resolution",
+        subjectKind: "prediction",
+        subjectId: rec.id,
+        verdict: outcome,
+      });
+    } catch { /* never fail a verdict on attribution */ }
+
 
     // If this was an event receipt, grade its still-open scenarios.
     if (rec.subject_kind === "event") {
