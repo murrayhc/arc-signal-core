@@ -147,6 +147,7 @@ function SideNav() {
     { icon: Eye, label: "Watchlists", to: "/watchlist" },
     { icon: Crosshair, label: "Exposures", to: "/exposures" },
     { icon: Target, label: "Interrogations", to: "/interrogations" },
+    { icon: FlaskConical, label: "Backtest", to: "/backtest" },
     { icon: Radar, label: "Scans", to: "/scans" },
     { icon: Database, label: "Sources", to: "/sources" },
     { icon: Shield, label: "Review queue", to: "/review" },
