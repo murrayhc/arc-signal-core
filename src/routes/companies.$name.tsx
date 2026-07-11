@@ -1,9 +1,11 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AppShell } from "@/components/archlight/AppShell";
 import { getCompanyDeep } from "@/lib/archlight/precognition.functions";
 import { getEntityDistressProfile } from "@/lib/archlight/signatures.functions";
-import { ArrowLeft, Building2, Fingerprint, GitBranch, Loader2, Radar, Sparkles, TriangleAlert, Users, Zap } from "lucide-react";
+import { getRegistryEdges, rebuildRegistryGraph } from "@/lib/archlight/registry.functions";
+import { ArrowLeft, Building2, CheckCircle2, Fingerprint, GitBranch, Landmark, Loader2, RefreshCw, Sparkles, TriangleAlert, Users, Zap } from "lucide-react";
+
 
 
 export const Route = createFileRoute("/companies/$name")({
