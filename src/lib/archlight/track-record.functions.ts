@@ -94,6 +94,19 @@ async function computeCore(): Promise<TrackRecord> {
     .map((r) => Number(r.lead_time_days))
     .filter((n) => Number.isFinite(n));
   const mean_lead_time_days = leadTimes.length ? Number((leadTimes.reduce((a, b) => a + b, 0) / leadTimes.length).toFixed(2)) : null;
+  const sortedLead = [...leadTimes].sort((a, b) => a - b);
+  const median_lead_time_days = sortedLead.length
+    ? Number(
+        (
+          sortedLead.length % 2
+            ? sortedLead[(sortedLead.length - 1) / 2]
+            : (sortedLead[sortedLead.length / 2 - 1] + sortedLead[sortedLead.length / 2]) / 2
+        ).toFixed(2),
+      )
+    : null;
+  const before_mainstream_count = graded.filter(
+    (r) => r.outcome === "happened" && (r as { before_mainstream?: boolean }).before_mainstream === true,
+  ).length;
 
   const scenariosResolved = scenarios.filter((r) => r.status === "resolved" && r.outcome && r.outcome !== "unresolvable");
   const scenario_count = scenariosResolved.length;
