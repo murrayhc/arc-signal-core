@@ -166,7 +166,7 @@ export const updateBeliefs = createServerFn({ method: "POST" })
     // Sum over verified edges (either direction) of neighbour.decayed * weight * 0.4, capped 0.5.
     type Inherited = { neighbour_id: string; neighbour_name: string; relationship_type: string; contribution: number };
     const inheritedByEntity = new Map<string, { total: number; sources: Inherited[] }>();
-    for (const id of involvedArr) inheritedByEntity.set(id, { total: 0, sources: [] });
+    for (const idv of involvedArr) inheritedByEntity.set(idv, { total: 0, sources: [] });
 
     const addInherited = (target: string, neighbour: string, relType: string, weight: number) => {
       if (target === neighbour) return;
