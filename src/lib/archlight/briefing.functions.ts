@@ -161,7 +161,7 @@ export async function generateBriefings(opts: GenerateOpts): Promise<GenerateRes
         profile_id: p.id,
         briefing_date: date,
         summary,
-        stats: stats as unknown as Record<string, unknown>,
+        stats: JSON.parse(JSON.stringify(stats)),
         // Clear delivered_at on regenerate so the delivery pass can re-send.
         delivered_at: null,
       }, { onConflict: "profile_id,briefing_date" });
