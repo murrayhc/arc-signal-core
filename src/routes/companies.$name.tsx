@@ -392,3 +392,56 @@ function formatSignalType(t: string): string {
   }
 }
 
+interface RegistryRow {
+  entity_id: string;
+  canonical_name: string;
+  company_number: string | null;
+  relationship_type: string;
+  weight: number;
+  rationale: string | null;
+  natures: string[];
+  direction: "outgoing" | "incoming";
+}
+function RegistryColumn({ title, rows, arrow }: { title: string; rows: RegistryRow[]; arrow: string }) {
+  return (
+    <div className="rounded-md border border-border/50 bg-background/30 p-3">
+      <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mb-2">{title}</div>
+      {rows.length === 0 && <div className="text-[11px] text-muted-foreground italic">None.</div>}
+      <ul className="space-y-2">
+        {rows.map((r) => (
+          <li key={`${r.entity_id}-${r.relationship_type}-${r.direction}`} className="rounded border border-border/40 bg-background/40 p-2">
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] font-mono text-muted-foreground">{arrow}</span>
+              <Link
+                to="/companies/$name"
+                params={{ name: encodeURIComponent(r.canonical_name) }}
+                className="text-xs font-display hover:text-[color:var(--color-signal)] truncate"
+              >
+                {r.canonical_name}
+              </Link>
+            </div>
+            <div className="mt-1 flex flex-wrap items-center gap-1.5">
+              <span
+                className="inline-flex items-center gap-1 text-[9px] font-mono uppercase tracking-widest px-1.5 py-0.5 rounded"
+                style={{ background: "color-mix(in oklch, var(--color-signal) 18%, transparent)", color: "var(--color-signal)", border: "1px solid color-mix(in oklch, var(--color-signal) 40%, transparent)" }}
+              >
+                <CheckCircle2 className="h-2.5 w-2.5"/>registry-verified
+              </span>
+              <span className="text-[10px] font-mono text-muted-foreground">w {r.weight.toFixed(2)}</span>
+              {r.company_number && <span className="text-[10px] font-mono text-muted-foreground">no {r.company_number}</span>}
+            </div>
+            {r.natures.length > 0 && r.relationship_type === "controls" && (
+              <div className="mt-1 text-[10px] text-muted-foreground line-clamp-2">
+                {r.natures.slice(0, 3).map((n) => n.replace(/-/g, " ")).join(" · ")}
+              </div>
+            )}
+            {r.rationale && r.relationship_type !== "controls" && (
+              <div className="mt-1 text-[10px] text-muted-foreground line-clamp-1">{r.rationale}</div>
+            )}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
