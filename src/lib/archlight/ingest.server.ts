@@ -5,7 +5,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { callJson, callEmbedding, guardFinancialAdvice, pickModel } from "./ai-gateway.server";
-import { shingles, jaccard, shingleSignature, deriveIndependenceGroup } from "./text.server";
+import { shingles, jaccard, shingleSignature, deriveIndependenceGroup, fetchArticleBody } from "./text.server";
 
 export type DbAdmin = SupabaseClient<Database>;
 
