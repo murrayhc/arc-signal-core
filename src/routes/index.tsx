@@ -12,8 +12,9 @@ import { runScan } from "@/lib/archlight/pipeline.functions";
 import { getScanSettings } from "@/lib/archlight/settings.functions";
 import { countKnobsOffDefault } from "@/lib/archlight/settings.defaults";
 import { listExposureHits, markHitSeen } from "@/lib/archlight/exposure.functions";
+import { getRisingStressRail } from "@/lib/archlight/beliefs.functions";
 import { toast } from "sonner";
-import { Crosshair, Settings } from "lucide-react";
+import { Activity, ArrowDown, ArrowUp, Crosshair, Minus, Settings } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
