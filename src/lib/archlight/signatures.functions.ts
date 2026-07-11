@@ -389,3 +389,201 @@ export const computeDistressProfiles = createServerFn({ method: "POST" })
 
     return { companies_checked: checked, profiles_written: written, review_queue_added: reviewAdded, notes };
   });
+
+// ============= 3. resolveCohort =============
+
+const FAILED_STATUSES = new Set([
+  "liquidation",
+  "administration",
+  "insolvency-proceedings",
+  "receivership",
+  "receiver-action",
+  "dissolved",
+  "voluntary-arrangement",
+]);
+
+export interface ResolveCohortOpts { maxChecks?: number }
+
+export async function resolveCohort(opts: ResolveCohortOpts = {}): Promise<{
+  checked: number; failed: number; survived: number; still_open: number; notes: string[];
+}> {
+  const db = await admin();
+  const notes: string[] = [];
+  const maxChecks = Math.max(1, Math.min(200, opts.maxChecks ?? 30));
+
+  const apiKey = process.env.COMPANIES_HOUSE_API_KEY;
+  if (!apiKey) {
+    notes.push("resolveCohort: COMPANIES_HOUSE_API_KEY not set — skipping.");
+    return { checked: 0, failed: 0, survived: 0, still_open: 0, notes };
+  }
+
+  // Find Gazette source ids up front for post-flag failure detection.
+  const { data: gazetteSources } = await db
+    .from("sources")
+    .select("id")
+    .or("name.ilike.%gazette%,base_url.ilike.%thegazette%");
+  const gazetteIds = (gazetteSources ?? []).map((s) => s.id);
+
+  const { data: openRows } = await db
+    .from("distress_cohort")
+    .select("id, entity_id, company_number, flagged_at, survive_after")
+    .eq("outcome", "open")
+    .order("flagged_at", { ascending: true })
+    .limit(maxChecks);
+  const rows = (openRows ?? []) as Array<{
+    id: string; entity_id: string; company_number: string | null;
+    flagged_at: string; survive_after: string;
+  }>;
+
+  let checked = 0;
+  let failed = 0;
+  let survived = 0;
+  let stillOpen = 0;
+  let rateLimited = false;
+
+  const nowIso = new Date().toISOString();
+  const nowMs = Date.now();
+
+  for (const row of rows) {
+    if (rateLimited) { notes.push("Stopped — Companies House rate limited."); break; }
+    checked++;
+
+    // 1. Try Companies House company profile for a failure status.
+    let markedFailed = false;
+    let failDetail: string | null = null;
+
+    if (row.company_number) {
+      let profile: Awaited<ReturnType<typeof chCompanyProfile>> = null;
+      try {
+        profile = await chCompanyProfile(row.company_number, apiKey);
+      } catch {
+        rateLimited = true;
+      }
+      if (profile?.company_status && FAILED_STATUSES.has(profile.company_status)) {
+        markedFailed = true;
+        failDetail = `company_status=${profile.company_status}`;
+      }
+    }
+
+    // 2. Fallback: any Gazette document referencing this entity, dated after flagged_at.
+    if (!markedFailed && gazetteIds.length > 0) {
+      const { data: docs } = await db
+        .from("documents")
+        .select("id, published_at, title")
+        .in("source_id", gazetteIds)
+        .gte("published_at", row.flagged_at)
+        .not("published_at", "is", null);
+      const entityDocs = docs ?? [];
+      if (entityDocs.length > 0) {
+        // Filter by entity_id via document_entities join if it exists.
+        const { data: docLinks } = await db
+          .from("document_entities" as never)
+          .select("document_id, entity_id")
+          .in("document_id", entityDocs.map((d) => d.id))
+          .eq("entity_id", row.entity_id)
+          .limit(1);
+        // If the join table is absent or returns empty, we do NOT auto-mark
+        // — only real linked evidence counts.
+        if (docLinks && docLinks.length > 0) {
+          const hit = entityDocs.find((d) => d.id === (docLinks[0] as { document_id: string }).document_id);
+          markedFailed = true;
+          failDetail = `gazette_notice=${(hit?.title ?? "").slice(0, 200)}`;
+        }
+      }
+    }
+
+    if (markedFailed) {
+      await db.from("distress_cohort").update({
+        outcome: "failed",
+        outcome_detail: (failDetail ?? "failure detected").slice(0, 500),
+        resolved_at: nowIso,
+      }).eq("id", row.id);
+      failed++;
+      continue;
+    }
+
+    // 3. Survival: past survive_after with no failure signal.
+    const surviveAfterMs = Date.parse(row.survive_after + "T00:00:00Z");
+    if (Number.isFinite(surviveAfterMs) && nowMs > surviveAfterMs) {
+      await db.from("distress_cohort").update({
+        outcome: "survived",
+        outcome_detail: "no failure signal within 18 months",
+        resolved_at: nowIso,
+      }).eq("id", row.id);
+      survived++;
+      continue;
+    }
+
+    stillOpen++;
+  }
+
+  return { checked, failed, survived, still_open: stillOpen, notes };
+}
+
+export const resolveCohortNow = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => z.object({ maxChecks: z.number().int().min(1).max(200).optional() }).optional().parse(d))
+  .handler(async ({ data }) => resolveCohort({ maxChecks: data?.maxChecks }));
+
+// ============= 4. computeCalibration =============
+
+export interface CalibrationBand {
+  band: string;
+  min: number;
+  max: number;
+  failed: number;
+  survived: number;
+  open: number;
+  resolved: number;
+  failure_rate: number | null; // null when resolved === 0
+}
+export interface CalibrationResult {
+  overall: { failed: number; survived: number; open: number; resolved: number; failure_rate: number | null };
+  bands: CalibrationBand[];
+  min_headline_sample: 30;
+}
+
+export const computeCalibration = createServerFn({ method: "GET" }).handler(async (): Promise<CalibrationResult> => {
+  const db = await admin();
+  const { data } = await db
+    .from("distress_cohort")
+    .select("outcome, profile_score");
+  const rows = (data ?? []) as Array<{ outcome: string; profile_score: number | null }>;
+
+  const bandDefs: Array<{ band: string; min: number; max: number }> = [
+    { band: "0.50–0.69", min: 0.5, max: 0.7 },
+    { band: "0.70–0.84", min: 0.7, max: 0.85 },
+    { band: "0.85–1.00", min: 0.85, max: 1.0001 },
+  ];
+
+  const bands: CalibrationBand[] = bandDefs.map((b) => ({
+    ...b, failed: 0, survived: 0, open: 0, resolved: 0, failure_rate: null,
+  }));
+
+  let failed = 0, survived = 0, open = 0;
+  for (const r of rows) {
+    const s = Number(r.profile_score ?? 0);
+    if (r.outcome === "failed") failed++;
+    else if (r.outcome === "survived") survived++;
+    else open++;
+    for (const b of bands) {
+      if (s >= b.min && s < b.max) {
+        if (r.outcome === "failed") b.failed++;
+        else if (r.outcome === "survived") b.survived++;
+        else b.open++;
+      }
+    }
+  }
+  for (const b of bands) {
+    b.resolved = b.failed + b.survived;
+    b.failure_rate = b.resolved > 0 ? Number((b.failed / b.resolved).toFixed(4)) : null;
+  }
+  const resolved = failed + survived;
+  return {
+    overall: {
+      failed, survived, open, resolved,
+      failure_rate: resolved > 0 ? Number((failed / resolved).toFixed(4)) : null,
+    },
+    bands,
+    min_headline_sample: 30,
+  };
+});
