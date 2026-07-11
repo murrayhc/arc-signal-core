@@ -952,30 +952,39 @@ export type Database = {
           created_at: string
           from_entity_id: string
           id: string
+          natures: Json
           rationale: string | null
           relationship_type: string
+          source: string
           source_notes: string | null
           to_entity_id: string
+          verified: boolean
           weight: number
         }
         Insert: {
           created_at?: string
           from_entity_id: string
           id?: string
+          natures?: Json
           rationale?: string | null
           relationship_type: string
+          source?: string
           source_notes?: string | null
           to_entity_id: string
+          verified?: boolean
           weight?: number
         }
         Update: {
           created_at?: string
           from_entity_id?: string
           id?: string
+          natures?: Json
           rationale?: string | null
           relationship_type?: string
+          source?: string
           source_notes?: string | null
           to_entity_id?: string
+          verified?: boolean
           weight?: number
         }
         Relationships: [
