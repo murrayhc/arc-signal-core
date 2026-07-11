@@ -924,6 +924,9 @@ export const runScan = createServerFn({ method: "POST" }).handler(async () => {
     for (const n of b.notes) notes.push(n);
   } catch (err) {
     notes.push(`Belief pass skipped: ${err instanceof Error ? err.message : String(err)}`);
+  }
+
+
 
   // ============ ACTIVE INVESTIGATION (GDELT) ============
   // For events with OPEN outcome_predictions (nearest deadline first), search
