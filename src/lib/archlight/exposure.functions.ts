@@ -319,6 +319,13 @@ export const addExposureItem = createServerFn({ method: "POST" })
       notes: data.notes ?? null,
     }).select().single();
     if (error) throw new Error(error.message);
+    // Backfill: immediately score the newly added item against the most
+    // recent events so the user sees hits without waiting for the next scan.
+    try {
+      await scoreExposures({});
+    } catch (e) {
+      console.warn("[exposure] backfill scoreExposures failed", e);
+    }
     return row;
   });
 
@@ -331,15 +338,50 @@ export const removeExposureItem = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+const UpdateProfileInput = z.object({
+  id: z.string().uuid(),
+  name: z.string().min(1).max(200).optional(),
+  active: z.boolean().optional(),
+  description: z.string().max(2000).nullable().optional(),
+});
+export const updateExposureProfile = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => UpdateProfileInput.parse(d))
+  .handler(async ({ data }) => {
+    const db = await admin();
+    const patch: Record<string, unknown> = {};
+    if (data.name !== undefined) patch.name = data.name.trim();
+    if (data.active !== undefined) patch.active = data.active;
+    if (data.description !== undefined) patch.description = data.description;
+    const { error } = await db.from("exposure_profiles").update(patch).eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const deleteExposureProfile = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data }) => {
+    const db = await admin();
+    const { error } = await db.from("exposure_profiles").delete().eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 export const listProfilesWithItems = createServerFn({ method: "GET" }).handler(async () => {
   const db = await admin();
-  const [{ data: profiles }, { data: items }] = await Promise.all([
+  const [{ data: profiles }, { data: items }, { data: hits }] = await Promise.all([
     db.from("exposure_profiles").select("*").order("created_at", { ascending: false }),
     db.from("exposure_items").select("*"),
+    db.from("exposure_hits").select("exposure_item_id"),
   ]);
+  const hitCounts = new Map<string, number>();
+  for (const h of hits ?? []) {
+    hitCounts.set(h.exposure_item_id, (hitCounts.get(h.exposure_item_id) ?? 0) + 1);
+  }
   const grouped = (profiles ?? []).map((p) => ({
     ...p,
-    items: (items ?? []).filter((it) => it.profile_id === p.id),
+    items: (items ?? [])
+      .filter((it) => it.profile_id === p.id)
+      .map((it) => ({ ...it, hit_count: hitCounts.get(it.id) ?? 0 })),
   }));
   return { profiles: grouped };
 });
@@ -347,16 +389,24 @@ export const listProfilesWithItems = createServerFn({ method: "GET" }).handler(a
 const ListHitsInput = z.object({
   profileId: z.string().uuid().optional(),
   unseenOnly: z.boolean().optional(),
+  activeOnly: z.boolean().optional(),
   limit: z.number().int().positive().max(200).optional(),
 });
 export const listExposureHits = createServerFn({ method: "GET" })
   .inputValidator((d: unknown) => ListHitsInput.parse(d ?? {}))
   .handler(async ({ data }) => {
     const db = await admin();
+    let profileIdFilter: string[] | null = null;
+    if (data.activeOnly) {
+      const { data: pr } = await db.from("exposure_profiles").select("id").eq("active", true);
+      profileIdFilter = (pr ?? []).map((p) => p.id);
+      if (profileIdFilter.length === 0) return { hits: [], events: [], items: [], profiles: [] };
+    }
     let q = db.from("exposure_hits").select(
       "id, profile_id, exposure_item_id, event_candidate_id, relevance, direction, match_kind, rationale, seen, created_at",
     );
     if (data.profileId) q = q.eq("profile_id", data.profileId);
+    if (profileIdFilter) q = q.in("profile_id", profileIdFilter);
     if (data.unseenOnly) q = q.eq("seen", false);
     q = q.order("relevance", { ascending: false }).limit(data.limit ?? 100);
     const { data: hits, error } = await q;
@@ -364,15 +414,41 @@ export const listExposureHits = createServerFn({ method: "GET" })
     const hitsArr = hits ?? [];
     const eventIds = Array.from(new Set(hitsArr.map((h) => h.event_candidate_id)));
     const itemIds = Array.from(new Set(hitsArr.map((h) => h.exposure_item_id)));
+    const profileIds = Array.from(new Set(hitsArr.map((h) => h.profile_id)));
     type EvRow = { id: string; title: string; event_class: string; severity: string; risk_score: number; opportunity_score: number; confidence: number };
     type ItRow = { id: string; name: string; kind: string; weight: number };
+    type PrRow = { id: string; name: string; active: boolean };
     const events: EvRow[] = eventIds.length
       ? ((await db.from("event_candidates").select("id, title, event_class, severity, risk_score, opportunity_score, confidence").in("id", eventIds)).data ?? []) as EvRow[]
       : [];
     const items: ItRow[] = itemIds.length
       ? ((await db.from("exposure_items").select("id, name, kind, weight").in("id", itemIds)).data ?? []) as ItRow[]
       : [];
-    return { hits: hitsArr, events, items };
+    const profilesOut: PrRow[] = profileIds.length
+      ? ((await db.from("exposure_profiles").select("id, name, active").in("id", profileIds)).data ?? []) as PrRow[]
+      : [];
+    return { hits: hitsArr, events, items, profiles: profilesOut };
+  });
+
+export const listEventExposureHits = createServerFn({ method: "GET" })
+  .inputValidator((d: unknown) => z.object({ eventId: z.string().uuid() }).parse(d))
+  .handler(async ({ data }) => {
+    const db = await admin();
+    const { data: hits, error } = await db
+      .from("exposure_hits")
+      .select("id, profile_id, exposure_item_id, event_candidate_id, relevance, direction, match_kind, rationale, seen, created_at")
+      .eq("event_candidate_id", data.eventId)
+      .order("relevance", { ascending: false });
+    if (error) throw new Error(error.message);
+    const hitsArr = hits ?? [];
+    if (hitsArr.length === 0) return { hits: [], items: [], profiles: [] };
+    const itemIds = Array.from(new Set(hitsArr.map((h) => h.exposure_item_id)));
+    const profileIds = Array.from(new Set(hitsArr.map((h) => h.profile_id)));
+    const [it, pr] = await Promise.all([
+      db.from("exposure_items").select("id, name, kind, weight").in("id", itemIds),
+      db.from("exposure_profiles").select("id, name, active").in("id", profileIds),
+    ]);
+    return { hits: hitsArr, items: it.data ?? [], profiles: pr.data ?? [] };
   });
 
 export const markHitSeen = createServerFn({ method: "POST" })
@@ -383,3 +459,4 @@ export const markHitSeen = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
