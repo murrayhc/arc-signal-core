@@ -76,53 +76,146 @@ function median(nums: number[]): number | null {
 
 // ---------- 1. Import Gazette cases ----------
 
-export const importGazetteCases = createServerFn({ method: "POST" }).handler(async () => {
-  const db = await admin();
-  // Locate the Gazette source(s) — match by name/base_url.
-  const { data: sources } = await db
-    .from("sources")
-    .select("id, name")
-    .or("name.ilike.%gazette%,base_url.ilike.%thegazette%");
-  const gazetteSourceIds = (sources ?? []).map((s) => s.id);
-  if (gazetteSourceIds.length === 0) {
-    return { imported: 0, considered: 0, notes: ["No Gazette source found."] };
+const GAZETTE_FEED_BASE = "https://www.thegazette.co.uk/all-notices/notice/data.feed";
+
+function extractTag(xml: string, tag: string): string | null {
+  const re = new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, "i");
+  const m = xml.match(re);
+  return m ? m[1].trim() : null;
+}
+
+function decodeXml(s: string): string {
+  return s
+    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&apos;/g, "'")
+    .replace(/&amp;/g, "&")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function findNextLink(xml: string): string | null {
+  const re = /<link\b[^>]*\brel=["']next["'][^>]*\bhref=["']([^"']+)["'][^>]*\/?>/i;
+  const m = xml.match(re);
+  if (m) return m[1];
+  const re2 = /<link\b[^>]*\bhref=["']([^"']+)["'][^>]*\brel=["']next["'][^>]*\/?>/i;
+  const m2 = xml.match(re2);
+  return m2 ? m2[1] : null;
+}
+
+function extractEntries(xml: string): string[] {
+  const out: string[] = [];
+  const re = /<entry\b[\s\S]*?<\/entry>/gi;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(xml)) !== null) out.push(m[0]);
+  return out;
+}
+
+function extractEntryLink(entryXml: string): string | null {
+  const re = /<link\b[^>]*\bhref=["']([^"']+)["'][^>]*\/?>/i;
+  const m = entryXml.match(re);
+  return m ? m[1] : null;
+}
+
+async function fetchWithTimeout(url: string, ms: number): Promise<Response> {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), ms);
+  try {
+    return await fetch(url, {
+      signal: ctrl.signal,
+      headers: {
+        "User-Agent": "ArchlightBacktest/1.0 (+https://arc-signal-core.lovable.app)",
+        Accept: "application/atom+xml, application/xml;q=0.9, */*;q=0.8",
+      },
+    });
+  } finally {
+    clearTimeout(t);
   }
+}
 
-  const { data: docs } = await db
-    .from("documents")
-    .select("title, published_at, url")
-    .in("source_id", gazetteSourceIds)
-    .not("published_at", "is", null)
-    .order("published_at", { ascending: false })
-    .limit(500);
-  const rows = docs ?? [];
+export const importGazetteCases = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        maxPages: z.number().int().min(1).max(50).optional(),
+        pageSize: z.number().int().min(10).max(100).optional(),
+      })
+      .optional()
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const db = await admin();
+    const maxPages = data?.maxPages ?? 10;
+    const pageSize = data?.pageSize ?? 100;
+    const notes: string[] = [];
 
-  let imported = 0;
-  const notes: string[] = [];
-  for (const d of rows) {
-    const name = extractCompanyName(d.title ?? "");
-    const outcomeDate = toISODate(d.published_at);
-    if (!name || !outcomeDate) continue;
-    const { error } = await db
-      .from("backtest_cases")
-      .upsert(
-        {
-          company_name: name,
-          outcome_type: "insolvency",
-          outcome_date: outcomeDate,
-          source: "the_gazette",
-          notes: (d.url ?? "").slice(0, 500),
-        },
-        { onConflict: "company_name,outcome_type,outcome_date", ignoreDuplicates: true },
-      );
-    if (error) {
-      notes.push(`upsert failed for "${name}": ${error.message}`);
-      continue;
+    let url: string | null = `${GAZETTE_FEED_BASE}?categorycode=24&results-page-size=${pageSize}`;
+    let pages_fetched = 0;
+    let considered = 0;
+    let imported = 0;
+
+    while (url && pages_fetched < maxPages) {
+      let xml: string;
+      try {
+        const res = await fetchWithTimeout(url, 15000);
+        if (!res.ok) {
+          notes.push(`fetch ${res.status} at page ${pages_fetched + 1}`);
+          break;
+        }
+        xml = await res.text();
+      } catch (e) {
+        notes.push(`fetch error at page ${pages_fetched + 1}: ${(e as Error).message}`);
+        break;
+      }
+      pages_fetched++;
+
+      const entries = extractEntries(xml);
+      for (const entry of entries) {
+        considered++;
+        const rawTitle = extractTag(entry, "title");
+        const title = rawTitle ? decodeXml(rawTitle) : "";
+        const name = extractCompanyName(title);
+        const dateStr = extractTag(entry, "updated") ?? extractTag(entry, "published");
+        const outcomeDate = toISODate(dateStr);
+        if (!name || !outcomeDate) continue;
+
+        const rawContent = extractTag(entry, "content") ?? extractTag(entry, "summary") ?? "";
+        const contentText = decodeXml(rawContent);
+        const numMatch = contentText.match(/Company Number\s*[:#]?\s*([0-9A-Z]{6,10})/i);
+        const company_number = numMatch ? numMatch[1].toUpperCase() : null;
+
+        const link = extractEntryLink(entry);
+
+        const { error } = await db
+          .from("backtest_cases")
+          .upsert(
+            {
+              company_name: name,
+              company_number,
+              outcome_type: "insolvency",
+              outcome_date: outcomeDate,
+              source: "the_gazette",
+              notes: (link ?? "").slice(0, 500),
+            },
+            { onConflict: "company_name,outcome_type,outcome_date", ignoreDuplicates: true },
+          );
+        if (error) {
+          notes.push(`upsert failed for "${name}": ${error.message}`);
+          continue;
+        }
+        imported++;
+      }
+
+      const next = findNextLink(xml);
+      url = next && next !== url ? next : null;
     }
-    imported++;
-  }
-  return { imported, considered: rows.length, notes };
-});
+
+    return { imported, considered, pages_fetched, notes };
+  });
 
 // ---------- 2. Run backtest ----------
 
