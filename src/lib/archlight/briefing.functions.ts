@@ -274,6 +274,15 @@ export async function runDailyBriefing(): Promise<{
   } catch (e) {
     notes.push(`cohort: skipped (${e instanceof Error ? e.message : String(e)})`);
   }
+  // Best-effort: refresh registry-verified relationship edges from Companies House.
+  try {
+    const { buildRegistryEdges } = await import("./registry.functions");
+    const reg = await buildRegistryEdges({ maxCompanies: 15 });
+    for (const n of reg.notes) notes.push(n);
+  } catch (e) {
+    notes.push(`registry: skipped (${e instanceof Error ? e.message : String(e)})`);
+  }
+
   return {
     date,
     generated: gen.generated,

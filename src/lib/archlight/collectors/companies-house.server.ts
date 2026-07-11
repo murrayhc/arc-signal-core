@@ -159,6 +159,30 @@ export async function chCompanyProfile(number: string, apiKey: string): Promise<
   return chGet<CHCompanyProfile>(`/company/${encodeURIComponent(number)}`, apiKey);
 }
 
+// Persons with Significant Control — ownership & voting-rights facts.
+export interface CHPSCItem {
+  kind?: string; // e.g. "individual-person-with-significant-control", "corporate-entity-person-with-significant-control"
+  name?: string;
+  natures_of_control?: string[];
+  identification?: {
+    registration_number?: string;
+    country_registered?: string;
+    legal_authority?: string;
+    legal_form?: string;
+    place_registered?: string;
+  };
+  ceased_on?: string;
+}
+interface CHPSCResp { items?: CHPSCItem[] }
+export async function chPSC(number: string, apiKey: string): Promise<CHPSCItem[]> {
+  const resp = await chGet<CHPSCResp>(
+    `/company/${encodeURIComponent(number)}/persons-with-significant-control`,
+    apiKey,
+  );
+  return resp?.items ?? [];
+}
+
+
 
 
 function companyUrl(number: string): string {

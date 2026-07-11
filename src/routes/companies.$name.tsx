@@ -1,9 +1,11 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AppShell } from "@/components/archlight/AppShell";
 import { getCompanyDeep } from "@/lib/archlight/precognition.functions";
 import { getEntityDistressProfile } from "@/lib/archlight/signatures.functions";
-import { ArrowLeft, Building2, Fingerprint, GitBranch, Loader2, Radar, Sparkles, TriangleAlert, Users, Zap } from "lucide-react";
+import { getRegistryEdges, rebuildRegistryGraph } from "@/lib/archlight/registry.functions";
+import { ArrowLeft, Building2, CheckCircle2, Fingerprint, GitBranch, Landmark, Loader2, Radar, RefreshCw, Sparkles, TriangleAlert, Users, Zap } from "lucide-react";
+
 
 
 export const Route = createFileRoute("/companies/$name")({
@@ -32,6 +34,20 @@ function CompanyDetailPage() {
     queryFn: () => getEntityDistressProfile({ data: { entityId: entityId! } }),
     enabled: !!entityId,
   });
+  const { data: registry } = useQuery({
+    queryKey: ["archlight", "registry-edges", entityId],
+    queryFn: () => getRegistryEdges({ data: { entityId: entityId! } }),
+    enabled: !!entityId,
+  });
+  const qc = useQueryClient();
+  const rebuild = useMutation({
+    mutationFn: () => rebuildRegistryGraph({ data: { maxCompanies: 20 } }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["archlight", "registry-edges"] });
+      qc.invalidateQueries({ queryKey: ["archlight", "company", "deep"] });
+    },
+  });
+
 
 
   const propagatedImpacts = (data?.impacts ?? []).filter((i) => (i.metadata as { propagated?: boolean } | null)?.propagated);
@@ -144,6 +160,66 @@ function CompanyDetailPage() {
                 })()}
               </section>
             )}
+
+            {/* Ownership & control — Companies House registry-verified edges */}
+            {entityId && (
+              <section className="glass-panel rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Landmark className="h-4 w-4" style={{ color: "var(--color-signal)" }}/>
+                  <h2 className="font-display text-sm">Ownership & control — Companies House</h2>
+                  <span className="ml-auto flex items-center gap-2">
+                    <span className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+                      {(registry?.outgoing.length ?? 0) + (registry?.incoming.length ?? 0)} verified
+                    </span>
+                    <button
+                      onClick={() => rebuild.mutate()}
+                      disabled={rebuild.isPending}
+                      className="inline-flex items-center gap-1.5 h-7 px-2 rounded-md text-[10px] font-mono uppercase tracking-widest border border-border/60 text-muted-foreground hover:text-foreground hover:bg-accent/40 transition disabled:opacity-50"
+                    >
+                      {rebuild.isPending
+                        ? <><Loader2 className="h-3 w-3 animate-spin"/>rebuilding…</>
+                        : <><RefreshCw className="h-3 w-3"/>rebuild registry graph</>}
+                    </button>
+                  </span>
+                </div>
+                {!registry && <div className="text-xs text-muted-foreground italic">Loading registry edges…</div>}
+                {registry && (registry.outgoing.length + registry.incoming.length === 0) && (
+                  <div className="text-xs text-muted-foreground italic">
+                    No registry-verified edges yet. Rebuild pulls Persons with Significant Control and shared officers from Companies House.
+                  </div>
+                )}
+                {registry && (registry.outgoing.length + registry.incoming.length > 0) && (
+                  <div className="grid md:grid-cols-3 gap-3 text-xs">
+                    <RegistryColumn
+                      title="Controlled by (incoming)"
+                      rows={registry.incoming.filter((r) => r.relationship_type === "controls")}
+                      arrow="←"
+                    />
+                    <RegistryColumn
+                      title="Controls (outgoing)"
+                      rows={registry.outgoing.filter((r) => r.relationship_type === "controls")}
+                      arrow="→"
+                    />
+                    <RegistryColumn
+                      title="Shared directors"
+                      rows={[
+                        ...registry.outgoing.filter((r) => r.relationship_type === "shared_officer"),
+                        ...registry.incoming.filter((r) => r.relationship_type === "shared_officer"),
+                      ]}
+                      arrow="↔"
+                    />
+                  </div>
+                )}
+                {rebuild.data && (
+                  <div className="mt-3 text-[10px] font-mono text-muted-foreground border-t border-border/40 pt-2">
+                    Last rebuild — checked {rebuild.data.companies_checked}, PSC edges {rebuild.data.psc_edges},
+                    shared-officer edges {rebuild.data.shared_officer_edges}, numbers resolved {rebuild.data.numbers_resolved}.
+                  </div>
+                )}
+              </section>
+            )}
+
+
 
             {/* Forward scenarios grouped by horizon */}
 
@@ -314,5 +390,58 @@ function formatSignalType(t: string): string {
     case "officer_resignation": return "Officer resigned";
     default: return t;
   }
+}
+
+interface RegistryRow {
+  entity_id: string;
+  canonical_name: string;
+  company_number: string | null;
+  relationship_type: string;
+  weight: number;
+  rationale: string | null;
+  natures: string[];
+  direction: "outgoing" | "incoming";
+}
+function RegistryColumn({ title, rows, arrow }: { title: string; rows: RegistryRow[]; arrow: string }) {
+  return (
+    <div className="rounded-md border border-border/50 bg-background/30 p-3">
+      <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mb-2">{title}</div>
+      {rows.length === 0 && <div className="text-[11px] text-muted-foreground italic">None.</div>}
+      <ul className="space-y-2">
+        {rows.map((r) => (
+          <li key={`${r.entity_id}-${r.relationship_type}-${r.direction}`} className="rounded border border-border/40 bg-background/40 p-2">
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] font-mono text-muted-foreground">{arrow}</span>
+              <Link
+                to="/companies/$name"
+                params={{ name: encodeURIComponent(r.canonical_name) }}
+                className="text-xs font-display hover:text-[color:var(--color-signal)] truncate"
+              >
+                {r.canonical_name}
+              </Link>
+            </div>
+            <div className="mt-1 flex flex-wrap items-center gap-1.5">
+              <span
+                className="inline-flex items-center gap-1 text-[9px] font-mono uppercase tracking-widest px-1.5 py-0.5 rounded"
+                style={{ background: "color-mix(in oklch, var(--color-signal) 18%, transparent)", color: "var(--color-signal)", border: "1px solid color-mix(in oklch, var(--color-signal) 40%, transparent)" }}
+              >
+                <CheckCircle2 className="h-2.5 w-2.5"/>registry-verified
+              </span>
+              <span className="text-[10px] font-mono text-muted-foreground">w {r.weight.toFixed(2)}</span>
+              {r.company_number && <span className="text-[10px] font-mono text-muted-foreground">no {r.company_number}</span>}
+            </div>
+            {r.natures.length > 0 && r.relationship_type === "controls" && (
+              <div className="mt-1 text-[10px] text-muted-foreground line-clamp-2">
+                {r.natures.slice(0, 3).map((n) => n.replace(/-/g, " ")).join(" · ")}
+              </div>
+            )}
+            {r.rationale && r.relationship_type !== "controls" && (
+              <div className="mt-1 text-[10px] text-muted-foreground line-clamp-1">{r.rationale}</div>
+            )}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
 }
 

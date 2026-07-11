@@ -147,21 +147,32 @@ export async function scoreExposures(opts: ScoreExposuresOpts): Promise<ScoreExp
   if (itemEntityIds.length) {
     const { data: rels } = await db
       .from("entity_relationships")
-      .select("from_entity_id, to_entity_id, weight")
+      .select("from_entity_id, to_entity_id, weight, verified")
       .or(itemEntityIds.map((id) => `from_entity_id.eq.${id},to_entity_id.eq.${id}`).join(","));
+    // Prefer verified (registry-fact) edges over inferred ones on the same pair.
+    const bestByPair = new Map<string, { from_entity_id: string; to_entity_id: string; weight: number; verified: boolean }>();
     for (const r of rels ?? []) {
+      const key = `${r.from_entity_id}|${r.to_entity_id}`;
+      const prev = bestByPair.get(key);
       const w = Number(r.weight ?? 1);
+      const v = !!r.verified;
+      if (!prev || (v && !prev.verified)) {
+        bestByPair.set(key, { from_entity_id: r.from_entity_id, to_entity_id: r.to_entity_id, weight: w, verified: v });
+      }
+    }
+    for (const r of bestByPair.values()) {
       if (itemEntityIds.includes(r.from_entity_id)) {
         const arr = relMap.get(r.from_entity_id) ?? [];
-        arr.push({ other: r.to_entity_id, weight: w });
+        arr.push({ other: r.to_entity_id, weight: r.weight });
         relMap.set(r.from_entity_id, arr);
       }
       if (itemEntityIds.includes(r.to_entity_id)) {
         const arr = relMap.get(r.to_entity_id) ?? [];
-        arr.push({ other: r.from_entity_id, weight: w });
+        arr.push({ other: r.from_entity_id, weight: r.weight });
         relMap.set(r.to_entity_id, arr);
       }
     }
+
   }
 
   // 4. Score each item × event
