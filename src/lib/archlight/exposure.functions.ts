@@ -114,7 +114,7 @@ export async function scoreExposures(opts: ScoreExposuresOpts): Promise<ScoreExp
   const impactsByEvent = new Map<string, Array<{ company: string; entity_id: string | null }>>();
   for (const im of impacts ?? []) {
     const arr = impactsByEvent.get(im.event_candidate_id) ?? [];
-    arr.push({ company: im.company_name, entity_id: im.entity_id });
+    arr.push({ company: im.company_name ?? "", entity_id: im.entity_id });
     impactsByEvent.set(im.event_candidate_id, arr);
   }
 
