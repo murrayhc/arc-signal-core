@@ -29,6 +29,12 @@ const runsQuery = queryOptions({
   queryFn: () => listRecentBacktestRuns({ data: { limit: 10 } }),
   staleTime: 30_000,
 });
+const signaturesQuery = queryOptions({
+  queryKey: ["archlight", "signatures"],
+  queryFn: () => listSignatures(),
+  staleTime: 30_000,
+});
+
 
 export const Route = createFileRoute("/backtest")({
   head: () => ({
