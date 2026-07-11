@@ -104,14 +104,39 @@ export function centroid(vectors: number[][]): number[] | null {
 // ============ Lightweight RSS parser (title/link/description) ============
 export interface FeedItem { title: string; link: string; description: string; publishedAt: string | null; }
 
-export async function fetchFeed(url: string, timeoutMs = 8000): Promise<FeedItem[]> {
+export interface FeedFetchResult {
+  notModified: boolean;
+  items: FeedItem[];
+  etag: string | null;
+  lastModified: string | null;
+}
+
+export async function fetchFeed(
+  url: string,
+  opts: { etag?: string | null; lastModified?: string | null; timeoutMs?: number } = {},
+): Promise<FeedFetchResult> {
+  const timeoutMs = opts.timeoutMs ?? 8000;
   const controller = new AbortController();
   const t = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const res = await fetch(url, { signal: controller.signal, headers: { "User-Agent": "Mozilla/5.0 (compatible; ArchlightBot/1.0; +https://arc-signal-core.lovable.app)", "Accept": "application/rss+xml, application/atom+xml, application/xml;q=0.9, */*;q=0.8" } });
+    const headers: Record<string, string> = {
+      "User-Agent": "Mozilla/5.0 (compatible; ArchlightBot/1.0; +https://arc-signal-core.lovable.app)",
+      "Accept": "application/rss+xml, application/atom+xml, application/xml;q=0.9, */*;q=0.8",
+    };
+    if (opts.etag) headers["If-None-Match"] = opts.etag;
+    if (opts.lastModified) headers["If-Modified-Since"] = opts.lastModified;
+    const res = await fetch(url, { signal: controller.signal, headers });
+    if (res.status === 304) {
+      return { notModified: true, items: [], etag: null, lastModified: null };
+    }
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const xml = await res.text();
-    return parseRss(xml);
+    return {
+      notModified: false,
+      items: parseRss(xml),
+      etag: res.headers.get("etag"),
+      lastModified: res.headers.get("last-modified"),
+    };
   } finally {
     clearTimeout(t);
   }

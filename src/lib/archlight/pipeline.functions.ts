@@ -154,7 +154,7 @@ export const runScan = createServerFn({ method: "POST" }).handler(async () => {
   let sourcesSucceeded = 0;
   let sourcesFailed = 0;
 
-  const { data: sources } = await db.from("sources").select("*").eq("status", "active").order("reliability_score", { ascending: false }).limit(settings.sources_per_scan);
+  const { data: sources } = await db.from("sources").select("*").in("status", ["active", "degraded"]).order("reliability_score", { ascending: false }).limit(settings.sources_per_scan);
   const chosen = sources ?? [];
 
   const hasBudget = () => Date.now() < deadlineAtMs;
@@ -201,7 +201,26 @@ export const runScan = createServerFn({ method: "POST" }).handler(async () => {
       notes.push("Stopped source intake early: scan runtime budget reached; partial results saved.");
       break;
     }
+
+    // Backoff: skip degraded/failing sources unless overdue by refresh_cadence_minutes.
+    const consecFailures = Number(src.consecutive_failures ?? 0);
+    if (consecFailures >= 5) {
+      const cadenceMin = Math.max(1, Number(src.refresh_cadence_minutes ?? 60));
+      const lastSuccessMs = src.last_success_at ? Date.parse(src.last_success_at) : 0;
+      const lastFailureMs = src.last_failure_at ? Date.parse(src.last_failure_at) : 0;
+      const lastAnyMs = Math.max(lastSuccessMs, lastFailureMs);
+      const overdue = !lastAnyMs || (Date.now() - lastAnyMs) >= cadenceMin * 60 * 1000;
+      if (!overdue) {
+        notes.push(`${src.name}: skipped (backoff, ${consecFailures} consecutive failures, not yet overdue).`);
+        continue;
+      }
+    }
+
     sourcesAttempted++;
+    let feedNotModified = false;
+    let feedEtag: string | null = null;
+    let feedLastModified: string | null = null;
+
     try {
       // 1. Collect one or more documents for this source (RSS multi-pick or single synthetic).
 
@@ -214,21 +233,44 @@ export const runScan = createServerFn({ method: "POST" }).handler(async () => {
 
       if (src.feed_url && (src.feed_kind === "rss" || src.feed_kind === "atom")) {
         try {
-          const items = await fetchFeed(src.feed_url);
-          const valid = items.filter((it) => it.title && it.description).slice(0, Math.max(1, settings.items_per_feed));
-          for (const it of valid) {
-            picks.push({
-              title: it.title,
-              body: it.description,
-              url: it.link ?? `https://demo/${src.id.slice(0, 8)}/${Date.now()}-${picks.length}`,
-              publishedAt: it.publishedAt ?? new Date().toISOString(),
-              isSynthetic: false,
-              collectedVia: "rss",
-            });
+          const feedResult = await fetchFeed(src.feed_url, {
+            etag: src.http_etag ?? null,
+            lastModified: src.http_last_modified ?? null,
+          });
+          if (feedResult.notModified) {
+            feedNotModified = true;
+            notes.push(`${src.name}: feed unchanged (304 Not Modified).`);
+          } else {
+            feedEtag = feedResult.etag;
+            feedLastModified = feedResult.lastModified;
+            const valid = feedResult.items.filter((it) => it.title && it.description).slice(0, Math.max(1, settings.items_per_feed));
+            for (const it of valid) {
+              picks.push({
+                title: it.title,
+                body: it.description,
+                url: it.link ?? `https://demo/${src.id.slice(0, 8)}/${Date.now()}-${picks.length}`,
+                publishedAt: it.publishedAt ?? new Date().toISOString(),
+                isSynthetic: false,
+                collectedVia: "rss",
+              });
+            }
           }
         } catch (err) {
           notes.push(`RSS fetch failed for ${src.name}: ${err instanceof Error ? err.message : String(err)} — falling back to synthetic.`);
         }
+      }
+
+      // 304 Not Modified is success — no new work, but reset backoff and skip synthetic fallback.
+      if (feedNotModified) {
+        await db.from("sources").update({
+          last_success_at: new Date().toISOString(),
+          consecutive_failures: 0,
+          status: "active",
+          health_score: Math.min(1, Number(src.health_score) + 0.005),
+        }).eq("id", src.id);
+        sourcesSucceeded++;
+        await saveProgress();
+        continue;
       }
 
       // If RSS produced nothing, fall back to a single synthetic slot (title/body filled below).
@@ -293,13 +335,26 @@ export const runScan = createServerFn({ method: "POST" }).handler(async () => {
       if (!sourceProducedAtLeastOne) throw new Error("no usable docs from source");
 
 
-      await db.from("sources").update({ last_success_at: new Date().toISOString(), health_score: Math.min(1, Number(src.health_score) + 0.01) }).eq("id", src.id);
+      await db.from("sources").update({
+        last_success_at: new Date().toISOString(),
+        health_score: Math.min(1, Number(src.health_score) + 0.01),
+        consecutive_failures: 0,
+        status: "active",
+        ...(feedEtag !== null ? { http_etag: feedEtag } : {}),
+        ...(feedLastModified !== null ? { http_last_modified: feedLastModified } : {}),
+      }).eq("id", src.id);
       sourcesSucceeded++;
       await saveProgress();
     } catch (err) {
       sourcesFailed++;
-      notes.push(`${src.name}: ${err instanceof Error ? err.message : String(err)}`);
-      await db.from("sources").update({ last_failure_at: new Date().toISOString(), health_score: Math.max(0, Number(src.health_score) - 0.05) }).eq("id", src.id);
+      const newFailures = consecFailures + 1;
+      notes.push(`${src.name}: ${err instanceof Error ? err.message : String(err)} (consecutive_failures=${newFailures})`);
+      await db.from("sources").update({
+        last_failure_at: new Date().toISOString(),
+        health_score: Math.max(0, Number(src.health_score) - 0.05),
+        consecutive_failures: newFailures,
+        ...(newFailures >= 5 ? { status: "degraded" as const } : {}),
+      }).eq("id", src.id);
       await saveProgress();
     }
   }
