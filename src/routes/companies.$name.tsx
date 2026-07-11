@@ -40,6 +40,11 @@ function CompanyDetailPage() {
     queryFn: () => getRegistryEdges({ data: { entityId: entityId! } }),
     enabled: !!entityId,
   });
+  const { data: belief } = useQuery({
+    queryKey: ["archlight", "belief", entityId],
+    queryFn: () => getBeliefState({ data: { entityId: entityId! } }),
+    enabled: !!entityId,
+  });
   const qc = useQueryClient();
   const rebuild = useMutation({
     mutationFn: () => rebuildRegistryGraph({ data: { maxCompanies: 20 } }),
