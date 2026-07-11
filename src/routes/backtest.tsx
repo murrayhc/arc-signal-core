@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { AppShell } from "@/components/archlight/AppShell";
-import { FlaskConical, ImportIcon, Play, RefreshCcw, Fingerprint, Radar } from "lucide-react";
+import { FlaskConical, ImportIcon, Play, RefreshCcw, Fingerprint, Radar, TimerReset } from "lucide-react";
 import {
   computeBacktestSummary,
   getBacktestSummary,
@@ -11,7 +11,8 @@ import {
   listRecentBacktestRuns,
   runBacktest,
 } from "@/lib/archlight/backtest.functions";
-import { computeDistressProfiles, listSignatures, mineSignatures } from "@/lib/archlight/signatures.functions";
+import { computeCalibration, computeDistressProfiles, listSignatures, mineSignatures, resolveCohortNow } from "@/lib/archlight/signatures.functions";
+
 
 
 const summaryQuery = queryOptions({
