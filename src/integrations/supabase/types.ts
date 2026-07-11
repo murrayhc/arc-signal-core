@@ -477,6 +477,50 @@ export type Database = {
           },
         ]
       }
+      company_distress_profiles: {
+        Row: {
+          company_number: string | null
+          computed_at: string
+          created_at: string
+          entity_id: string
+          id: string
+          matched_types: Json
+          profile_score: number
+          updated_at: string
+          window_months: number
+        }
+        Insert: {
+          company_number?: string | null
+          computed_at?: string
+          created_at?: string
+          entity_id: string
+          id?: string
+          matched_types?: Json
+          profile_score?: number
+          updated_at?: string
+          window_months?: number
+        }
+        Update: {
+          company_number?: string | null
+          computed_at?: string
+          created_at?: string
+          entity_id?: string
+          id?: string
+          matched_types?: Json
+          profile_score?: number
+          updated_at?: string
+          window_months?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_distress_profiles_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: true
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_exposures: {
         Row: {
           company_name: string
@@ -695,6 +739,39 @@ export type Database = {
           top_scenarios?: Json
           window_end?: string
           window_start?: string
+        }
+        Relationships: []
+      }
+      distress_signatures: {
+        Row: {
+          created_at: string
+          id: string
+          median_lead_days: number | null
+          mined_at: string
+          prevalence_in_failures: number
+          sample_size: number
+          signal_type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          median_lead_days?: number | null
+          mined_at?: string
+          prevalence_in_failures?: number
+          sample_size?: number
+          signal_type: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          median_lead_days?: number | null
+          mined_at?: string
+          prevalence_in_failures?: number
+          sample_size?: number
+          signal_type?: string
+          updated_at?: string
         }
         Relationships: []
       }
