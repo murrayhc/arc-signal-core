@@ -386,5 +386,5 @@ export async function ingestDocument(db: DbAdmin, opts: IngestOpts): Promise<Ing
     }
   }
 
-  return { docId: doc.id, newClaims, atomicsCreated, notes, isLikelyCopy };
+  return { docId: doc.id, newClaims, atomicsCreated, notes, isLikelyCopy, fetchedBody };
 }
