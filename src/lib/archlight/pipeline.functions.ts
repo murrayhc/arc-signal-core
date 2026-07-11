@@ -949,6 +949,18 @@ export const runScan = createServerFn({ method: "POST" }).handler(async () => {
     notes.push(`Investigation pass skipped: ${err instanceof Error ? err.message : String(err)}`);
   }
 
+  // ============ RED TEAM + ACH ANALYSIS ============
+  // Bounded, non-fatal adversarial analysis for the top events of this scan.
+  try {
+    const { autoAnalyseTopEvents } = await import("./analysis.functions");
+    const a = await autoAnalyseTopEvents({ scanRunId: run.id, max: 3 });
+    for (const n of a.notes) notes.push(n);
+  } catch (err) {
+    notes.push(`Red-team analysis skipped: ${err instanceof Error ? err.message : String(err)}`);
+  }
+
+
+
 
   // ============ PREDICTION LEDGER (freeze receipts) ============
   // Final, non-fatal stage. Freezes an immutable receipt per event + per
