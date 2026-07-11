@@ -182,5 +182,114 @@ function stripTags(s: string): string {
 }
 function safeDate(s: string): string | null {
   const d = new Date(s);
-  return Number.isFinite(d.getTime()) ? d.toISOString() : null;
+
+// ============ Full-article body fetch (best-effort, polite) ============
+//
+// Fetch a public article URL and extract the readable body text so downstream
+// claim extraction / synthesis works on real prose, not a headline snippet.
+// Never throws — returns null on any error, non-HTML, or too-short output.
+
+const ARCHLIGHT_UA = "Mozilla/5.0 (compatible; ArchlightBot/1.0; +https://arc-signal-core.lovable.app)";
+
+function stripTagBlocks(html: string, tag: string): string {
+  const re = new RegExp(`<${tag}\\b[^>]*>[\\s\\S]*?</${tag}>`, "gi");
+  return html.replace(re, " ");
 }
+
+function decodeEntities(s: string): string {
+  return s
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/&#(\d+);/g, (_, n) => {
+      const code = parseInt(n, 10);
+      return Number.isFinite(code) ? String.fromCharCode(code) : "";
+    })
+    .replace(/&[a-z]+;/gi, " ");
+}
+
+function normalise(s: string): string {
+  return decodeEntities(s).replace(/\s+/g, " ").trim();
+}
+
+function extractTagInnerText(html: string, tag: string): string | null {
+  const re = new RegExp(`<${tag}\\b[^>]*>([\\s\\S]*?)</${tag}>`, "i");
+  const m = html.match(re);
+  if (!m) return null;
+  const inner = m[1].replace(/<[^>]+>/g, " ");
+  const text = normalise(inner);
+  return text || null;
+}
+
+function extractParagraphs(html: string): string {
+  const paras: string[] = [];
+  const re = /<p\b[^>]*>([\s\S]*?)<\/p>/gi;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(html)) !== null) {
+    const inner = m[1].replace(/<[^>]+>/g, " ");
+    const text = normalise(inner);
+    if (text.length >= 40) paras.push(text); // drop nav/link fragments
+  }
+  return paras.join("\n\n");
+}
+
+const BODY_CAP = 8000;
+const BODY_MIN = 200;
+const BODY_TIMEOUT_MS = 10000;
+
+export async function fetchArticleBody(url: string): Promise<string | null> {
+  try {
+    if (!/^https?:\/\//i.test(url)) return null;
+    const controller = new AbortController();
+    const t = setTimeout(() => controller.abort(), BODY_TIMEOUT_MS);
+    let html: string;
+    let ctype: string | null;
+    try {
+      const res = await fetch(url, {
+        signal: controller.signal,
+        redirect: "follow",
+        headers: {
+          "User-Agent": ARCHLIGHT_UA,
+          "Accept": "text/html,application/xhtml+xml;q=0.9,*/*;q=0.5",
+          "Accept-Language": "en-GB,en;q=0.9",
+        },
+      });
+      if (!res.ok) return null;
+      ctype = res.headers.get("content-type");
+      if (ctype && !/html/i.test(ctype)) return null;
+      html = await res.text();
+    } finally {
+      clearTimeout(t);
+    }
+    if (!html || (ctype && !/html/i.test(ctype))) return null;
+
+    // Strip non-content blocks.
+    let cleaned = html;
+    for (const tag of ["script", "style", "noscript", "nav", "footer", "header", "aside", "form"]) {
+      cleaned = stripTagBlocks(cleaned, tag);
+    }
+
+    // Prefer <article>, then <main>, else largest concatenation of <p> text.
+    const candidates: string[] = [];
+    const art = extractTagInnerText(cleaned, "article");
+    if (art) candidates.push(art);
+    const main = extractTagInnerText(cleaned, "main");
+    if (main) candidates.push(main);
+    const paras = extractParagraphs(cleaned);
+    if (paras) candidates.push(paras);
+
+    let best = "";
+    for (const c of candidates) {
+      const n = normalise(c);
+      if (n.length > best.length) best = n;
+    }
+    if (best.length < BODY_MIN) return null;
+    return best.slice(0, BODY_CAP);
+  } catch {
+    return null;
+  }
+}
+
