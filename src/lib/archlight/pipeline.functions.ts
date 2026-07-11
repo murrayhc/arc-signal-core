@@ -198,8 +198,9 @@ export const runScan = createServerFn({ method: "POST" }).handler(async () => {
   const newClaims: NewClaim[] = [];
 
   // Load a small window of recent doc signatures for copy-loop detection.
-  const { data: recentDocs } = await db.from("documents").select("id, title, body, shingle_signature").order("fetched_at", { ascending: false }).limit(80);
-  const recentShingleSets = (recentDocs ?? []).map((d) => ({ id: d.id, s: shingles(`${d.title ?? ""} ${d.body ?? ""}`, 5), sig: d.shingle_signature as string | null }));
+  const { data: recentDocs } = await db.from("documents").select("id, title, body, full_text, shingle_signature").order("fetched_at", { ascending: false }).limit(80);
+  const recentShingleSets = (recentDocs ?? []).map((d) => ({ id: d.id, s: shingles(`${d.title ?? ""} ${(d.full_text ?? d.body) ?? ""}`, 5), sig: d.shingle_signature as string | null }));
+
 
   for (const src of chosen) {
     if (!hasBudget()) {
