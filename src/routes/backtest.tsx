@@ -138,7 +138,9 @@ function BacktestPage() {
             <ActionBtn onClick={() => recomputeM.mutate()} disabled={busy} icon={<RefreshCcw className="h-3.5 w-3.5"/>} label={recomputeM.isPending ? "Recomputing…" : "Recompute summary"}/>
             <ActionBtn onClick={() => mineM.mutate()} disabled={busy} icon={<Fingerprint className="h-3.5 w-3.5"/>} label={mineM.isPending ? "Mining…" : "Mine signatures"}/>
             <ActionBtn onClick={() => profileM.mutate()} disabled={busy} icon={<Radar className="h-3.5 w-3.5"/>} label={profileM.isPending ? "Matching…" : "Match live companies"}/>
+            <ActionBtn onClick={() => resolveM.mutate()} disabled={busy} icon={<TimerReset className="h-3.5 w-3.5"/>} label={resolveM.isPending ? "Resolving…" : "Resolve cohort"}/>
           </div>
+
 
         </div>
 
