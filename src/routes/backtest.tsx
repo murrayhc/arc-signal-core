@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { AppShell } from "@/components/archlight/AppShell";
-import { FlaskConical, ImportIcon, Play, RefreshCcw } from "lucide-react";
+import { FlaskConical, ImportIcon, Play, RefreshCcw, Fingerprint, Radar } from "lucide-react";
 import {
   computeBacktestSummary,
   getBacktestSummary,
@@ -11,6 +11,8 @@ import {
   listRecentBacktestRuns,
   runBacktest,
 } from "@/lib/archlight/backtest.functions";
+import { computeDistressProfiles, listSignatures, mineSignatures } from "@/lib/archlight/signatures.functions";
+
 
 const summaryQuery = queryOptions({
   queryKey: ["archlight", "backtest", "summary"],
@@ -27,6 +29,12 @@ const runsQuery = queryOptions({
   queryFn: () => listRecentBacktestRuns({ data: { limit: 10 } }),
   staleTime: 30_000,
 });
+const signaturesQuery = queryOptions({
+  queryKey: ["archlight", "signatures"],
+  queryFn: () => listSignatures(),
+  staleTime: 30_000,
+});
+
 
 export const Route = createFileRoute("/backtest")({
   head: () => ({
@@ -41,6 +49,7 @@ export const Route = createFileRoute("/backtest")({
     context.queryClient.ensureQueryData(summaryQuery);
     context.queryClient.ensureQueryData(casesQuery);
     context.queryClient.ensureQueryData(runsQuery);
+    context.queryClient.ensureQueryData(signaturesQuery);
   },
   component: BacktestPage,
 });
@@ -50,10 +59,12 @@ function BacktestPage() {
   const { data: summary } = useSuspenseQuery(summaryQuery);
   const { data: casesData } = useSuspenseQuery(casesQuery);
   const { data: runsData } = useSuspenseQuery(runsQuery);
+  const { data: sigData } = useSuspenseQuery(signaturesQuery);
   const [banner, setBanner] = useState<string | null>(null);
 
   const invalidateAll = () => {
     qc.invalidateQueries({ queryKey: ["archlight", "backtest"] });
+    qc.invalidateQueries({ queryKey: ["archlight", "signatures"] });
   };
 
   const importM = useMutation({
@@ -74,10 +85,22 @@ function BacktestPage() {
     onSuccess: () => { setBanner("Summary snapshot recorded."); invalidateAll(); },
     onError: (e: Error) => setBanner(`Recompute failed: ${e.message}`),
   });
+  const mineM = useMutation({
+    mutationFn: () => mineSignatures(),
+    onSuccess: (r) => { setBanner(`Mined ${r.signal_types ?? 0} signature(s) across ${r.total_cases ?? 0} case(s).`); invalidateAll(); },
+    onError: (e: Error) => setBanner(`Mine failed: ${e.message}`),
+  });
+  const profileM = useMutation({
+    mutationFn: () => computeDistressProfiles({ data: { maxCompanies: 20 } }),
+    onSuccess: (r) => { setBanner(`Distress profiles: checked ${r.companies_checked}, wrote ${r.profiles_written}, ${r.review_queue_added} raised for review.`); invalidateAll(); },
+    onError: (e: Error) => setBanner(`Profile run failed: ${e.message}`),
+  });
 
-  const busy = importM.isPending || runM.isPending || recomputeM.isPending;
+  const busy = importM.isPending || runM.isPending || recomputeM.isPending || mineM.isPending || profileM.isPending;
   const cases = casesData.cases;
   const runs = runsData.runs;
+  const signatures = sigData.signatures;
+
 
   return (
     <AppShell>
@@ -96,7 +119,10 @@ function BacktestPage() {
             <ActionBtn onClick={() => importM.mutate()} disabled={busy} icon={<ImportIcon className="h-3.5 w-3.5"/>} label={importM.isPending ? "Importing…" : "Import Gazette cases"}/>
             <ActionBtn onClick={() => runM.mutate()} disabled={busy} icon={<Play className="h-3.5 w-3.5"/>} label={runM.isPending ? "Running…" : "Run backtest"} accent/>
             <ActionBtn onClick={() => recomputeM.mutate()} disabled={busy} icon={<RefreshCcw className="h-3.5 w-3.5"/>} label={recomputeM.isPending ? "Recomputing…" : "Recompute summary"}/>
+            <ActionBtn onClick={() => mineM.mutate()} disabled={busy} icon={<Fingerprint className="h-3.5 w-3.5"/>} label={mineM.isPending ? "Mining…" : "Mine signatures"}/>
+            <ActionBtn onClick={() => profileM.mutate()} disabled={busy} icon={<Radar className="h-3.5 w-3.5"/>} label={profileM.isPending ? "Matching…" : "Match live companies"}/>
           </div>
+
         </div>
 
         {banner && (
@@ -148,7 +174,37 @@ function BacktestPage() {
           </section>
         )}
 
-        {/* Cases table */}
+        {/* Mined signatures — recall among known failures */}
+        <section className="glass-panel rounded-xl overflow-hidden">
+          <div className="px-4 py-2 text-[10px] font-mono uppercase tracking-widest text-muted-foreground border-b border-border/40 flex items-center justify-between">
+            <span className="flex items-center gap-2"><Fingerprint className="h-3.5 w-3.5"/>Mined distress signatures</span>
+            <span className="text-muted-foreground/70">Recall among known failures · not a probability</span>
+          </div>
+          {signatures.length === 0 ? (
+            <div className="p-6 text-center text-xs text-muted-foreground italic">
+              No signatures yet. Run the backtest, then click <span className="text-foreground">Mine signatures</span>.
+            </div>
+          ) : (
+            <table className="w-full text-xs">
+              <thead className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground bg-background/30">
+                <tr><Th>Signal</Th><Th>Prevalence in failures</Th><Th>Median lead</Th><Th>Sample</Th><Th>Mined</Th></tr>
+              </thead>
+              <tbody>
+                {signatures.map((s) => (
+                  <tr key={s.signal_type} className="border-t border-border/40">
+                    <Td>{formatType(s.signal_type)}</Td>
+                    <Td className="font-mono">{Math.round(Number(s.prevalence_in_failures) * 100)}%</Td>
+                    <Td className="font-mono">{s.median_lead_days == null ? "—" : `${Math.round(Number(s.median_lead_days))}d`}</Td>
+                    <Td className="font-mono">n={s.sample_size}</Td>
+                    <Td className="font-mono text-muted-foreground">{new Date(s.mined_at).toLocaleDateString()}</Td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </section>
+
+
         <section className="glass-panel rounded-xl overflow-hidden">
           <div className="px-4 py-2 text-[10px] font-mono uppercase tracking-widest text-muted-foreground border-b border-border/40 flex items-center justify-between">
             <span>Cases · {cases.length}</span>

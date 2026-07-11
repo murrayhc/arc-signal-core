@@ -2,7 +2,9 @@ import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/archlight/AppShell";
 import { getCompanyDeep } from "@/lib/archlight/precognition.functions";
-import { ArrowLeft, Building2, GitBranch, Loader2, Radar, Sparkles, TriangleAlert, Users, Zap } from "lucide-react";
+import { getEntityDistressProfile } from "@/lib/archlight/signatures.functions";
+import { ArrowLeft, Building2, Fingerprint, GitBranch, Loader2, Radar, Sparkles, TriangleAlert, Users, Zap } from "lucide-react";
+
 
 export const Route = createFileRoute("/companies/$name")({
   head: ({ params }) => ({
@@ -24,6 +26,13 @@ function CompanyDetailPage() {
     queryKey: ["archlight", "company", "deep", decoded],
     queryFn: () => getCompanyDeep({ data: { name: decoded } }),
   });
+  const entityId = data?.entity?.id as string | undefined;
+  const { data: distress } = useQuery({
+    queryKey: ["archlight", "distress-profile", entityId],
+    queryFn: () => getEntityDistressProfile({ data: { entityId: entityId! } }),
+    enabled: !!entityId,
+  });
+
 
   const propagatedImpacts = (data?.impacts ?? []).filter((i) => (i.metadata as { propagated?: boolean } | null)?.propagated);
   const primaryImpacts = (data?.impacts ?? []).filter((i) => !(i.metadata as { propagated?: boolean } | null)?.propagated);
@@ -75,7 +84,69 @@ function CompanyDetailPage() {
 
         {data && (
           <>
+            {/* Distress signal profile — pattern match against known UK failures */}
+            {distress?.profile && (
+              <section className="glass-panel rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Fingerprint className="h-4 w-4" style={{ color: "var(--color-risk)" }}/>
+                  <h2 className="font-display text-sm">Distress signal profile</h2>
+                  <span className="ml-auto text-[10px] font-mono text-muted-foreground">
+                    updated {new Date(distress.profile.computed_at).toLocaleDateString()}
+                  </span>
+                </div>
+                {(() => {
+                  const matched = (distress.profile.matched_types ?? []) as Array<{ type: string; date: string; historical_median_lead: number | null }>;
+                  const score = Number(distress.profile.profile_score ?? 0);
+                  const scorePct = Math.round(score * 100);
+                  const totalSigs = distress.total_signatures;
+                  const sampleN = distress.sample_size;
+                  const color = score >= 0.66 ? "var(--color-risk)" : score >= 0.34 ? "var(--color-signal)" : "var(--color-growth)";
+                  return (
+                    <>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div className="rounded-md border border-border/50 p-3 bg-background/30">
+                          <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">Pattern match</div>
+                          <div className="font-display text-3xl mt-1" style={{ color }}>{scorePct}%</div>
+                          <div className="text-[10px] font-mono text-muted-foreground mt-1">
+                            shows {matched.length} of {totalSigs} signals common in failed companies
+                          </div>
+                        </div>
+                        <div className="md:col-span-2 rounded-md border border-border/50 p-3 bg-background/30">
+                          <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">Matched signals</div>
+                          {matched.length === 0 ? (
+                            <div className="text-xs text-muted-foreground italic mt-2">
+                              No distress signals detected in the last {distress.profile.window_months} months.
+                            </div>
+                          ) : (
+                            <ul className="mt-2 space-y-1.5">
+                              {matched.map((m) => (
+                                <li key={m.type} className="flex items-baseline justify-between gap-3 text-xs">
+                                  <span>{formatSignalType(m.type)}</span>
+                                  <span className="font-mono text-muted-foreground">
+                                    {m.date}
+                                    {m.historical_median_lead != null && (
+                                      <span className="ml-2 text-[color:var(--color-signal)]">
+                                        · historical median lead {Math.round(m.historical_median_lead)}d
+                                      </span>
+                                    )}
+                                  </span>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                      </div>
+                      <div className="mt-3 text-[11px] text-muted-foreground italic border-t border-border/40 pt-2">
+                        Pattern match against {sampleN} known UK failures — a leading indicator, not a probability. Calibrated failure rates require a survivor control group (planned).
+                      </div>
+                    </>
+                  );
+                })()}
+              </section>
+            )}
+
             {/* Forward scenarios grouped by horizon */}
+
             {(data.scenarios ?? []).length > 0 && (
               <section className="glass-panel rounded-xl p-4">
                 <div className="flex items-center gap-2 mb-3">
@@ -236,3 +307,12 @@ function pct(n: unknown): string {
   if (!Number.isFinite(v)) return "—";
   return `${Math.round(v * 100)}`;
 }
+function formatSignalType(t: string): string {
+  switch (t) {
+    case "charge_registered": return "Charge registered";
+    case "insolvency_filing": return "Insolvency filing";
+    case "officer_resignation": return "Officer resigned";
+    default: return t;
+  }
+}
+
