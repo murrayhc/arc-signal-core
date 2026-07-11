@@ -363,15 +363,15 @@ export const listExposureHits = createServerFn({ method: "GET" })
     const hitsArr = hits ?? [];
     const eventIds = Array.from(new Set(hitsArr.map((h) => h.event_candidate_id)));
     const itemIds = Array.from(new Set(hitsArr.map((h) => h.exposure_item_id)));
-    const [{ data: events }, { data: items }] = await Promise.all([
-      eventIds.length
-        ? db.from("event_candidates").select("id, title, event_class, severity, risk_score, opportunity_score, confidence").in("id", eventIds)
-        : Promise.resolve({ data: [] as Array<Record<string, unknown>> }),
-      itemIds.length
-        ? db.from("exposure_items").select("id, name, kind, weight").in("id", itemIds)
-        : Promise.resolve({ data: [] as Array<Record<string, unknown>> }),
-    ]);
-    return { hits: hitsArr, events: events ?? [], items: items ?? [] };
+    type EvRow = { id: string; title: string; event_class: string; severity: string; risk_score: number; opportunity_score: number; confidence: number };
+    type ItRow = { id: string; name: string; kind: string; weight: number };
+    const events: EvRow[] = eventIds.length
+      ? ((await db.from("event_candidates").select("id, title, event_class, severity, risk_score, opportunity_score, confidence").in("id", eventIds)).data ?? []) as EvRow[]
+      : [];
+    const items: ItRow[] = itemIds.length
+      ? ((await db.from("exposure_items").select("id, name, kind, weight").in("id", itemIds)).data ?? []) as ItRow[]
+      : [];
+    return { hits: hitsArr, events, items };
   });
 
 export const markHitSeen = createServerFn({ method: "POST" })
