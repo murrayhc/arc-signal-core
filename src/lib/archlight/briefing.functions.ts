@@ -282,6 +282,14 @@ export async function runDailyBriefing(): Promise<{
   } catch (e) {
     notes.push(`registry: skipped (${e instanceof Error ? e.message : String(e)})`);
   }
+  // Best-effort: grade reviewer verdicts whose subjects have since resolved.
+  try {
+    const { gradeReviewerVerdicts } = await import("./reviewers.functions");
+    const g = await gradeReviewerVerdicts();
+    for (const n of g.notes) notes.push(n);
+  } catch (e) {
+    notes.push(`reviewer grading: skipped (${e instanceof Error ? e.message : String(e)})`);
+  }
 
   return {
     date,
