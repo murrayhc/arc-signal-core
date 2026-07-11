@@ -65,6 +65,10 @@ export interface IngestOpts {
   copyLoopJaccard?: number;
   /** Stage label used in llm_task_logs.metadata for auditing. */
   logStage?: string;
+  /** If true, try to fetch the full article body from `url` before claim extraction. */
+  enrichBody?: boolean;
+  /** Shared budget across the scan — decremented on each fetch attempt. */
+  bodyBudget?: { remaining: number };
 }
 
 export interface IngestResult {
@@ -74,7 +78,10 @@ export interface IngestResult {
   notes: string[];
   isLikelyCopy: boolean;
   skipped?: string;
+  /** True if the full article body was fetched and stored on the document. */
+  fetchedBody?: boolean;
 }
+
 
 async function logTask(
   db: DbAdmin,
