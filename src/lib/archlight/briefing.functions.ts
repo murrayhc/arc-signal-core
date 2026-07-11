@@ -265,15 +265,25 @@ export async function runDailyBriefing(): Promise<{
   const date = todayUTC();
   const gen = await generateBriefings({ date });
   const del = await deliverBriefings({ date });
+  // Best-effort: resolve the calibration cohort. Never fail the briefing on this.
+  const notes = [...gen.notes, ...del.notes];
+  try {
+    const { resolveCohort } = await import("./signatures.functions");
+    const cohort = await resolveCohort({ maxChecks: 30 });
+    notes.push(`cohort: checked=${cohort.checked} failed=${cohort.failed} survived=${cohort.survived} open=${cohort.still_open}`);
+  } catch (e) {
+    notes.push(`cohort: skipped (${e instanceof Error ? e.message : String(e)})`);
+  }
   return {
     date,
     generated: gen.generated,
     skipped: gen.skipped,
     delivered: del.delivered,
     briefings: del.briefings,
-    notes: [...gen.notes, ...del.notes],
+    notes,
   };
 }
+
 
 // ============ READ (for UI) ============
 

@@ -148,6 +148,19 @@ export async function chOfficersAll(number: string, apiKey: string, maxPages = 5
   return chGetAll<CHOfficerItem>(`/company/${encodeURIComponent(number)}/officers`, apiKey, { maxPages });
 }
 
+export interface CHCompanyProfile {
+  company_number?: string;
+  company_status?: string;
+  company_name?: string;
+  date_of_creation?: string;
+  date_of_cessation?: string;
+}
+export async function chCompanyProfile(number: string, apiKey: string): Promise<CHCompanyProfile | null> {
+  return chGet<CHCompanyProfile>(`/company/${encodeURIComponent(number)}`, apiKey);
+}
+
+
+
 function companyUrl(number: string): string {
   return `https://find-and-update.company-information.service.gov.uk/company/${encodeURIComponent(number)}`;
 }
