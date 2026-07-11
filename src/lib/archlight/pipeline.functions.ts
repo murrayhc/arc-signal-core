@@ -905,6 +905,8 @@ export const runScan = createServerFn({ method: "POST" }).handler(async () => {
     investigation_events: investigationEvents,
     investigation_ingested: investigationIngested,
     investigation_claims: investigationClaims,
+    contracts_finder_ingested: contractsFinderIngested,
+
     notes,
   };
 
