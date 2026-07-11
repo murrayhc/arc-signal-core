@@ -56,7 +56,7 @@ function TrackRecordPage() {
         </div>
 
         {/* Headline tiles */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
           <Tile label="Resolved" value={String(tr.resolved_count)} sub={`${tr.graded_count} graded · ${tr.pending_review_count} pending review · ${tr.open_count} open`}/>
           <Tile
             label="Happened %"
@@ -71,10 +71,16 @@ function TrackRecordPage() {
             color={tr.mean_brier_first != null && tr.mean_brier_first < tr.coin_flip_brier ? "var(--color-growth)" : "var(--color-reason)"}
           />
           <Tile
-            label="Mean lead time"
-            value={tr.mean_lead_time_days == null ? "—" : `${tr.mean_lead_time_days.toFixed(1)}d`}
-            sub={tr.lead_time_n > 0 ? `Across ${tr.lead_time_n} happened events · provisional` : "No happened events with lead time yet"}
-            color="var(--color-signal)"
+            label="Median lead vs mainstream"
+            value={tr.median_lead_time_days == null ? "—" : `${tr.median_lead_time_days > 0 ? "+" : ""}${tr.median_lead_time_days.toFixed(1)}d`}
+            sub={tr.lead_time_n > 0 ? `n=${tr.lead_time_n} · positive = Archlight first` : "No mainstream-matched happened events yet"}
+            color={tr.median_lead_time_days != null && tr.median_lead_time_days > 0 ? "var(--color-growth)" : "var(--color-signal)"}
+          />
+          <Tile
+            label="Called before any mainstream coverage"
+            value={String(tr.before_mainstream_count)}
+            sub={tr.before_mainstream_count > 0 ? "Exclusives — no mainstream outlet covered them" : "None yet"}
+            color={tr.before_mainstream_count > 0 ? "var(--color-growth)" : undefined}
           />
         </div>
 
