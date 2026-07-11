@@ -34,6 +34,20 @@ function CompanyDetailPage() {
     queryFn: () => getEntityDistressProfile({ data: { entityId: entityId! } }),
     enabled: !!entityId,
   });
+  const { data: registry } = useQuery({
+    queryKey: ["archlight", "registry-edges", entityId],
+    queryFn: () => getRegistryEdges({ data: { entityId: entityId! } }),
+    enabled: !!entityId,
+  });
+  const qc = useQueryClient();
+  const rebuild = useMutation({
+    mutationFn: () => rebuildRegistryGraph({ data: { maxCompanies: 20 } }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["archlight", "registry-edges"] });
+      qc.invalidateQueries({ queryKey: ["archlight", "company", "deep"] });
+    },
+  });
+
 
 
   const propagatedImpacts = (data?.impacts ?? []).filter((i) => (i.metadata as { propagated?: boolean } | null)?.propagated);
