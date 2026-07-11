@@ -161,6 +161,66 @@ function CompanyDetailPage() {
               </section>
             )}
 
+            {/* Ownership & control — Companies House registry-verified edges */}
+            {entityId && (
+              <section className="glass-panel rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Landmark className="h-4 w-4" style={{ color: "var(--color-signal)" }}/>
+                  <h2 className="font-display text-sm">Ownership & control — Companies House</h2>
+                  <span className="ml-auto flex items-center gap-2">
+                    <span className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+                      {(registry?.outgoing.length ?? 0) + (registry?.incoming.length ?? 0)} verified
+                    </span>
+                    <button
+                      onClick={() => rebuild.mutate()}
+                      disabled={rebuild.isPending}
+                      className="inline-flex items-center gap-1.5 h-7 px-2 rounded-md text-[10px] font-mono uppercase tracking-widest border border-border/60 text-muted-foreground hover:text-foreground hover:bg-accent/40 transition disabled:opacity-50"
+                    >
+                      {rebuild.isPending
+                        ? <><Loader2 className="h-3 w-3 animate-spin"/>rebuilding…</>
+                        : <><RefreshCw className="h-3 w-3"/>rebuild registry graph</>}
+                    </button>
+                  </span>
+                </div>
+                {!registry && <div className="text-xs text-muted-foreground italic">Loading registry edges…</div>}
+                {registry && (registry.outgoing.length + registry.incoming.length === 0) && (
+                  <div className="text-xs text-muted-foreground italic">
+                    No registry-verified edges yet. Rebuild pulls Persons with Significant Control and shared officers from Companies House.
+                  </div>
+                )}
+                {registry && (registry.outgoing.length + registry.incoming.length > 0) && (
+                  <div className="grid md:grid-cols-3 gap-3 text-xs">
+                    <RegistryColumn
+                      title="Controlled by (incoming)"
+                      rows={registry.incoming.filter((r) => r.relationship_type === "controls")}
+                      arrow="←"
+                    />
+                    <RegistryColumn
+                      title="Controls (outgoing)"
+                      rows={registry.outgoing.filter((r) => r.relationship_type === "controls")}
+                      arrow="→"
+                    />
+                    <RegistryColumn
+                      title="Shared directors"
+                      rows={[
+                        ...registry.outgoing.filter((r) => r.relationship_type === "shared_officer"),
+                        ...registry.incoming.filter((r) => r.relationship_type === "shared_officer"),
+                      ]}
+                      arrow="↔"
+                    />
+                  </div>
+                )}
+                {rebuild.data && (
+                  <div className="mt-3 text-[10px] font-mono text-muted-foreground border-t border-border/40 pt-2">
+                    Last rebuild — checked {rebuild.data.companies_checked}, PSC edges {rebuild.data.psc_edges},
+                    shared-officer edges {rebuild.data.shared_officer_edges}, numbers resolved {rebuild.data.numbers_resolved}.
+                  </div>
+                )}
+              </section>
+            )}
+
+
+
             {/* Forward scenarios grouped by horizon */}
 
             {(data.scenarios ?? []).length > 0 && (
