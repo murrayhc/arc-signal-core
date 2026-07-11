@@ -413,7 +413,7 @@ export const askGraph = createServerFn({ method: "POST" })
       params?: Params;
       reason?: string;
     }>({
-      task: "graph_intent_classification",
+      task: "query_generation",
       system:
         "You classify a natural-language question about a companies-and-relationships graph into EXACTLY ONE of four fixed query intents, and extract parameters. Return ONLY strict JSON. Never invent facts. If the question does not clearly map to one intent, return {\"mapped\":false}.\n" +
         "Intents:\n" +
