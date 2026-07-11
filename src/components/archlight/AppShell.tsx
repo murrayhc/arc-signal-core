@@ -143,6 +143,7 @@ function SideNav() {
     { icon: Building2, label: "Companies", to: "/companies" },
     { icon: GitBranch, label: "Evidence arcs", to: "/arcs" },
     { icon: Eye, label: "Watchlists", to: "/watchlist" },
+    { icon: Crosshair, label: "Exposures", to: "/exposures" },
     { icon: Target, label: "Interrogations", to: "/interrogations" },
     { icon: Radar, label: "Scans", to: "/scans" },
     { icon: Database, label: "Sources", to: "/sources" },
