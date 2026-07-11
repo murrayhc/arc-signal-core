@@ -146,6 +146,7 @@ export const updateBeliefs = createServerFn({ method: "POST" })
       }
     }
     for (const im of impacts) {
+      if (!im.event_candidate_id) continue;
       const ev = eventById.get(im.event_candidate_id);
       if (!ev) continue;
       addOwn(im.entity_id, ev, Number(im.confidence ?? 0));
