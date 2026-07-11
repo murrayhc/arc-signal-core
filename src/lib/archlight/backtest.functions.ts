@@ -1,0 +1,436 @@
+// Backtest harness — prove Archlight's lead-time against known outcomes.
+// Ground truth: The Gazette corporate-insolvency notices already ingested as
+// documents. Distress signals: Companies House filing history / charges /
+// officers before the outcome date.
+//
+// Guardrails: only real fetched data (no synthesised signals or dates), GBP
+// only, bounded Companies House usage.
+
+import { createServerFn } from "@tanstack/react-start";
+import { z } from "zod";
+import {
+  chChargesAll,
+  chFilingHistoryAll,
+  chOfficersAll,
+  chSearch,
+  type CHChargeItem,
+  type CHFilingItem,
+  type CHOfficerItem,
+} from "./collectors/companies-house.server";
+
+async function admin() {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  return supabaseAdmin;
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+// ---------- helpers ----------
+
+// Extract a plausible company name from a Gazette insolvency notice title.
+// Titles are like:
+//   "ACME LIMITED — Notice of appointment of liquidator"
+//   "IN THE MATTER OF ACME LTD — Notice of intended dividend"
+//   "ACME (UK) LIMITED (In Administration)"
+// Keep the leading company clause, strip any "(In Administration)" trailer,
+// and drop the "IN THE MATTER OF" boilerplate.
+function extractCompanyName(title: string): string | null {
+  if (!title) return null;
+  let t = title.trim();
+  // Split on em-dash / colon / hyphen boundaries — company is the head.
+  const splitters = [" — ", " – ", " - ", ": ", " | "];
+  for (const s of splitters) {
+    const i = t.indexOf(s);
+    if (i > 0) { t = t.slice(0, i).trim(); break; }
+  }
+  // Strip common trailing parenthetical status (e.g. "(In Administration)").
+  t = t.replace(/\s*\((in|under)\s+[^)]+\)\s*$/i, "").trim();
+  // Strip a leading "IN THE MATTER OF ".
+  t = t.replace(/^in the matter of\s+/i, "").trim();
+  // Keep it sane.
+  t = t.replace(/\s+/g, " ").slice(0, 240);
+  if (t.length < 3) return null;
+  return t;
+}
+
+function toISODate(s: string | null | undefined): string | null {
+  if (!s) return null;
+  const d = new Date(s);
+  if (!Number.isFinite(d.getTime())) return null;
+  return d.toISOString().slice(0, 10);
+}
+
+function daysBetween(fromISO: string, toISO: string): number {
+  const a = Date.parse(fromISO);
+  const b = Date.parse(toISO);
+  if (!Number.isFinite(a) || !Number.isFinite(b)) return 0;
+  return Math.round((b - a) / DAY_MS);
+}
+
+function median(nums: number[]): number | null {
+  if (!nums.length) return null;
+  const s = [...nums].sort((a, b) => a - b);
+  const mid = Math.floor(s.length / 2);
+  return s.length % 2 ? s[mid] : Number(((s[mid - 1] + s[mid]) / 2).toFixed(2));
+}
+
+// ---------- 1. Import Gazette cases ----------
+
+export const importGazetteCases = createServerFn({ method: "POST" }).handler(async () => {
+  const db = await admin();
+  // Locate the Gazette source(s) — match by name/base_url.
+  const { data: sources } = await db
+    .from("sources")
+    .select("id, name")
+    .or("name.ilike.%gazette%,base_url.ilike.%thegazette%");
+  const gazetteSourceIds = (sources ?? []).map((s) => s.id);
+  if (gazetteSourceIds.length === 0) {
+    return { imported: 0, considered: 0, notes: ["No Gazette source found."] };
+  }
+
+  const { data: docs } = await db
+    .from("documents")
+    .select("title, published_at, url")
+    .in("source_id", gazetteSourceIds)
+    .not("published_at", "is", null)
+    .order("published_at", { ascending: false })
+    .limit(500);
+  const rows = docs ?? [];
+
+  let imported = 0;
+  const notes: string[] = [];
+  for (const d of rows) {
+    const name = extractCompanyName(d.title ?? "");
+    const outcomeDate = toISODate(d.published_at);
+    if (!name || !outcomeDate) continue;
+    const { error } = await db
+      .from("backtest_cases")
+      .upsert(
+        {
+          company_name: name,
+          outcome_type: "insolvency",
+          outcome_date: outcomeDate,
+          source: "the_gazette",
+          notes: (d.url ?? "").slice(0, 500),
+        },
+        { onConflict: "company_name,outcome_type,outcome_date", ignoreDuplicates: true },
+      );
+    if (error) {
+      notes.push(`upsert failed for "${name}": ${error.message}`);
+      continue;
+    }
+    imported++;
+  }
+  return { imported, considered: rows.length, notes };
+});
+
+// ---------- 2. Run backtest ----------
+
+interface BuiltSignal {
+  signal_type: "charge_registered" | "insolvency_filing" | "officer_resignation";
+  signal_date: string; // ISO date
+  detail: string;
+  lead_days: number;
+}
+
+function buildChargesSignals(charges: CHChargeItem[], outcomeDate: string): BuiltSignal[] {
+  const out: BuiltSignal[] = [];
+  for (const c of charges) {
+    const d = toISODate(c.created_on);
+    if (!d || d >= outcomeDate) continue;
+    const classification = c.classification?.description || c.classification?.type || "charge";
+    const particulars = (c.particulars?.description ?? "").slice(0, 240);
+    out.push({
+      signal_type: "charge_registered",
+      signal_date: d,
+      detail: `Charge registered (${classification})${particulars ? ` — ${particulars}` : ""}`.slice(0, 500),
+      lead_days: daysBetween(d, outcomeDate),
+    });
+  }
+  return out;
+}
+
+function buildFilingSignals(filings: CHFilingItem[], outcomeDate: string): BuiltSignal[] {
+  const out: BuiltSignal[] = [];
+  for (const f of filings) {
+    const d = toISODate(f.date);
+    if (!d || d >= outcomeDate) continue;
+    const cat = (f.category ?? "").toLowerCase();
+    if (cat !== "insolvency") continue;
+    const desc = (f.description ?? f.type ?? "insolvency filing").toString().slice(0, 240);
+    out.push({
+      signal_type: "insolvency_filing",
+      signal_date: d,
+      detail: `Insolvency filing: ${desc}`.slice(0, 500),
+      lead_days: daysBetween(d, outcomeDate),
+    });
+  }
+  return out;
+}
+
+function buildOfficerSignals(officers: CHOfficerItem[], outcomeDate: string): BuiltSignal[] {
+  const out: BuiltSignal[] = [];
+  for (const o of officers) {
+    const d = toISODate(o.resigned_on);
+    if (!d || d >= outcomeDate) continue;
+    const name = (o.name ?? "An officer").trim();
+    const role = o.officer_role ?? "director";
+    out.push({
+      signal_type: "officer_resignation",
+      signal_date: d,
+      detail: `${name} resigned as ${role}`.slice(0, 500),
+      lead_days: daysBetween(d, outcomeDate),
+    });
+  }
+  return out;
+}
+
+export const runBacktest = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => z.object({ maxCases: z.number().int().min(1).max(100).optional() }).optional().parse(d))
+  .handler(async ({ data }) => {
+    const db = await admin();
+    const maxCases = Math.max(1, Math.min(100, data?.maxCases ?? 15));
+
+    const apiKey = process.env.COMPANIES_HOUSE_API_KEY;
+    if (!apiKey) {
+      return { cases_processed: 0, cases_resolved: 0, signals_inserted: 0, notes: ["COMPANIES_HOUSE_API_KEY not set — skipping."] };
+    }
+
+    const { data: cases } = await db
+      .from("backtest_cases")
+      .select("id, company_name, company_number, outcome_date")
+      .is("signals_computed_at", null)
+      .order("outcome_date", { ascending: false })
+      .limit(maxCases);
+    const candidates = cases ?? [];
+    if (candidates.length === 0) {
+      return { cases_processed: 0, cases_resolved: 0, signals_inserted: 0, notes: ["No cases pending — everything already computed."] };
+    }
+
+    const notes: string[] = [];
+    let processed = 0;
+    let resolved = 0;
+    let signalsInserted = 0;
+    let rateLimited = false;
+
+    for (const c of candidates) {
+      if (rateLimited) { notes.push("Stopped — Companies House rate limited."); break; }
+      processed++;
+
+      // Resolve company_number if missing.
+      let number = c.company_number as string | null;
+      if (!number) {
+        try {
+          number = await chSearch(c.company_name, apiKey);
+        } catch {
+          rateLimited = true;
+          break;
+        }
+        if (!number) {
+          notes.push(`No Companies House match for "${c.company_name}".`);
+          // Mark computed so we don't retry every run.
+          await db.from("backtest_cases").update({ signals_computed_at: new Date().toISOString() }).eq("id", c.id);
+          continue;
+        }
+        await db.from("backtest_cases").update({ company_number: number }).eq("id", c.id);
+      }
+      resolved++;
+
+      let charges: CHChargeItem[] = [];
+      let filings: CHFilingItem[] = [];
+      let officers: CHOfficerItem[] = [];
+      try {
+        charges = await chChargesAll(number, apiKey, 3);
+        filings = await chFilingHistoryAll(number, apiKey, 6);
+        officers = await chOfficersAll(number, apiKey, 3);
+      } catch {
+        rateLimited = true;
+        // Continue with anything we already have for this case.
+      }
+
+      const built: BuiltSignal[] = [
+        ...buildChargesSignals(charges, c.outcome_date),
+        ...buildFilingSignals(filings, c.outcome_date),
+        ...buildOfficerSignals(officers, c.outcome_date),
+      ];
+
+      if (built.length) {
+        // Dedupe within this case by (type, date, detail).
+        const seen = new Set<string>();
+        const dedup = built.filter((b) => {
+          const k = `${b.signal_type}|${b.signal_date}|${b.detail}`;
+          if (seen.has(k)) return false;
+          seen.add(k);
+          return true;
+        });
+        // Wipe any previous signals for this case so a re-run reflects fresh data.
+        await db.from("backtest_signals").delete().eq("case_id", c.id);
+        const insertRows = dedup.map((b) => ({ case_id: c.id, ...b }));
+        const { error } = await db.from("backtest_signals").insert(insertRows);
+        if (error) {
+          notes.push(`insert failed for ${c.company_name}: ${error.message}`);
+        } else {
+          signalsInserted += insertRows.length;
+        }
+      }
+
+      await db.from("backtest_cases").update({ signals_computed_at: new Date().toISOString() }).eq("id", c.id);
+    }
+
+    return { cases_processed: processed, cases_resolved: resolved, signals_inserted: signalsInserted, notes };
+  });
+
+// ---------- 3. Aggregate summary + snapshot ----------
+
+export interface BacktestSummary {
+  cases_total: number;
+  cases_with_signal: number;
+  cases_with_signal_pct: number | null;
+  median_lead_days: number | null;
+  earliest_lead_days_max: number | null;
+  signal_type_stats: Record<string, { count: number; cases: number; median_lead_days: number | null }>;
+  most_predictive_type: { type: string; median_lead_days: number } | null;
+}
+
+async function computeSummaryCore(): Promise<BacktestSummary> {
+  const db = await admin();
+  const { data: cases } = await db
+    .from("backtest_cases")
+    .select("id");
+  const caseIds = (cases ?? []).map((c) => c.id);
+  const cases_total = caseIds.length;
+
+  if (cases_total === 0) {
+    return {
+      cases_total: 0,
+      cases_with_signal: 0,
+      cases_with_signal_pct: null,
+      median_lead_days: null,
+      earliest_lead_days_max: null,
+      signal_type_stats: {},
+      most_predictive_type: null,
+    };
+  }
+
+  const { data: signals } = await db
+    .from("backtest_signals")
+    .select("case_id, signal_type, lead_days");
+  const rows = (signals ?? []) as Array<{ case_id: string; signal_type: string; lead_days: number }>;
+
+  const earliestByCase = new Map<string, number>();
+  const perType = new Map<string, { leads: number[]; caseSet: Set<string> }>();
+
+  for (const r of rows) {
+    const prev = earliestByCase.get(r.case_id);
+    if (prev == null || r.lead_days > prev) earliestByCase.set(r.case_id, r.lead_days);
+    if (!perType.has(r.signal_type)) perType.set(r.signal_type, { leads: [], caseSet: new Set() });
+    const bucket = perType.get(r.signal_type)!;
+    bucket.leads.push(r.lead_days);
+    bucket.caseSet.add(r.case_id);
+  }
+
+  const earliestLeads = Array.from(earliestByCase.values());
+  const cases_with_signal = earliestByCase.size;
+  const cases_with_signal_pct = cases_total > 0 ? Number(((cases_with_signal / cases_total) * 100).toFixed(1)) : null;
+  const median_lead_days = median(earliestLeads);
+  const earliest_lead_days_max = earliestLeads.length ? Math.max(...earliestLeads) : null;
+
+  const signal_type_stats: BacktestSummary["signal_type_stats"] = {};
+  for (const [t, v] of perType) {
+    signal_type_stats[t] = { count: v.leads.length, cases: v.caseSet.size, median_lead_days: median(v.leads) };
+  }
+
+  let most_predictive_type: BacktestSummary["most_predictive_type"] = null;
+  for (const [t, v] of Object.entries(signal_type_stats)) {
+    if (v.median_lead_days == null) continue;
+    if (!most_predictive_type || v.median_lead_days > most_predictive_type.median_lead_days) {
+      most_predictive_type = { type: t, median_lead_days: v.median_lead_days };
+    }
+  }
+
+  return {
+    cases_total,
+    cases_with_signal,
+    cases_with_signal_pct,
+    median_lead_days,
+    earliest_lead_days_max,
+    signal_type_stats,
+    most_predictive_type,
+  };
+}
+
+export const computeBacktestSummary = createServerFn({ method: "POST" }).handler(async () => {
+  const db = await admin();
+  const summary = await computeSummaryCore();
+  const { error } = await db.from("backtest_runs").insert({
+    cases_total: summary.cases_total,
+    cases_with_signal: summary.cases_with_signal,
+    median_lead_days: summary.median_lead_days,
+    signal_type_stats: JSON.parse(JSON.stringify(summary.signal_type_stats)),
+  });
+  if (error) return { ...summary, snapshot_error: error.message };
+  return summary;
+});
+
+// ---------- 4. Read fns for the UI ----------
+
+export const getBacktestSummary = createServerFn({ method: "GET" }).handler(async () => {
+  return computeSummaryCore();
+});
+
+export const listBacktestCases = createServerFn({ method: "GET" })
+  .inputValidator((d: unknown) => z.object({ limit: z.number().int().min(1).max(500).optional() }).optional().parse(d))
+  .handler(async ({ data }) => {
+    const db = await admin();
+    const limit = data?.limit ?? 100;
+    const { data: cases } = await db
+      .from("backtest_cases")
+      .select("id, company_name, company_number, outcome_type, outcome_date, signals_computed_at")
+      .order("outcome_date", { ascending: false })
+      .limit(limit);
+    const rows = cases ?? [];
+    if (rows.length === 0) return { cases: [] as Array<Record<string, unknown>> };
+
+    const caseIds = rows.map((c) => c.id);
+    const { data: signals } = await db
+      .from("backtest_signals")
+      .select("case_id, signal_type, signal_date, lead_days")
+      .in("case_id", caseIds);
+    const byCase = new Map<string, Array<{ signal_type: string; signal_date: string; lead_days: number }>>();
+    for (const s of signals ?? []) {
+      const arr = byCase.get(s.case_id as string) ?? [];
+      arr.push({ signal_type: s.signal_type as string, signal_date: s.signal_date as string, lead_days: Number(s.lead_days) });
+      byCase.set(s.case_id as string, arr);
+    }
+
+    const enriched = rows.map((c) => {
+      const sigs = byCase.get(c.id) ?? [];
+      const earliest = sigs.length ? sigs.reduce((a, b) => (a.lead_days >= b.lead_days ? a : b)) : null;
+      const types = Array.from(new Set(sigs.map((s) => s.signal_type)));
+      return {
+        id: c.id,
+        company_name: c.company_name,
+        company_number: c.company_number,
+        outcome_type: c.outcome_type,
+        outcome_date: c.outcome_date,
+        signals_computed_at: c.signals_computed_at,
+        signal_count: sigs.length,
+        earliest_signal_date: earliest?.signal_date ?? null,
+        earliest_lead_days: earliest?.lead_days ?? null,
+        signal_types: types,
+      };
+    });
+    return { cases: enriched };
+  });
+
+export const listRecentBacktestRuns = createServerFn({ method: "GET" })
+  .inputValidator((d: unknown) => z.object({ limit: z.number().int().min(1).max(50).optional() }).optional().parse(d))
+  .handler(async ({ data }) => {
+    const db = await admin();
+    const { data: runs } = await db
+      .from("backtest_runs")
+      .select("id, ran_at, cases_total, cases_with_signal, median_lead_days, signal_type_stats")
+      .order("ran_at", { ascending: false })
+      .limit(data?.limit ?? 10);
+    return { runs: runs ?? [] };
+  });
