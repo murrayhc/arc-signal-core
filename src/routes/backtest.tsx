@@ -35,6 +35,11 @@ const signaturesQuery = queryOptions({
   queryFn: () => listSignatures(),
   staleTime: 30_000,
 });
+const calibrationQuery = queryOptions({
+  queryKey: ["archlight", "calibration"],
+  queryFn: () => computeCalibration(),
+  staleTime: 30_000,
+});
 
 
 export const Route = createFileRoute("/backtest")({
@@ -51,7 +56,9 @@ export const Route = createFileRoute("/backtest")({
     context.queryClient.ensureQueryData(casesQuery);
     context.queryClient.ensureQueryData(runsQuery);
     context.queryClient.ensureQueryData(signaturesQuery);
+    context.queryClient.ensureQueryData(calibrationQuery);
   },
+
   component: BacktestPage,
 });
 
