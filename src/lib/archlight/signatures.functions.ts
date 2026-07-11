@@ -331,28 +331,59 @@ export const computeDistressProfiles = createServerFn({ method: "POST" })
       }
       written++;
 
-      // Raise review_queue if score >= 0.5 AND this entity is exposed.
-      const isExposed = candidateEntityIds.has(ent.id) && (expItems ?? []).some((r) => r.entity_id === ent.id);
-      if (score >= 0.5 && isExposed) {
-        const { data: existing } = await db
-          .from("review_queue")
-          .select("id")
-          .eq("item_type", "distress_profile")
-          .eq("item_id", ent.id)
-          .eq("status", "pending")
-          .limit(1);
-        if (!existing || existing.length === 0) {
-          const reason = `Distress pattern match ${(score * 100).toFixed(0)}% — ${matched.length} of ${signatures.length} known-failure signal types present for ${ent.canonical_name}.`;
-          const { error } = await db.from("review_queue").insert({
-            item_type: "distress_profile",
-            item_id: ent.id,
-            reason: reason.slice(0, 500),
-            status: "pending",
+      // If flagged: raise review_queue (when exposed) AND enrol in the
+      // calibration cohort (regardless of exposure). Keep earliest flagged_at.
+      if (score >= 0.5) {
+        // ---- calibration cohort ----
+        const { data: existingCohort } = await db
+          .from("distress_cohort")
+          .select("id, flagged_at, outcome")
+          .eq("entity_id", ent.id)
+          .maybeSingle();
+        if (!existingCohort) {
+          const nowIso = new Date().toISOString();
+          const surviveAfter = new Date(Date.now() + 18 * 30 * 24 * 3600 * 1000).toISOString().slice(0, 10);
+          await db.from("distress_cohort").insert({
+            entity_id: ent.id,
+            company_number: number,
+            flagged_at: nowIso,
+            profile_score: score,
+            matched_types: matched,
+            outcome: "open",
+            survive_after: surviveAfter,
           });
-          if (!error) reviewAdded++;
+        } else if (existingCohort.outcome === "open") {
+          // Refresh score/matched_types but keep earliest flagged_at & survive_after.
+          await db
+            .from("distress_cohort")
+            .update({ profile_score: score, matched_types: matched, company_number: number })
+            .eq("id", existingCohort.id);
+        }
+
+        // ---- review_queue (exposed only) ----
+        const isExposed = (expItems ?? []).some((r) => r.entity_id === ent.id);
+        if (isExposed) {
+          const { data: existing } = await db
+            .from("review_queue")
+            .select("id")
+            .eq("item_type", "distress_profile")
+            .eq("item_id", ent.id)
+            .eq("status", "pending")
+            .limit(1);
+          if (!existing || existing.length === 0) {
+            const reason = `Distress pattern match ${(score * 100).toFixed(0)}% — ${matched.length} of ${signatures.length} known-failure signal types present for ${ent.canonical_name}.`;
+            const { error } = await db.from("review_queue").insert({
+              item_type: "distress_profile",
+              item_id: ent.id,
+              reason: reason.slice(0, 500),
+              status: "pending",
+            });
+            if (!error) reviewAdded++;
+          }
         }
       }
     }
+
 
     return { companies_checked: checked, profiles_written: written, review_queue_added: reviewAdded, notes };
   });
