@@ -32,7 +32,9 @@ export interface TrackRecord {
   coin_flip_brier: number;
   calibration: CalibrationBucket[];
   mean_lead_time_days: number | null;
+  median_lead_time_days: number | null;
   lead_time_n: number;
+  before_mainstream_count: number;
   // Scenario-level
   scenario_count: number;
   scenario_mean_brier: number | null;
@@ -50,7 +52,7 @@ async function computeCore(): Promise<TrackRecord> {
   const { data: rows } = await db
     .from("outcome_predictions")
     .select(
-      "subject_kind, status, outcome, predicted_probability, brier_first, brier_final, lead_time_days, horizon",
+      "subject_kind, status, outcome, predicted_probability, brier_first, brier_final, lead_time_days, before_mainstream, horizon",
     );
 
   const all = rows ?? [];
@@ -92,6 +94,19 @@ async function computeCore(): Promise<TrackRecord> {
     .map((r) => Number(r.lead_time_days))
     .filter((n) => Number.isFinite(n));
   const mean_lead_time_days = leadTimes.length ? Number((leadTimes.reduce((a, b) => a + b, 0) / leadTimes.length).toFixed(2)) : null;
+  const sortedLead = [...leadTimes].sort((a, b) => a - b);
+  const median_lead_time_days = sortedLead.length
+    ? Number(
+        (
+          sortedLead.length % 2
+            ? sortedLead[(sortedLead.length - 1) / 2]
+            : (sortedLead[sortedLead.length / 2 - 1] + sortedLead[sortedLead.length / 2]) / 2
+        ).toFixed(2),
+      )
+    : null;
+  const before_mainstream_count = graded.filter(
+    (r) => r.outcome === "happened" && (r as { before_mainstream?: boolean }).before_mainstream === true,
+  ).length;
 
   const scenariosResolved = scenarios.filter((r) => r.status === "resolved" && r.outcome && r.outcome !== "unresolvable");
   const scenario_count = scenariosResolved.length;
@@ -118,7 +133,9 @@ async function computeCore(): Promise<TrackRecord> {
     coin_flip_brier: COIN_FLIP_BRIER,
     calibration: buckets,
     mean_lead_time_days,
+    median_lead_time_days,
     lead_time_n: leadTimes.length,
+    before_mainstream_count,
     scenario_count,
     scenario_mean_brier,
     by_horizon,

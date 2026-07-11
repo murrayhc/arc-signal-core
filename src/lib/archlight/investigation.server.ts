@@ -71,6 +71,7 @@ async function findOrCreateSearchSource(db: DbAdmin, domain: string): Promise<In
       reliability_score: 0.5,
       health_score: 0.7,
       collector_supported: false,
+      tier: "mainstream",
       metadata: { origin: "gdelt_investigation" },
     })
     .select("id, name, reliability_score, base_url, feed_url, is_synthetic, independence_group")

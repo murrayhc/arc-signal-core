@@ -139,6 +139,7 @@ export const COMPANIES_HOUSE_SOURCE = {
   collector_supported: true,
   refresh_cadence_minutes: 60,
   access_method: "api" as const,
+  tier: "primary" as const,
   metadata: { origin: "uk_primary_seed", collector: "companies_house_watchlist" },
 };
 

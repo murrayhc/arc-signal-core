@@ -1514,6 +1514,7 @@ export type Database = {
       outcome_predictions: {
         Row: {
           baseline: Json
+          before_mainstream: boolean
           brier_final: number | null
           brier_first: number | null
           created_at: string
@@ -1541,6 +1542,7 @@ export type Database = {
         }
         Insert: {
           baseline?: Json
+          before_mainstream?: boolean
           brier_final?: number | null
           brier_first?: number | null
           created_at?: string
@@ -1568,6 +1570,7 @@ export type Database = {
         }
         Update: {
           baseline?: Json
+          before_mainstream?: boolean
           brier_final?: number | null
           brier_first?: number | null
           created_at?: string
@@ -2035,6 +2038,7 @@ export type Database = {
           reliability_score: number
           source_type: Database["public"]["Enums"]["source_type"]
           status: Database["public"]["Enums"]["source_status"]
+          tier: string
           updated_at: string
         }
         Insert: {
@@ -2059,6 +2063,7 @@ export type Database = {
           reliability_score?: number
           source_type: Database["public"]["Enums"]["source_type"]
           status?: Database["public"]["Enums"]["source_status"]
+          tier?: string
           updated_at?: string
         }
         Update: {
@@ -2083,6 +2088,7 @@ export type Database = {
           reliability_score?: number
           source_type?: Database["public"]["Enums"]["source_type"]
           status?: Database["public"]["Enums"]["source_status"]
+          tier?: string
           updated_at?: string
         }
         Relationships: []
