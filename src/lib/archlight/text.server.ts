@@ -182,12 +182,15 @@ function stripTags(s: string): string {
 }
 function safeDate(s: string): string | null {
   const d = new Date(s);
+  return Number.isFinite(d.getTime()) ? d.toISOString() : null;
+}
 
 // ============ Full-article body fetch (best-effort, polite) ============
 //
 // Fetch a public article URL and extract the readable body text so downstream
 // claim extraction / synthesis works on real prose, not a headline snippet.
 // Never throws — returns null on any error, non-HTML, or too-short output.
+
 
 const ARCHLIGHT_UA = "Mozilla/5.0 (compatible; ArchlightBot/1.0; +https://arc-signal-core.lovable.app)";
 
