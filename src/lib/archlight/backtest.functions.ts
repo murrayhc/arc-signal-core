@@ -389,7 +389,19 @@ export const listBacktestCases = createServerFn({ method: "GET" })
       .order("outcome_date", { ascending: false })
       .limit(limit);
     const rows = cases ?? [];
-    if (rows.length === 0) return { cases: [] as Array<Record<string, unknown>> };
+    const emptyEnriched: Array<{
+      id: string;
+      company_name: string;
+      company_number: string | null;
+      outcome_type: string;
+      outcome_date: string;
+      signals_computed_at: string | null;
+      signal_count: number;
+      earliest_signal_date: string | null;
+      earliest_lead_days: number | null;
+      signal_types: string[];
+    }> = [];
+    if (rows.length === 0) return { cases: emptyEnriched };
 
     const caseIds = rows.map((c) => c.id);
     const { data: signals } = await db
