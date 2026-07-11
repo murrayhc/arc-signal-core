@@ -49,6 +49,7 @@ export const Route = createFileRoute("/backtest")({
     context.queryClient.ensureQueryData(summaryQuery);
     context.queryClient.ensureQueryData(casesQuery);
     context.queryClient.ensureQueryData(runsQuery);
+    context.queryClient.ensureQueryData(signaturesQuery);
   },
   component: BacktestPage,
 });
@@ -58,10 +59,12 @@ function BacktestPage() {
   const { data: summary } = useSuspenseQuery(summaryQuery);
   const { data: casesData } = useSuspenseQuery(casesQuery);
   const { data: runsData } = useSuspenseQuery(runsQuery);
+  const { data: sigData } = useSuspenseQuery(signaturesQuery);
   const [banner, setBanner] = useState<string | null>(null);
 
   const invalidateAll = () => {
     qc.invalidateQueries({ queryKey: ["archlight", "backtest"] });
+    qc.invalidateQueries({ queryKey: ["archlight", "signatures"] });
   };
 
   const importM = useMutation({
@@ -82,10 +85,22 @@ function BacktestPage() {
     onSuccess: () => { setBanner("Summary snapshot recorded."); invalidateAll(); },
     onError: (e: Error) => setBanner(`Recompute failed: ${e.message}`),
   });
+  const mineM = useMutation({
+    mutationFn: () => mineSignatures(),
+    onSuccess: (r) => { setBanner(`Mined ${r.signal_types ?? 0} signature(s) across ${r.total_cases ?? 0} case(s).`); invalidateAll(); },
+    onError: (e: Error) => setBanner(`Mine failed: ${e.message}`),
+  });
+  const profileM = useMutation({
+    mutationFn: () => computeDistressProfiles({ data: { maxCompanies: 20 } }),
+    onSuccess: (r) => { setBanner(`Distress profiles: checked ${r.companies_checked}, wrote ${r.profiles_written}, ${r.review_queue_added} raised for review.`); invalidateAll(); },
+    onError: (e: Error) => setBanner(`Profile run failed: ${e.message}`),
+  });
 
-  const busy = importM.isPending || runM.isPending || recomputeM.isPending;
+  const busy = importM.isPending || runM.isPending || recomputeM.isPending || mineM.isPending || profileM.isPending;
   const cases = casesData.cases;
   const runs = runsData.runs;
+  const signatures = sigData.signatures;
+
 
   return (
     <AppShell>
