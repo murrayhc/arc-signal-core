@@ -341,3 +341,84 @@ function formatType(t: string): string {
     default: return t;
   }
 }
+
+type Calibration = Awaited<ReturnType<typeof computeCalibration>>;
+function CalibrationPanel({ calibration }: { calibration: Calibration }) {
+  const { overall, bands, min_headline_sample } = calibration;
+  const total = overall.failed + overall.survived + overall.open;
+  const resolved = overall.resolved;
+  const rate = overall.failure_rate;
+  const headlineReady = resolved >= min_headline_sample;
+  const ratePct = rate == null ? "—" : `${Math.round(rate * 100)}%`;
+
+  return (
+    <section className="glass-panel rounded-xl overflow-hidden">
+      <div className="px-4 py-2 text-[10px] font-mono uppercase tracking-widest text-muted-foreground border-b border-border/40 flex items-center justify-between">
+        <span>Calibration · prospective, accruing</span>
+        <span className="text-muted-foreground/70">Real predictive base rate · accrues as flagged companies resolve</span>
+      </div>
+      <div className="p-4 flex flex-col gap-3">
+        {total === 0 ? (
+          <div className="text-xs text-muted-foreground italic text-center py-3">
+            No companies flagged yet. Run <span className="text-foreground">Match live companies</span> after mining signatures to start enrolling.
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="rounded-md border border-border/50 p-3 bg-background/30">
+                <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">Flagged (all-time)</div>
+                <div className="font-display text-2xl mt-1">{total}</div>
+                <div className="text-[10px] font-mono text-muted-foreground mt-1">{resolved} resolved · {overall.open} open</div>
+              </div>
+              <div className="rounded-md border border-border/50 p-3 bg-background/30 md:col-span-2">
+                <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">Measured failure rate</div>
+                <div className="flex items-baseline gap-3 mt-1">
+                  <div
+                    className="font-display text-3xl"
+                    style={{ color: headlineReady ? (rate != null && rate >= 0.5 ? "var(--color-risk)" : "var(--color-signal)") : "hsl(var(--muted-foreground))", opacity: headlineReady ? 1 : 0.55 }}
+                  >
+                    {ratePct}
+                  </div>
+                  {!headlineReady && (
+                    <span className="text-[10px] font-mono uppercase tracking-widest px-1.5 py-0.5 rounded border border-border/60 text-muted-foreground">accruing · n={resolved}</span>
+                  )}
+                </div>
+                <div className="text-[11px] text-muted-foreground mt-1">
+                  Of {total} companies flagged, {resolved} resolved — {overall.failed} failed, {overall.survived} survived.
+                </div>
+              </div>
+            </div>
+
+            <table className="w-full text-xs mt-2">
+              <thead className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground bg-background/30">
+                <tr><Th>Score band</Th><Th>Failed</Th><Th>Survived</Th><Th>Open</Th><Th>Failure rate</Th></tr>
+              </thead>
+              <tbody>
+                {bands.map((b) => {
+                  const bandReady = b.resolved >= min_headline_sample;
+                  const bandRate = b.failure_rate == null ? "—" : `${Math.round(b.failure_rate * 100)}%`;
+                  return (
+                    <tr key={b.band} className="border-t border-border/40">
+                      <Td className="font-mono">{b.band}</Td>
+                      <Td className="font-mono">{b.failed}</Td>
+                      <Td className="font-mono">{b.survived}</Td>
+                      <Td className="font-mono text-muted-foreground">{b.open}</Td>
+                      <Td className="font-mono" style={{ opacity: bandReady ? 1 : 0.5 }}>
+                        {bandRate}
+                        {!bandReady && b.resolved > 0 && <span className="ml-2 text-[10px] uppercase tracking-widest text-muted-foreground">accruing · n={b.resolved}</span>}
+                      </Td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+
+            <div className="text-[11px] text-muted-foreground italic border-t border-border/40 pt-2">
+              This is the real predictive base rate the signatures alone could not give — it accrues as flagged companies resolve. Treat as indicative until at least {min_headline_sample} have resolved.
+            </div>
+          </>
+        )}
+      </div>
+    </section>
+  );
+}
