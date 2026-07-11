@@ -4,7 +4,8 @@ import { AppShell } from "@/components/archlight/AppShell";
 import { getEventDetail } from "@/lib/archlight/pipeline.functions";
 import { getEventScenarios, projectEventForward } from "@/lib/archlight/precognition.functions";
 import { getEventPredictions } from "@/lib/archlight/outcome.functions";
-import { ArrowLeft, Building2, ExternalLink, FileText, GitBranch, Loader2, Radar, ShieldAlert, Sparkles, Target, TriangleAlert, Zap } from "lucide-react";
+import { listEventExposureHits } from "@/lib/archlight/exposure.functions";
+import { ArrowLeft, Building2, Crosshair, ExternalLink, FileText, GitBranch, Loader2, Radar, ShieldAlert, Sparkles, Target, TriangleAlert, Zap } from "lucide-react";
 import { ForensicReport } from "@/components/archlight/ForensicReport";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -56,6 +57,11 @@ function EventDetailPage() {
   const preds = useQuery({
     queryKey: ["archlight", "event", id, "predictions"],
     queryFn: () => getEventPredictions({ data: { eventId: id } }),
+    enabled: !!data?.event,
+  });
+  const exposure = useQuery({
+    queryKey: ["archlight", "event", id, "exposure"],
+    queryFn: () => listEventExposureHits({ data: { eventId: id } }),
     enabled: !!data?.event,
   });
   const projectMut = useMutation({
@@ -123,6 +129,43 @@ function EventDetailPage() {
             </header>
 
             <ForensicReport subjectType="event" subjectId={data.event.id} title={data.event.title} />
+
+            {(exposure.data?.hits?.length ?? 0) > 0 && (
+              <section className="glass-panel rounded-xl p-4 border-l-2" style={{ borderLeftColor: "var(--color-signal)" }}>
+                <div className="flex items-center gap-2 mb-3">
+                  <Crosshair className="h-4 w-4" style={{ color: "var(--color-signal)" }}/>
+                  <h2 className="font-display text-sm">Why this matters to you</h2>
+                  <span className="ml-auto text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+                    {exposure.data!.hits.length} exposure hit{exposure.data!.hits.length === 1 ? "" : "s"}
+                  </span>
+                </div>
+                <ul className="grid md:grid-cols-2 gap-2">
+                  {exposure.data!.hits.map((h) => {
+                    const it = exposure.data!.items.find((x) => x.id === h.exposure_item_id);
+                    const pr = exposure.data!.profiles.find((x) => x.id === h.profile_id);
+                    const dir = h.direction ?? "mixed";
+                    const dirColor = dir === "risk" ? "var(--color-risk)" : dir === "opportunity" ? "var(--color-opportunity)" : "var(--color-reason)";
+                    return (
+                      <li key={h.id} className="rounded-lg border border-border/50 bg-background/30 p-3">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {it && <span className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">{it.kind}</span>}
+                          <span className="font-display text-sm">{it?.name ?? "—"}</span>
+                          {pr && <span className="text-[10px] font-mono text-muted-foreground">· {pr.name}</span>}
+                          <span className="ml-auto text-[10px] font-mono" style={{ color: "var(--color-signal)" }}>{(Number(h.relevance) * 100).toFixed(0)}%</span>
+                        </div>
+                        <div className="mt-2 flex items-center gap-2 flex-wrap">
+                          <span className="text-[10px] font-mono uppercase tracking-widest px-1.5 py-0.5 rounded border" style={{ borderColor: `color-mix(in oklch, ${dirColor} 60%, transparent)`, color: dirColor }}>{dir}</span>
+                          <span className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">via · {h.match_kind}</span>
+                        </div>
+                        {h.rationale && <p className="text-xs text-foreground/90 mt-2">{h.rationale}</p>}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
+            )}
+
+
 
 
 

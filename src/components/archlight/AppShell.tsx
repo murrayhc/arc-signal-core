@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Bell, Building2, Command, Compass, Database, Download, Eye, Flame, Gauge, GitBranch, Layers, Play, Radar, Search, Settings, Shield, Sparkles, Target } from "lucide-react";
+import { Bell, Building2, Command, Compass, Crosshair, Database, Download, Eye, Flame, Gauge, GitBranch, Layers, Play, Radar, Search, Settings, Shield, Sparkles, Target } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { getDashboard } from "@/lib/archlight/pipeline.functions";
 
@@ -38,6 +38,7 @@ function TopNav({ onRunScan, scanning }: { onRunScan?: () => void; scanning?: bo
           <TopLink to="/opportunities" label="Opportunities"/>
           <TopLink to="/companies" label="Companies"/>
           <TopLink to="/arcs" label="Arcs"/>
+          <TopLink to="/exposures" label="Exposures"/>
           <TopLink to="/track-record" label="Track record"/>
         </nav>
 
@@ -142,6 +143,7 @@ function SideNav() {
     { icon: Building2, label: "Companies", to: "/companies" },
     { icon: GitBranch, label: "Evidence arcs", to: "/arcs" },
     { icon: Eye, label: "Watchlists", to: "/watchlist" },
+    { icon: Crosshair, label: "Exposures", to: "/exposures" },
     { icon: Target, label: "Interrogations", to: "/interrogations" },
     { icon: Radar, label: "Scans", to: "/scans" },
     { icon: Database, label: "Sources", to: "/sources" },

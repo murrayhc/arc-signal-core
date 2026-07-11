@@ -17,6 +17,7 @@ import { Route as ReviewRouteImport } from './routes/review'
 import { Route as OpportunitiesRouteImport } from './routes/opportunities'
 import { Route as InterrogationsRouteImport } from './routes/interrogations'
 import { Route as InterrogateRouteImport } from './routes/interrogate'
+import { Route as ExposuresRouteImport } from './routes/exposures'
 import { Route as DigestRouteImport } from './routes/digest'
 import { Route as CompaniesRouteImport } from './routes/companies'
 import { Route as ArcsRouteImport } from './routes/arcs'
@@ -70,6 +71,11 @@ const InterrogationsRoute = InterrogationsRouteImport.update({
 const InterrogateRoute = InterrogateRouteImport.update({
   id: '/interrogate',
   path: '/interrogate',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ExposuresRoute = ExposuresRouteImport.update({
+  id: '/exposures',
+  path: '/exposures',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DigestRoute = DigestRouteImport.update({
@@ -148,6 +154,7 @@ export interface FileRoutesByFullPath {
   '/arcs': typeof ArcsRouteWithChildren
   '/companies': typeof CompaniesRouteWithChildren
   '/digest': typeof DigestRoute
+  '/exposures': typeof ExposuresRoute
   '/interrogate': typeof InterrogateRoute
   '/interrogations': typeof InterrogationsRoute
   '/opportunities': typeof OpportunitiesRouteWithChildren
@@ -172,6 +179,7 @@ export interface FileRoutesByTo {
   '/arcs': typeof ArcsRouteWithChildren
   '/companies': typeof CompaniesRouteWithChildren
   '/digest': typeof DigestRoute
+  '/exposures': typeof ExposuresRoute
   '/interrogate': typeof InterrogateRoute
   '/interrogations': typeof InterrogationsRoute
   '/review': typeof ReviewRoute
@@ -196,6 +204,7 @@ export interface FileRoutesById {
   '/arcs': typeof ArcsRouteWithChildren
   '/companies': typeof CompaniesRouteWithChildren
   '/digest': typeof DigestRoute
+  '/exposures': typeof ExposuresRoute
   '/interrogate': typeof InterrogateRoute
   '/interrogations': typeof InterrogationsRoute
   '/opportunities': typeof OpportunitiesRouteWithChildren
@@ -222,6 +231,7 @@ export interface FileRouteTypes {
     | '/arcs'
     | '/companies'
     | '/digest'
+    | '/exposures'
     | '/interrogate'
     | '/interrogations'
     | '/opportunities'
@@ -246,6 +256,7 @@ export interface FileRouteTypes {
     | '/arcs'
     | '/companies'
     | '/digest'
+    | '/exposures'
     | '/interrogate'
     | '/interrogations'
     | '/review'
@@ -269,6 +280,7 @@ export interface FileRouteTypes {
     | '/arcs'
     | '/companies'
     | '/digest'
+    | '/exposures'
     | '/interrogate'
     | '/interrogations'
     | '/opportunities'
@@ -294,6 +306,7 @@ export interface RootRouteChildren {
   ArcsRoute: typeof ArcsRouteWithChildren
   CompaniesRoute: typeof CompaniesRouteWithChildren
   DigestRoute: typeof DigestRoute
+  ExposuresRoute: typeof ExposuresRoute
   InterrogateRoute: typeof InterrogateRoute
   InterrogationsRoute: typeof InterrogationsRoute
   OpportunitiesRoute: typeof OpportunitiesRouteWithChildren
@@ -365,6 +378,13 @@ declare module '@tanstack/react-router' {
       path: '/interrogate'
       fullPath: '/interrogate'
       preLoaderRoute: typeof InterrogateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/exposures': {
+      id: '/exposures'
+      path: '/exposures'
+      fullPath: '/exposures'
+      preLoaderRoute: typeof ExposuresRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/digest': {
@@ -520,6 +540,7 @@ const rootRouteChildren: RootRouteChildren = {
   ArcsRoute: ArcsRouteWithChildren,
   CompaniesRoute: CompaniesRouteWithChildren,
   DigestRoute: DigestRoute,
+  ExposuresRoute: ExposuresRoute,
   InterrogateRoute: InterrogateRoute,
   InterrogationsRoute: InterrogationsRoute,
   OpportunitiesRoute: OpportunitiesRouteWithChildren,

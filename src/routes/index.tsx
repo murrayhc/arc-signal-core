@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
-import { useMutation, useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { AppShell, InterrogateSearch } from "@/components/archlight/AppShell";
 import { IntelligenceBrain, type GNode } from "@/components/archlight/IntelligenceBrain";
@@ -11,8 +11,9 @@ import { dashboardQueryOptions } from "@/lib/archlight/queries";
 import { runScan } from "@/lib/archlight/pipeline.functions";
 import { getScanSettings } from "@/lib/archlight/settings.functions";
 import { countKnobsOffDefault } from "@/lib/archlight/settings.defaults";
+import { listExposureHits, markHitSeen } from "@/lib/archlight/exposure.functions";
 import { toast } from "sonner";
-import { Settings } from "lucide-react";
+import { Crosshair, Settings } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -97,6 +98,8 @@ function Dashboard() {
       </div>
 
 
+      <YourExposuresRail />
+
       {/* Lower grid */}
       <div className="grid grid-cols-12 gap-5">
         <div className="col-span-12 md:col-span-6 xl:col-span-3"><InternationalData/></div>
@@ -165,6 +168,97 @@ function ScanTuningPill() {
     </Link>
   );
 }
+
+function directionBadge(dir: string) {
+  const color = dir === "risk" ? "var(--color-risk)" : dir === "opportunity" ? "var(--color-opportunity)" : "var(--color-reason)";
+  return (
+    <span className="text-[10px] font-mono uppercase tracking-widest px-1.5 py-0.5 rounded border" style={{ borderColor: `color-mix(in oklch, ${color} 60%, transparent)`, color }}>
+      {dir}
+    </span>
+  );
+}
+
+function YourExposuresRail() {
+  const qc = useQueryClient();
+  const { data, isLoading } = useQuery({
+    queryKey: ["exposures", "top-unseen"],
+    queryFn: () => listExposureHits({ data: { unseenOnly: true, activeOnly: true, limit: 8 } }),
+    staleTime: 20_000,
+  });
+  const seen = useMutation({
+    mutationFn: (id: string) => markHitSeen({ data: { id } }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["exposures"] }),
+  });
+
+  const hits = data?.hits ?? [];
+  const eventMap = new Map((data?.events ?? []).map((e) => [e.id, e] as const));
+  const itemMap = new Map((data?.items ?? []).map((i) => [i.id, i] as const));
+
+  return (
+    <section className="glass-panel rounded-xl p-4">
+      <div className="flex items-center gap-2 mb-3">
+        <Crosshair className="h-4 w-4" style={{ color: "var(--color-signal)" }}/>
+        <h3 className="font-display text-sm tracking-wide">Your exposures</h3>
+        <span className="ml-auto text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+          why this matters to you
+        </span>
+      </div>
+
+      {isLoading && <div className="text-xs text-muted-foreground">Loading…</div>}
+
+      {!isLoading && hits.length === 0 && (
+        <div className="text-center py-6">
+          <p className="text-sm text-muted-foreground">
+            No exposure profiles yet — tell Archlight what you hold and it will watch it for you.
+          </p>
+          <Link
+            to="/exposures"
+            className="mt-3 inline-flex items-center gap-1.5 h-8 px-3 rounded-md text-xs border border-[color:var(--color-signal)]/60 text-[color:var(--color-signal)] hover:bg-[color:var(--color-signal)]/10"
+          >
+            <Crosshair className="h-3.5 w-3.5"/> Set up exposures
+          </Link>
+        </div>
+      )}
+
+      {hits.length > 0 && (
+        <ul className="grid md:grid-cols-2 gap-2">
+          {hits.map((h) => {
+            const ev = eventMap.get(h.event_candidate_id);
+            const it = itemMap.get(h.exposure_item_id);
+            if (!ev || !it) return null;
+            return (
+              <li key={h.id} className="rounded-lg border border-border/50 bg-background/30 p-3 hover:border-[color:var(--color-signal)]/40 transition">
+                <Link
+                  to="/events/$id"
+                  params={{ id: ev.id }}
+                  onClick={() => seen.mutate(h.id)}
+                  className="block"
+                >
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">{it.kind}</span>
+                    <span className="font-display text-sm">{it.name}</span>
+                    <span className="ml-auto text-[10px] font-mono text-[color:var(--color-signal)]">
+                      {(Number(h.relevance) * 100).toFixed(0)}%
+                    </span>
+                  </div>
+                  <div className="text-xs text-foreground/90 mt-1 line-clamp-2">{ev.title}</div>
+                  <div className="mt-2 flex items-center gap-2 flex-wrap">
+                    {directionBadge(h.direction ?? "mixed")}
+                    <span className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+                      via · {h.match_kind}
+                    </span>
+                  </div>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+
 
 
 function buildTicker(data: { system: { source_coverage: number; model_health: number }; counts: { sources_online: number; sources_total: number }; opportunities: Array<{ title: string }>; risks: Array<{ title: string }> }): string[] {
