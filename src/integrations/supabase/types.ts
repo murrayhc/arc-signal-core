@@ -1060,6 +1060,56 @@ export type Database = {
           },
         ]
       }
+      event_analysis: {
+        Row: {
+          analysed_at: string | null
+          created_at: string
+          discriminating_evidence: string | null
+          event_candidate_id: string
+          evidence_ambiguity: string | null
+          hypotheses: Json
+          id: string
+          leading_hypothesis: string | null
+          red_team_case: string | null
+          red_team_strength: string | null
+          updated_at: string
+        }
+        Insert: {
+          analysed_at?: string | null
+          created_at?: string
+          discriminating_evidence?: string | null
+          event_candidate_id: string
+          evidence_ambiguity?: string | null
+          hypotheses?: Json
+          id?: string
+          leading_hypothesis?: string | null
+          red_team_case?: string | null
+          red_team_strength?: string | null
+          updated_at?: string
+        }
+        Update: {
+          analysed_at?: string | null
+          created_at?: string
+          discriminating_evidence?: string | null
+          event_candidate_id?: string
+          evidence_ambiguity?: string | null
+          hypotheses?: Json
+          id?: string
+          leading_hypothesis?: string | null
+          red_team_case?: string | null
+          red_team_strength?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_analysis_event_candidate_id_fkey"
+            columns: ["event_candidate_id"]
+            isOneToOne: true
+            referencedRelation: "event_candidates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_candidates: {
         Row: {
           affected_region: string | null
