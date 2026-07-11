@@ -52,7 +52,7 @@ async function computeCore(): Promise<TrackRecord> {
   const { data: rows } = await db
     .from("outcome_predictions")
     .select(
-      "subject_kind, status, outcome, predicted_probability, brier_first, brier_final, lead_time_days, horizon",
+      "subject_kind, status, outcome, predicted_probability, brier_first, brier_final, lead_time_days, before_mainstream, horizon",
     );
 
   const all = rows ?? [];
