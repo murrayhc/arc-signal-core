@@ -153,6 +153,11 @@ export const runScan = createServerFn({ method: "POST" }).handler(async () => {
   let sourcesAttempted = 0;
   let sourcesSucceeded = 0;
   let sourcesFailed = 0;
+  let fetchedBodies = 0;
+  // Shared, bounded budget for full-article body enrichment across all
+  // collectors in this scan. Politeness > completeness.
+  const bodyBudget = { remaining: 30 };
+
 
   const { data: sources } = await db.from("sources").select("*").in("status", ["active", "degraded"]).order("reliability_score", { ascending: false }).limit(settings.sources_per_scan);
   const chosen = sources ?? [];
