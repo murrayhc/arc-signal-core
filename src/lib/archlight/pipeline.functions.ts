@@ -352,6 +352,27 @@ export const runScan = createServerFn({ method: "POST" }).handler(async () => {
     notes.push(`Contracts Finder skipped: ${err instanceof Error ? err.message : String(err)}`);
   }
 
+  // ============ COMPANIES HOUSE WATCHLIST ============
+  // Polls Companies House REST API for new charges, insolvency filings, and
+  // officer changes on organisation entities linked to events with OPEN
+  // outcome_predictions. Non-fatal; bounded to respect ~600 req / 5 min limit.
+  let companiesHouseIngested = 0;
+  try {
+    if (!hasBudget()) throw new Error("scan runtime budget reached before Companies House step");
+    const { runCompaniesHouseWatch } = await import("./collectors/companies-house.server");
+    const res = await runCompaniesHouseWatch(db, {
+      maxCompanies: 15,
+      recentShingleSets,
+      copyLoopJaccard: settings.copy_loop_jaccard,
+      hasBudget,
+    });
+    companiesHouseIngested = res.ingested;
+    documentsCollected += res.ingested;
+    for (const n of res.notes) notes.push(n);
+  } catch (err) {
+    notes.push(`Companies House skipped: ${err instanceof Error ? err.message : String(err)}`);
+  }
+
 
 
   // ============ SYNTHESIS PHASE ============
