@@ -1,8 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Crosshair, Plus, Trash2, Check, X, Pencil } from "lucide-react";
+import { Crosshair, Plus, Trash2, Check, X, Pencil, Radio } from "lucide-react";
 import { AppShell } from "@/components/archlight/AppShell";
 import {
   addExposureItem,
