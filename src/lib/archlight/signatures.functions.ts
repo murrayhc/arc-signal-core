@@ -18,6 +18,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import {
   chChargesAll,
+  chCompanyProfile,
   chFilingHistoryAll,
   chOfficersAll,
   resolveCompanyNumber,
@@ -25,6 +26,7 @@ import {
   type CHFilingItem,
   type CHOfficerItem,
 } from "./collectors/companies-house.server";
+
 
 async function admin() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
