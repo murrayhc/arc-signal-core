@@ -1790,10 +1790,13 @@ export type Database = {
           access_method: string
           base_url: string | null
           collector_supported: boolean
+          consecutive_failures: number
           created_at: string
           feed_kind: string
           feed_url: string | null
           health_score: number
+          http_etag: string | null
+          http_last_modified: string | null
           id: string
           independence_group: string | null
           is_synthetic: boolean
@@ -1811,10 +1814,13 @@ export type Database = {
           access_method?: string
           base_url?: string | null
           collector_supported?: boolean
+          consecutive_failures?: number
           created_at?: string
           feed_kind?: string
           feed_url?: string | null
           health_score?: number
+          http_etag?: string | null
+          http_last_modified?: string | null
           id?: string
           independence_group?: string | null
           is_synthetic?: boolean
@@ -1832,10 +1838,13 @@ export type Database = {
           access_method?: string
           base_url?: string | null
           collector_supported?: boolean
+          consecutive_failures?: number
           created_at?: string
           feed_kind?: string
           feed_url?: string | null
           health_score?: number
+          http_etag?: string | null
+          http_last_modified?: string | null
           id?: string
           independence_group?: string | null
           is_synthetic?: boolean
