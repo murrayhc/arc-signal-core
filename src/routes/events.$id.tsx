@@ -90,6 +90,23 @@ function EventDetailPage() {
     },
     onError: (e) => toast.error("Analysis failed", { description: e instanceof Error ? e.message : String(e) }),
   });
+  const panel = useQuery({
+    queryKey: ["archlight", "event", id, "panel"],
+    queryFn: () => getEventPanel({ data: { eventId: id } }),
+    enabled: !!data?.event,
+  });
+  const panelMut = useMutation({
+    mutationFn: () => panelEvent({ data: { eventId: id } }),
+    onSuccess: (r) => {
+      if (r.ok) {
+        toast.success(`Panel convened: ${r.consensus} (mean ${(r.mean_probability * 100).toFixed(0)}%, spread ${(r.disagreement * 100).toFixed(0)}%).`);
+        qc.invalidateQueries({ queryKey: ["archlight", "event", id, "panel"] });
+      } else {
+        toast.error("Panel failed", { description: r.error ?? "unknown" });
+      }
+    },
+    onError: (e) => toast.error("Panel failed", { description: e instanceof Error ? e.message : String(e) }),
+  });
 
   const claimsById = useMemo(() => {
     const m = new Map<string, SupportingClaim>();
