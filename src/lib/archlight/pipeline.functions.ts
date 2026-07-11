@@ -154,7 +154,7 @@ export const runScan = createServerFn({ method: "POST" }).handler(async () => {
   let sourcesSucceeded = 0;
   let sourcesFailed = 0;
 
-  const { data: sources } = await db.from("sources").select("*").eq("status", "active").order("reliability_score", { ascending: false }).limit(settings.sources_per_scan);
+  const { data: sources } = await db.from("sources").select("*").in("status", ["active", "degraded"]).order("reliability_score", { ascending: false }).limit(settings.sources_per_scan);
   const chosen = sources ?? [];
 
   const hasBudget = () => Date.now() < deadlineAtMs;
