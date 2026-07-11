@@ -1009,6 +1009,7 @@ export const runScan = createServerFn({ method: "POST" }).handler(async () => {
     contracts_finder_ingested: contractsFinderIngested,
     companies_house_ingested: companiesHouseIngested,
     exposure_hits_created: exposureHitsCreated,
+    exposure_hits_delivered: exposureHitsDelivered,
 
     notes,
   };
