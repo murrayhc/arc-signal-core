@@ -68,12 +68,15 @@ function BacktestPage() {
   const { data: casesData } = useSuspenseQuery(casesQuery);
   const { data: runsData } = useSuspenseQuery(runsQuery);
   const { data: sigData } = useSuspenseQuery(signaturesQuery);
+  const { data: calibration } = useSuspenseQuery(calibrationQuery);
   const [banner, setBanner] = useState<string | null>(null);
 
   const invalidateAll = () => {
     qc.invalidateQueries({ queryKey: ["archlight", "backtest"] });
     qc.invalidateQueries({ queryKey: ["archlight", "signatures"] });
+    qc.invalidateQueries({ queryKey: ["archlight", "calibration"] });
   };
+
 
   const importM = useMutation({
     mutationFn: () => importGazetteCases(),
