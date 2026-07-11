@@ -761,3 +761,66 @@ function AnalysisPanels({ a }: { a: EventAnalysisRow }) {
     </div>
   );
 }
+
+type PanelOpinion = { model: string; probability: number; stance: "risk" | "opportunity" | "benign" | "unclear"; rationale: string; ok: boolean; error?: string };
+type EventPanelRow = {
+  panel: PanelOpinion[] | unknown;
+  mean_probability: number | null;
+  disagreement: number | null;
+  consensus: "unanimous" | "majority" | "split" | null;
+  paneled_at: string | null;
+};
+
+function PanelSection({ p }: { p: EventPanelRow }) {
+  const opinions: PanelOpinion[] = Array.isArray(p.panel) ? (p.panel as PanelOpinion[]) : [];
+  const successful = opinions.filter((o) => o.ok);
+  const mean = Number(p.mean_probability ?? 0);
+  const spread = Number(p.disagreement ?? 0);
+  const consensus = p.consensus ?? "split";
+  const badge =
+    consensus === "unanimous"
+      ? { color: "var(--color-opportunity)", label: "Unanimous" }
+      : consensus === "majority"
+        ? { color: "var(--color-signal)", label: "Majority view" }
+        : { color: "var(--color-reason)", label: "Panel split — genuinely uncertain" };
+  const stanceColor = (s: PanelOpinion["stance"]) =>
+    s === "risk" ? "var(--color-risk)"
+    : s === "opportunity" ? "var(--color-opportunity)"
+    : s === "benign" ? "var(--color-muted-foreground)"
+    : "var(--color-reason)";
+  return (
+    <section className="glass-panel rounded-xl p-4 border-l-2" style={{ borderLeftColor: badge.color }}>
+      <div className="flex items-center gap-2 mb-3 flex-wrap">
+        <Users className="h-4 w-4" style={{ color: badge.color }}/>
+        <h2 className="font-display text-sm">Analyst panel</h2>
+        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded border uppercase tracking-widest" style={{ borderColor: badge.color, color: badge.color }}>
+          {badge.label}
+        </span>
+        <span className="ml-auto text-[10px] font-mono text-muted-foreground">
+          mean {(mean * 100).toFixed(0)}% · spread {(spread * 100).toFixed(0)}% · {successful.length} model{successful.length === 1 ? "" : "s"}
+        </span>
+      </div>
+      <ul className="space-y-2">
+        {opinions.map((o, i) => (
+          <li key={i} className="rounded-lg border border-border/50 bg-background/30 p-2.5">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded border border-border/60">{o.model}</span>
+              {o.ok ? (
+                <>
+                  <span className="text-[10px] font-mono px-1.5 py-0.5 rounded border uppercase tracking-widest" style={{ borderColor: stanceColor(o.stance), color: stanceColor(o.stance) }}>
+                    {o.stance}
+                  </span>
+                  <span className="text-[10px] font-mono text-muted-foreground">p {o.probability.toFixed(2)}</span>
+                </>
+              ) : (
+                <span className="text-[10px] font-mono text-muted-foreground">no opinion · {o.error ?? "error"}</span>
+              )}
+            </div>
+            {o.ok && o.rationale && <p className="text-xs text-foreground/90 mt-1.5">{o.rationale}</p>}
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
