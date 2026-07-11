@@ -590,6 +590,8 @@ export type Database = {
         Row: {
           aliases: string[]
           canonical_name: string
+          company_number: string | null
+          company_number_checked_at: string | null
           created_at: string
           entity_type: string
           id: string
@@ -602,6 +604,8 @@ export type Database = {
         Insert: {
           aliases?: string[]
           canonical_name: string
+          company_number?: string | null
+          company_number_checked_at?: string | null
           created_at?: string
           entity_type: string
           id?: string
@@ -614,6 +618,8 @@ export type Database = {
         Update: {
           aliases?: string[]
           canonical_name?: string
+          company_number?: string | null
+          company_number_checked_at?: string | null
           created_at?: string
           entity_type?: string
           id?: string
