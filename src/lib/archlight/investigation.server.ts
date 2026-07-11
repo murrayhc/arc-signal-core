@@ -144,15 +144,16 @@ export async function runInvestigation(
   // Small window of recent doc signatures for copy-loop detection.
   const { data: recentDocs } = await db
     .from("documents")
-    .select("id, title, body, shingle_signature")
+    .select("id, title, body, full_text, shingle_signature")
     .order("fetched_at", { ascending: false })
     .limit(80);
   const { shingles } = await import("./text.server");
   const recentShingleSets = (recentDocs ?? []).map((d) => ({
     id: d.id,
-    s: shingles(`${d.title ?? ""} ${d.body ?? ""}`, 5),
+    s: shingles(`${d.title ?? ""} ${(d.full_text ?? d.body) ?? ""}`, 5),
     sig: d.shingle_signature as string | null,
   }));
+
 
   for (const eventId of eventIds) {
     const evt = eventMap.get(eventId);
