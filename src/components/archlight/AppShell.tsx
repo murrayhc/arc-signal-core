@@ -31,19 +31,8 @@ function TopNav({ onRunScan, scanning }: { onRunScan?: () => void; scanning?: bo
           </div>
         </Link>
 
-        <nav className="hidden lg:flex items-center gap-1 text-xs">
-          <TopLink to="/" label="Overview"/>
-          <TopLink to="/digest" label="Digest"/>
-          <TopLink to="/interrogate" label="Interrogate"/>
-          <TopLink to="/opportunities" label="Opportunities"/>
-          <TopLink to="/companies" label="Companies"/>
-          <TopLink to="/arcs" label="Arcs"/>
-          <TopLink to="/exposures" label="Exposures"/>
-          <TopLink to="/briefings" label="Briefings"/>
-          <TopLink to="/track-record" label="Track record"/>
-          <TopLink to="/backtest" label="Backtest"/>
-          <TopLink to="/ask-graph" label="Ask graph"/>
-        </nav>
+
+
 
         <div className="flex-1"/>
 
