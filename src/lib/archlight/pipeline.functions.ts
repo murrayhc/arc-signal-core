@@ -959,6 +959,16 @@ export const runScan = createServerFn({ method: "POST" }).handler(async () => {
     notes.push(`Red-team analysis skipped: ${err instanceof Error ? err.message : String(err)}`);
   }
 
+  // ============ MULTI-MODEL ANALYST PANEL ============
+  // Bounded, non-fatal. Runs K independent assessments and stores disagreement.
+  try {
+    const { autoPanelTopEvents } = await import("./analysis.functions");
+    const p = await autoPanelTopEvents({ scanRunId: run.id, max: 3 });
+    for (const n of p.notes) notes.push(n);
+  } catch (err) {
+    notes.push(`Analyst panel skipped: ${err instanceof Error ? err.message : String(err)}`);
+  }
+
 
 
 

@@ -1205,6 +1205,50 @@ export type Database = {
           },
         ]
       }
+      event_panel: {
+        Row: {
+          consensus: string | null
+          created_at: string
+          disagreement: number | null
+          event_candidate_id: string
+          id: string
+          mean_probability: number | null
+          panel: Json
+          paneled_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          consensus?: string | null
+          created_at?: string
+          disagreement?: number | null
+          event_candidate_id: string
+          id?: string
+          mean_probability?: number | null
+          panel?: Json
+          paneled_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          consensus?: string | null
+          created_at?: string
+          disagreement?: number | null
+          event_candidate_id?: string
+          id?: string
+          mean_probability?: number | null
+          panel?: Json
+          paneled_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_panel_event_candidate_id_fkey"
+            columns: ["event_candidate_id"]
+            isOneToOne: true
+            referencedRelation: "event_candidates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       evidence_arc_steps: {
         Row: {
           confidence: number
