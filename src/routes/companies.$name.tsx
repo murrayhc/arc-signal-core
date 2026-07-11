@@ -307,3 +307,12 @@ function pct(n: unknown): string {
   if (!Number.isFinite(v)) return "—";
   return `${Math.round(v * 100)}`;
 }
+function formatSignalType(t: string): string {
+  switch (t) {
+    case "charge_registered": return "Charge registered";
+    case "insolvency_filing": return "Insolvency filing";
+    case "officer_resignation": return "Officer resigned";
+    default: return t;
+  }
+}
+
