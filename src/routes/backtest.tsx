@@ -223,6 +223,11 @@ function BacktestPage() {
           )}
         </section>
 
+        {/* Calibration — prospective, accruing */}
+        <CalibrationPanel calibration={calibration}/>
+
+
+
 
         <section className="glass-panel rounded-xl overflow-hidden">
           <div className="px-4 py-2 text-[10px] font-mono uppercase tracking-widest text-muted-foreground border-b border-border/40 flex items-center justify-between">
