@@ -12,11 +12,11 @@ import { z } from "zod";
 import {
   chPSC,
   chOfficers,
-  chSearch,
   resolveCompanyNumber,
   type CHOfficerItem,
   type CHPSCItem,
 } from "./collectors/companies-house.server";
+
 
 async function admin() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
