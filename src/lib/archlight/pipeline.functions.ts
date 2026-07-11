@@ -858,7 +858,7 @@ export const runScan = createServerFn({ method: "POST" }).handler(async () => {
   const status = sourcesFailed > 0 ? "completed_with_errors" : "completed";
   // Prepend a compact summary + skip counters so the truncated `notes` column
   // still shows *why* events=0 even when hundreds of collection notes follow.
-  const summary = `Result — docs:${documentsCollected} claims:${atomicClaimsCreated} events:${eventsCreated} skipped:${eventsSkipped}`;
+  const summary = `Result — docs:${documentsCollected} claims:${atomicClaimsCreated} events:${eventsCreated} skipped:${eventsSkipped} bodies:${fetchedBodies}`;
   const joined = [summary, ...notes].join(" | ");
   // Keep the TAIL when we have to truncate — synth-drop / skip reasons are
   // appended later in the run and are the most useful diagnostic.
