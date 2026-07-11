@@ -348,7 +348,7 @@ export const updateExposureProfile = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => UpdateProfileInput.parse(d))
   .handler(async ({ data }) => {
     const db = await admin();
-    const patch: Record<string, unknown> = {};
+    const patch: { name?: string; active?: boolean; description?: string | null } = {};
     if (data.name !== undefined) patch.name = data.name.trim();
     if (data.active !== undefined) patch.active = data.active;
     if (data.description !== undefined) patch.description = data.description;
