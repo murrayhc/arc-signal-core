@@ -174,7 +174,37 @@ function BacktestPage() {
           </section>
         )}
 
-        {/* Cases table */}
+        {/* Mined signatures — recall among known failures */}
+        <section className="glass-panel rounded-xl overflow-hidden">
+          <div className="px-4 py-2 text-[10px] font-mono uppercase tracking-widest text-muted-foreground border-b border-border/40 flex items-center justify-between">
+            <span className="flex items-center gap-2"><Fingerprint className="h-3.5 w-3.5"/>Mined distress signatures</span>
+            <span className="text-muted-foreground/70">Recall among known failures · not a probability</span>
+          </div>
+          {signatures.length === 0 ? (
+            <div className="p-6 text-center text-xs text-muted-foreground italic">
+              No signatures yet. Run the backtest, then click <span className="text-foreground">Mine signatures</span>.
+            </div>
+          ) : (
+            <table className="w-full text-xs">
+              <thead className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground bg-background/30">
+                <tr><Th>Signal</Th><Th>Prevalence in failures</Th><Th>Median lead</Th><Th>Sample</Th><Th>Mined</Th></tr>
+              </thead>
+              <tbody>
+                {signatures.map((s) => (
+                  <tr key={s.signal_type} className="border-t border-border/40">
+                    <Td>{formatType(s.signal_type)}</Td>
+                    <Td className="font-mono">{Math.round(Number(s.prevalence_in_failures) * 100)}%</Td>
+                    <Td className="font-mono">{s.median_lead_days == null ? "—" : `${Math.round(Number(s.median_lead_days))}d`}</Td>
+                    <Td className="font-mono">n={s.sample_size}</Td>
+                    <Td className="font-mono text-muted-foreground">{new Date(s.mined_at).toLocaleDateString()}</Td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </section>
+
+
         <section className="glass-panel rounded-xl overflow-hidden">
           <div className="px-4 py-2 text-[10px] font-mono uppercase tracking-widest text-muted-foreground border-b border-border/40 flex items-center justify-between">
             <span>Cases · {cases.length}</span>
