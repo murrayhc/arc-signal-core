@@ -147,6 +147,110 @@ export type Database = {
           },
         ]
       }
+      backtest_cases: {
+        Row: {
+          company_name: string
+          company_number: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          outcome_date: string
+          outcome_type: string
+          signals_computed_at: string | null
+          source: string
+        }
+        Insert: {
+          company_name: string
+          company_number?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          outcome_date: string
+          outcome_type?: string
+          signals_computed_at?: string | null
+          source?: string
+        }
+        Update: {
+          company_name?: string
+          company_number?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          outcome_date?: string
+          outcome_type?: string
+          signals_computed_at?: string | null
+          source?: string
+        }
+        Relationships: []
+      }
+      backtest_runs: {
+        Row: {
+          cases_total: number | null
+          cases_with_signal: number | null
+          created_at: string
+          id: string
+          median_lead_days: number | null
+          ran_at: string
+          signal_type_stats: Json
+        }
+        Insert: {
+          cases_total?: number | null
+          cases_with_signal?: number | null
+          created_at?: string
+          id?: string
+          median_lead_days?: number | null
+          ran_at?: string
+          signal_type_stats?: Json
+        }
+        Update: {
+          cases_total?: number | null
+          cases_with_signal?: number | null
+          created_at?: string
+          id?: string
+          median_lead_days?: number | null
+          ran_at?: string
+          signal_type_stats?: Json
+        }
+        Relationships: []
+      }
+      backtest_signals: {
+        Row: {
+          case_id: string
+          created_at: string
+          detail: string | null
+          id: string
+          lead_days: number
+          signal_date: string
+          signal_type: string
+        }
+        Insert: {
+          case_id: string
+          created_at?: string
+          detail?: string | null
+          id?: string
+          lead_days: number
+          signal_date: string
+          signal_type: string
+        }
+        Update: {
+          case_id?: string
+          created_at?: string
+          detail?: string | null
+          id?: string
+          lead_days?: number
+          signal_date?: string
+          signal_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "backtest_signals_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "backtest_cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       briefings: {
         Row: {
           briefing_date: string

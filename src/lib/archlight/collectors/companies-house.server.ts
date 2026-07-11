@@ -24,7 +24,7 @@ export interface CompaniesHouseDoc {
 interface CHSearchResp {
   items?: Array<{ company_number?: string; title?: string }>;
 }
-interface CHChargeItem {
+export interface CHChargeItem {
   id?: string;
   charge_number?: number;
   created_on?: string;
@@ -35,7 +35,7 @@ interface CHChargeItem {
   links?: { self?: string };
 }
 interface CHChargesResp { items?: CHChargeItem[] }
-interface CHFilingItem {
+export interface CHFilingItem {
   transaction_id?: string;
   date?: string;
   description?: string;
@@ -44,7 +44,7 @@ interface CHFilingItem {
   links?: { self?: string };
 }
 interface CHFilingResp { items?: CHFilingItem[] }
-interface CHOfficerItem {
+export interface CHOfficerItem {
   name?: string;
   officer_role?: string;
   resigned_on?: string;
@@ -112,6 +112,40 @@ export async function chInsolvencyFilings(number: string, apiKey: string): Promi
 export async function chOfficers(number: string, apiKey: string): Promise<CHOfficerItem[]> {
   const resp = await chGet<CHOfficersResp>(`/company/${encodeURIComponent(number)}/officers`, apiKey);
   return resp?.items ?? [];
+}
+
+// Paginated variants — walk the full history within a bounded page budget so
+// backtesting can see distress signals that landed years before an outcome.
+type PaginatedResp<T> = { items?: T[]; total_results?: number; total_count?: number };
+
+async function chGetAll<T>(
+  path: string,
+  apiKey: string,
+  opts: { pageSize?: number; maxPages?: number } = {},
+): Promise<T[]> {
+  const pageSize = opts.pageSize ?? 100;
+  const maxPages = Math.max(1, Math.min(20, opts.maxPages ?? 10));
+  const out: T[] = [];
+  for (let page = 0; page < maxPages; page++) {
+    const sep = path.includes("?") ? "&" : "?";
+    const url = `${path}${sep}items_per_page=${pageSize}&start_index=${page * pageSize}`;
+    const resp = await chGet<PaginatedResp<T>>(url, apiKey);
+    const items = resp?.items ?? [];
+    if (!items.length) break;
+    out.push(...items);
+    if (items.length < pageSize) break;
+  }
+  return out;
+}
+
+export async function chChargesAll(number: string, apiKey: string, maxPages = 5): Promise<CHChargeItem[]> {
+  return chGetAll<CHChargeItem>(`/company/${encodeURIComponent(number)}/charges`, apiKey, { maxPages });
+}
+export async function chFilingHistoryAll(number: string, apiKey: string, maxPages = 10): Promise<CHFilingItem[]> {
+  return chGetAll<CHFilingItem>(`/company/${encodeURIComponent(number)}/filing-history`, apiKey, { maxPages });
+}
+export async function chOfficersAll(number: string, apiKey: string, maxPages = 5): Promise<CHOfficerItem[]> {
+  return chGetAll<CHOfficerItem>(`/company/${encodeURIComponent(number)}/officers`, apiKey, { maxPages });
 }
 
 function companyUrl(number: string): string {

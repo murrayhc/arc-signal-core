@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Bell, Building2, Command, Compass, Crosshair, Database, Download, Eye, Flame, Gauge, GitBranch, Layers, Play, Radar, Search, Settings, Shield, Sparkles, Target } from "lucide-react";
+import { Bell, Building2, Command, Compass, Crosshair, Database, Download, Eye, FlaskConical, Flame, Gauge, GitBranch, Layers, Play, Radar, Search, Settings, Shield, Sparkles, Target } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { getDashboard } from "@/lib/archlight/pipeline.functions";
 
@@ -41,6 +41,7 @@ function TopNav({ onRunScan, scanning }: { onRunScan?: () => void; scanning?: bo
           <TopLink to="/exposures" label="Exposures"/>
           <TopLink to="/briefings" label="Briefings"/>
           <TopLink to="/track-record" label="Track record"/>
+          <TopLink to="/backtest" label="Backtest"/>
         </nav>
 
         <div className="flex-1"/>
@@ -146,6 +147,7 @@ function SideNav() {
     { icon: Eye, label: "Watchlists", to: "/watchlist" },
     { icon: Crosshair, label: "Exposures", to: "/exposures" },
     { icon: Target, label: "Interrogations", to: "/interrogations" },
+    { icon: FlaskConical, label: "Backtest", to: "/backtest" },
     { icon: Radar, label: "Scans", to: "/scans" },
     { icon: Database, label: "Sources", to: "/sources" },
     { icon: Shield, label: "Review queue", to: "/review" },

@@ -21,6 +21,7 @@ import { Route as ExposuresRouteImport } from './routes/exposures'
 import { Route as DigestRouteImport } from './routes/digest'
 import { Route as CompaniesRouteImport } from './routes/companies'
 import { Route as BriefingsRouteImport } from './routes/briefings'
+import { Route as BacktestRouteImport } from './routes/backtest'
 import { Route as ArcsRouteImport } from './routes/arcs'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as OpportunitiesIndexRouteImport } from './routes/opportunities.index'
@@ -94,6 +95,11 @@ const CompaniesRoute = CompaniesRouteImport.update({
 const BriefingsRoute = BriefingsRouteImport.update({
   id: '/briefings',
   path: '/briefings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BacktestRoute = BacktestRouteImport.update({
+  id: '/backtest',
+  path: '/backtest',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ArcsRoute = ArcsRouteImport.update({
@@ -170,6 +176,7 @@ const ApiPublicExportsEventsRoute = ApiPublicExportsEventsRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/arcs': typeof ArcsRouteWithChildren
+  '/backtest': typeof BacktestRoute
   '/briefings': typeof BriefingsRoute
   '/companies': typeof CompaniesRouteWithChildren
   '/digest': typeof DigestRoute
@@ -198,6 +205,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/arcs': typeof ArcsRouteWithChildren
+  '/backtest': typeof BacktestRoute
   '/briefings': typeof BriefingsRoute
   '/companies': typeof CompaniesRouteWithChildren
   '/digest': typeof DigestRoute
@@ -226,6 +234,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/arcs': typeof ArcsRouteWithChildren
+  '/backtest': typeof BacktestRoute
   '/briefings': typeof BriefingsRoute
   '/companies': typeof CompaniesRouteWithChildren
   '/digest': typeof DigestRoute
@@ -256,6 +265,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/arcs'
+    | '/backtest'
     | '/briefings'
     | '/companies'
     | '/digest'
@@ -284,6 +294,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/arcs'
+    | '/backtest'
     | '/briefings'
     | '/companies'
     | '/digest'
@@ -311,6 +322,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/arcs'
+    | '/backtest'
     | '/briefings'
     | '/companies'
     | '/digest'
@@ -340,6 +352,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ArcsRoute: typeof ArcsRouteWithChildren
+  BacktestRoute: typeof BacktestRoute
   BriefingsRoute: typeof BriefingsRoute
   CompaniesRoute: typeof CompaniesRouteWithChildren
   DigestRoute: typeof DigestRoute
@@ -445,6 +458,13 @@ declare module '@tanstack/react-router' {
       path: '/briefings'
       fullPath: '/briefings'
       preLoaderRoute: typeof BriefingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/backtest': {
+      id: '/backtest'
+      path: '/backtest'
+      fullPath: '/backtest'
+      preLoaderRoute: typeof BacktestRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/arcs': {
@@ -598,6 +618,7 @@ const SourcesRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ArcsRoute: ArcsRouteWithChildren,
+  BacktestRoute: BacktestRoute,
   BriefingsRoute: BriefingsRoute,
   CompaniesRoute: CompaniesRouteWithChildren,
   DigestRoute: DigestRoute,
