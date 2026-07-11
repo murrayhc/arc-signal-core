@@ -41,6 +41,7 @@ function TopNav({ onRunScan, scanning }: { onRunScan?: () => void; scanning?: bo
           <TopLink to="/exposures" label="Exposures"/>
           <TopLink to="/briefings" label="Briefings"/>
           <TopLink to="/track-record" label="Track record"/>
+          <TopLink to="/backtest" label="Backtest"/>
         </nav>
 
         <div className="flex-1"/>
