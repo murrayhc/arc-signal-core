@@ -10,6 +10,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { gdeltSearch, type GdeltArticle } from "./search/gdelt.server";
 import { ingestDocument, type IngestSource } from "./ingest.server";
+import { classifyStance } from "./stance.server";
 
 type DbAdmin = SupabaseClient<Database>;
 
@@ -168,6 +169,39 @@ export async function runInvestigation(
     });
     if (!query) continue;
 
+    // Resolve event's primary canonical claim (highest repeat_count among the
+    // atomic claims cited by this event's impacts). Used for stance grading
+    // against newly-ingested articles.
+    let primaryCanonical: { id: string; text: string } | null = null;
+    try {
+      const { data: eImpacts } = await db
+        .from("company_impacts")
+        .select("evidence_ids")
+        .eq("event_candidate_id", eventId);
+      const evAtomicIds = Array.from(new Set(
+        (eImpacts ?? []).flatMap((r) => ((r.evidence_ids ?? []) as string[])),
+      )).slice(0, 60);
+      if (evAtomicIds.length) {
+        const { data: evAtomics } = await db
+          .from("atomic_claims")
+          .select("canonical_claim_id")
+          .in("id", evAtomicIds);
+        const canIds = Array.from(new Set(
+          (evAtomics ?? []).map((a) => a.canonical_claim_id).filter((x): x is string => !!x),
+        ));
+        if (canIds.length) {
+          const { data: cans } = await db
+            .from("canonical_claims")
+            .select("id, claim_text, repeat_count")
+            .in("id", canIds)
+            .order("repeat_count", { ascending: false })
+            .limit(1);
+          const top = cans?.[0];
+          if (top && top.claim_text) primaryCanonical = { id: top.id, text: top.claim_text };
+        }
+      }
+    } catch { /* best-effort */ }
+
     // Dedupe candidate URLs against existing documents.
     const articles: GdeltArticle[] = await gdeltSearch(query, {
       maxRecords: maxPerEvent,
@@ -213,6 +247,44 @@ export async function runInvestigation(
           ingestedForEvent++;
           result.claims_created += ing.atomicsCreated;
           for (const c of ing.newClaims) if (c.canonical_id) evidenceIds.push(c.canonical_id);
+
+          // Stance grading against the event's primary canonical claim.
+          if (primaryCanonical) {
+            const stance = await classifyStance(primaryCanonical.text, `${title}\n\n${body}`);
+            if (stance.stance === "contradicts" && stance.confidence >= 0.6) {
+              await db.from("claim_lineage").insert({
+                canonical_claim_id: primaryCanonical.id,
+                source_id: src.id,
+                document_id: ing.docId,
+                url: art.url,
+                published_at: art.seendate ?? new Date().toISOString(),
+                relation_to_origin: "contradiction",
+                is_likely_copy: false,
+                origin_confidence: Number(stance.confidence.toFixed(2)),
+              });
+              const { data: curCan } = await db
+                .from("canonical_claims")
+                .select("contradiction_count")
+                .eq("id", primaryCanonical.id)
+                .maybeSingle();
+              await db.from("canonical_claims").update({
+                contradiction_count: Number(curCan?.contradiction_count ?? 0) + 1,
+                updated_at: new Date().toISOString(),
+              }).eq("id", primaryCanonical.id);
+              notes.push(`Contradiction recorded from ${src.name} vs event primary claim (${stance.confidence.toFixed(2)}).`);
+            } else if (stance.stance === "neutral") {
+              await db.from("claim_lineage").insert({
+                canonical_claim_id: primaryCanonical.id,
+                source_id: src.id,
+                document_id: ing.docId,
+                url: art.url,
+                published_at: art.seendate ?? new Date().toISOString(),
+                relation_to_origin: "neutral",
+                is_likely_copy: false,
+                origin_confidence: 0,
+              });
+            }
+          }
         }
       } catch (err) {
         queryErr = err instanceof Error ? err.message : String(err);

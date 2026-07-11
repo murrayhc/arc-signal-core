@@ -457,6 +457,11 @@ function EvidenceRow({ c, shortId }: { c: SupportingClaim; shortId: (s: string) 
               <ExternalLink className="h-3 w-3"/> doc
             </a>
           )}
+          {c.lineage.filter((l) => l.relation === "contradiction").length > 0 && (
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded border" style={{ borderColor: "var(--color-risk)", color: "var(--color-risk)" }}>
+              contradicted by {c.lineage.filter((l) => l.relation === "contradiction").length}
+            </span>
+          )}
           {c.lineage.length > 0 && (
             <button onClick={() => setOpen((v) => !v)} className="text-[10px] font-mono text-muted-foreground hover:text-foreground flex items-center gap-1">
               <GitBranch className="h-3 w-3"/> lineage · {c.lineage.length}
@@ -464,6 +469,25 @@ function EvidenceRow({ c, shortId }: { c: SupportingClaim; shortId: (s: string) 
           )}
         </div>
       </div>
+      {c.lineage.filter((l) => l.relation === "contradiction").length > 0 && (
+        <div className="mt-2 pl-6 border-l-2" style={{ borderColor: "var(--color-risk)" }}>
+          <div className="text-[10px] font-mono uppercase tracking-widest mb-1" style={{ color: "var(--color-risk)" }}>Contradicted by</div>
+          <ul className="space-y-1">
+            {c.lineage.filter((l) => l.relation === "contradiction").map((l, i) => (
+              <li key={`ctr-${i}`} className="text-[11px] flex flex-wrap items-baseline gap-x-2">
+                <span className="text-[10px] font-mono text-muted-foreground">{l.published_at ? new Date(l.published_at).toISOString().slice(0, 10) : "—"}</span>
+                <span className="font-display text-xs">{l.source_name ?? "unknown source"}</span>
+                {l.origin_confidence != null && <span className="text-[10px] font-mono text-muted-foreground">stance {Number(l.origin_confidence).toFixed(2)}</span>}
+                {l.url && (
+                  <a href={l.url} target="_blank" rel="noreferrer" className="text-[10px] font-mono text-muted-foreground hover:text-foreground inline-flex items-center gap-1">
+                    <ExternalLink className="h-3 w-3"/> link
+                  </a>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       {open && c.lineage.length > 0 && (
         <div className="mt-3 pl-6 border-l border-border/40">
           {c.canonical_text && c.canonical_text !== c.claim_text && (

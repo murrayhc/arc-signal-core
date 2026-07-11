@@ -1,0 +1,1 @@
+ALTER TYPE public.lineage_relation ADD VALUE IF NOT EXISTS 'neutral';

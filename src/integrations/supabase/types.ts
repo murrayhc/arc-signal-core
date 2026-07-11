@@ -2655,6 +2655,7 @@ export type Database = {
         | "commentary"
         | "contradiction"
         | "unknown"
+        | "neutral"
       node_kind:
         | "event"
         | "source"
@@ -2895,6 +2896,7 @@ export const Constants = {
         "commentary",
         "contradiction",
         "unknown",
+        "neutral",
       ],
       node_kind: [
         "event",
