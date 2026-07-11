@@ -911,6 +911,10 @@ export type Database = {
       entities: {
         Row: {
           aliases: string[]
+          belief_components: Json
+          belief_stress: number
+          belief_trajectory: number
+          belief_updated_at: string | null
           canonical_name: string
           company_number: string | null
           company_number_checked_at: string | null
@@ -925,6 +929,10 @@ export type Database = {
         }
         Insert: {
           aliases?: string[]
+          belief_components?: Json
+          belief_stress?: number
+          belief_trajectory?: number
+          belief_updated_at?: string | null
           canonical_name: string
           company_number?: string | null
           company_number_checked_at?: string | null
@@ -939,6 +947,10 @@ export type Database = {
         }
         Update: {
           aliases?: string[]
+          belief_components?: Json
+          belief_stress?: number
+          belief_trajectory?: number
+          belief_updated_at?: string | null
           canonical_name?: string
           company_number?: string | null
           company_number_checked_at?: string | null
@@ -952,6 +964,44 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      entity_belief_history: {
+        Row: {
+          at: string
+          created_at: string
+          entity_id: string
+          id: string
+          stress: number | null
+          trajectory: number | null
+          trigger: string | null
+        }
+        Insert: {
+          at?: string
+          created_at?: string
+          entity_id: string
+          id?: string
+          stress?: number | null
+          trajectory?: number | null
+          trigger?: string | null
+        }
+        Update: {
+          at?: string
+          created_at?: string
+          entity_id?: string
+          id?: string
+          stress?: number | null
+          trajectory?: number | null
+          trigger?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entity_belief_history_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       entity_relationships: {
         Row: {
