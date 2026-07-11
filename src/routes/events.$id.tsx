@@ -73,6 +73,23 @@ function EventDetailPage() {
     },
     onError: (e) => toast.error("Projection failed", { description: e instanceof Error ? e.message : String(e) }),
   });
+  const analysis = useQuery({
+    queryKey: ["archlight", "event", id, "analysis"],
+    queryFn: () => getEventAnalysis({ data: { eventId: id } }),
+    enabled: !!data?.event,
+  });
+  const analyseMut = useMutation({
+    mutationFn: () => analyseEvent({ data: { eventId: id } }),
+    onSuccess: (r) => {
+      if (r.ok) {
+        toast.success(`Red-team + ACH complete (case: ${r.red_team_strength}, ambiguity: ${r.ambiguity}).`);
+        qc.invalidateQueries({ queryKey: ["archlight", "event", id, "analysis"] });
+      } else {
+        toast.error("Analysis failed", { description: r.error ?? "unknown" });
+      }
+    },
+    onError: (e) => toast.error("Analysis failed", { description: e instanceof Error ? e.message : String(e) }),
+  });
 
   const claimsById = useMemo(() => {
     const m = new Map<string, SupportingClaim>();
