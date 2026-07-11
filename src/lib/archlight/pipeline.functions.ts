@@ -153,6 +153,11 @@ export const runScan = createServerFn({ method: "POST" }).handler(async () => {
   let sourcesAttempted = 0;
   let sourcesSucceeded = 0;
   let sourcesFailed = 0;
+  let fetchedBodies = 0;
+  // Shared, bounded budget for full-article body enrichment across all
+  // collectors in this scan. Politeness > completeness.
+  const bodyBudget = { remaining: 30 };
+
 
   const { data: sources } = await db.from("sources").select("*").in("status", ["active", "degraded"]).order("reliability_score", { ascending: false }).limit(settings.sources_per_scan);
   const chosen = sources ?? [];
@@ -193,8 +198,9 @@ export const runScan = createServerFn({ method: "POST" }).handler(async () => {
   const newClaims: NewClaim[] = [];
 
   // Load a small window of recent doc signatures for copy-loop detection.
-  const { data: recentDocs } = await db.from("documents").select("id, title, body, shingle_signature").order("fetched_at", { ascending: false }).limit(80);
-  const recentShingleSets = (recentDocs ?? []).map((d) => ({ id: d.id, s: shingles(`${d.title ?? ""} ${d.body ?? ""}`, 5), sig: d.shingle_signature as string | null }));
+  const { data: recentDocs } = await db.from("documents").select("id, title, body, full_text, shingle_signature").order("fetched_at", { ascending: false }).limit(80);
+  const recentShingleSets = (recentDocs ?? []).map((d) => ({ id: d.id, s: shingles(`${d.title ?? ""} ${(d.full_text ?? d.body) ?? ""}`, 5), sig: d.shingle_signature as string | null }));
+
 
   for (const src of chosen) {
     if (!hasBudget()) {
@@ -323,14 +329,18 @@ export const runScan = createServerFn({ method: "POST" }).handler(async () => {
           recentShingleSets,
           copyLoopJaccard: settings.copy_loop_jaccard,
           logStage: "scan_intake",
+          enrichBody: true,
+          bodyBudget,
         });
         for (const n of ing.notes) notes.push(n);
         if (ing.skipped) continue;
         documentsCollected++;
         atomicClaimsCreated += ing.atomicsCreated;
+        if (ing.fetchedBody) fetchedBodies++;
         for (const c of ing.newClaims) newClaims.push(c);
         sourceProducedAtLeastOne = true;
       }
+
 
       if (!sourceProducedAtLeastOne) throw new Error("no usable docs from source");
 
@@ -849,7 +859,7 @@ export const runScan = createServerFn({ method: "POST" }).handler(async () => {
   const status = sourcesFailed > 0 ? "completed_with_errors" : "completed";
   // Prepend a compact summary + skip counters so the truncated `notes` column
   // still shows *why* events=0 even when hundreds of collection notes follow.
-  const summary = `Result — docs:${documentsCollected} claims:${atomicClaimsCreated} events:${eventsCreated} skipped:${eventsSkipped}`;
+  const summary = `Result — docs:${documentsCollected} claims:${atomicClaimsCreated} events:${eventsCreated} skipped:${eventsSkipped} bodies:${fetchedBodies}`;
   const joined = [summary, ...notes].join(" | ");
   // Keep the TAIL when we have to truncate — synth-drop / skip reasons are
   // appended later in the run and are the most useful diagnostic.
@@ -995,6 +1005,8 @@ export const runScan = createServerFn({ method: "POST" }).handler(async () => {
     sources_succeeded: sourcesSucceeded,
     sources_failed: sourcesFailed,
     documents_collected: documentsCollected,
+    fetched_bodies: fetchedBodies,
+
     atomic_claims_created: atomicClaimsCreated,
     events_created: eventsCreated,
     events_skipped: eventsSkipped,

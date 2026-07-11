@@ -5,7 +5,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { callJson, callEmbedding, guardFinancialAdvice, pickModel } from "./ai-gateway.server";
-import { shingles, jaccard, shingleSignature, deriveIndependenceGroup } from "./text.server";
+import { shingles, jaccard, shingleSignature, deriveIndependenceGroup, fetchArticleBody } from "./text.server";
 
 export type DbAdmin = SupabaseClient<Database>;
 
@@ -65,6 +65,10 @@ export interface IngestOpts {
   copyLoopJaccard?: number;
   /** Stage label used in llm_task_logs.metadata for auditing. */
   logStage?: string;
+  /** If true, try to fetch the full article body from `url` before claim extraction. */
+  enrichBody?: boolean;
+  /** Shared budget across the scan — decremented on each fetch attempt. */
+  bodyBudget?: { remaining: number };
 }
 
 export interface IngestResult {
@@ -74,7 +78,10 @@ export interface IngestResult {
   notes: string[];
   isLikelyCopy: boolean;
   skipped?: string;
+  /** True if the full article body was fetched and stored on the document. */
+  fetchedBody?: boolean;
 }
+
 
 async function logTask(
   db: DbAdmin,
@@ -152,12 +159,35 @@ export async function ingestDocument(db: DbAdmin, opts: IngestOpts): Promise<Ing
   const srcGroup = (src.independence_group ?? "").trim() ||
     deriveIndependenceGroup(src.base_url ?? src.feed_url ?? null, src.name, !!src.is_synthetic, src.id);
 
+  // Best-effort full-article body enrichment BEFORE claim extraction, so the
+  // model sees real prose instead of a headline snippet. Bounded, polite,
+  // never throws. Skips synthetic sources and non-http(s) urls.
+  let fetchedBody = false;
+  let effectiveBody = doc.body ?? body;
+  if (
+    opts.enrichBody &&
+    !isSynthetic &&
+    /^https?:\/\//i.test(url) &&
+    (!opts.bodyBudget || opts.bodyBudget.remaining > 0)
+  ) {
+    if (opts.bodyBudget) opts.bodyBudget.remaining -= 1;
+    const fetched = await fetchArticleBody(url);
+    if (fetched && fetched.length > (effectiveBody?.length ?? 0)) {
+      effectiveBody = fetched;
+      fetchedBody = true;
+      const nowIso = new Date().toISOString();
+      await db.from("documents").update({ full_text: fetched, body_fetched_at: nowIso }).eq("id", doc.id);
+      notes.push(`${src.name}: fetched full article body (${fetched.length} chars).`);
+    }
+  }
+
   const ext = await callJson<{ claims: Array<{ claim_text: string; claim_type: string; entities: string[]; sectors: string[]; regions: string[]; commodities: string[]; specificity: number }> }>({
     task: "atomic_claim_extraction",
     system: "Extract atomic factual claims from the article. Each claim must be a single verifiable statement, no opinion. Return JSON: {\"claims\":[{\"claim_text\":string,\"claim_type\":one of layoff|hiring|regulatory|procurement|supply_chain|market|commodity|company_statement|executive|legal|complaint|demand|funding|macro|unknown,\"entities\":string[],\"sectors\":string[],\"regions\":string[],\"commodities\":string[],\"specificity\":0..1}]}. Do not invent, do not give financial advice.",
-    user: `TITLE: ${doc.title}\n\nBODY: ${doc.body}`,
+    user: `TITLE: ${doc.title}\n\nBODY: ${effectiveBody}`,
   });
   await logTask(db, "atomic_claim_extraction", ext, stage);
+
 
   const newClaims: IngestedClaim[] = [];
   let atomicsCreated = 0;
@@ -356,5 +386,5 @@ export async function ingestDocument(db: DbAdmin, opts: IngestOpts): Promise<Ing
     }
   }
 
-  return { docId: doc.id, newClaims, atomicsCreated, notes, isLikelyCopy };
+  return { docId: doc.id, newClaims, atomicsCreated, notes, isLikelyCopy, fetchedBody };
 }

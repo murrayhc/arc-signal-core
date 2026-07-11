@@ -832,11 +832,13 @@ export type Database = {
         Row: {
           author: string | null
           body: string | null
+          body_fetched_at: string | null
           copy_loop_score: number
           created_at: string
           document_type: string
           embedding: Json | null
           fetched_at: string
+          full_text: string | null
           id: string
           is_likely_copy: boolean
           is_synthetic: boolean
@@ -853,11 +855,13 @@ export type Database = {
         Insert: {
           author?: string | null
           body?: string | null
+          body_fetched_at?: string | null
           copy_loop_score?: number
           created_at?: string
           document_type?: string
           embedding?: Json | null
           fetched_at?: string
+          full_text?: string | null
           id?: string
           is_likely_copy?: boolean
           is_synthetic?: boolean
@@ -874,11 +878,13 @@ export type Database = {
         Update: {
           author?: string | null
           body?: string | null
+          body_fetched_at?: string | null
           copy_loop_score?: number
           created_at?: string
           document_type?: string
           embedding?: Json | null
           fetched_at?: string
+          full_text?: string | null
           id?: string
           is_likely_copy?: boolean
           is_synthetic?: boolean
