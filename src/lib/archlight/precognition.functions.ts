@@ -56,18 +56,30 @@ export const projectEventForward = createServerFn({ method: "POST" })
     const primaryIds = Array.from(new Set(primaryResolved.map((r) => r.id)));
 
     // --- Propagate to related entities (1 hop) ---
-    const propagated: Array<{ from_id: string; to_id: string; rel: string; weight: number; rationale: string | null }> = [];
+    const propagated: Array<{ from_id: string; to_id: string; rel: string; weight: number; rationale: string | null; verified: boolean }> = [];
     if (primaryIds.length) {
       const { data: rels } = await db.from("entity_relationships").select("*").in("from_entity_id", primaryIds);
       for (const rel of rels ?? []) {
-        propagated.push({ from_id: rel.from_entity_id, to_id: rel.to_entity_id, rel: rel.relationship_type, weight: Number(rel.weight), rationale: rel.rationale });
+        propagated.push({ from_id: rel.from_entity_id, to_id: rel.to_entity_id, rel: rel.relationship_type, weight: Number(rel.weight), rationale: rel.rationale, verified: !!rel.verified });
       }
       // also incoming (peer/competitor of X → X)
       const { data: relsIn } = await db.from("entity_relationships").select("*").in("to_entity_id", primaryIds);
       for (const rel of relsIn ?? []) {
-        propagated.push({ from_id: rel.to_entity_id, to_id: rel.from_entity_id, rel: rel.relationship_type, weight: Number(rel.weight), rationale: rel.rationale });
+        propagated.push({ from_id: rel.to_entity_id, to_id: rel.from_entity_id, rel: rel.relationship_type, weight: Number(rel.weight), rationale: rel.rationale, verified: !!rel.verified });
       }
     }
+    // When multiple edges cover the same (from,to,rel), keep the verified one.
+    {
+      const bestByKey = new Map<string, typeof propagated[number]>();
+      for (const p of propagated) {
+        const key = `${p.from_id}|${p.to_id}|${p.rel}`;
+        const prev = bestByKey.get(key);
+        if (!prev || (p.verified && !prev.verified)) bestByKey.set(key, p);
+      }
+      propagated.length = 0;
+      for (const v of bestByKey.values()) propagated.push(v);
+    }
+
 
     // Load propagated entities
     const propIds = Array.from(new Set(propagated.map((p) => p.to_id))).filter((id) => !primaryIds.includes(id));
