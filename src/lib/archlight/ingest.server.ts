@@ -365,6 +365,74 @@ export async function ingestDocument(db: DbAdmin, opts: IngestOpts): Promise<Ing
           } catch { /* best-effort */ }
         }
 
+        // Cross-canonical stance: if this new atomic is semantically close to
+        // (but not the same as) an existing canonical, ask the classifier
+        // whether it contradicts that neighbour. Bounded: one stance call per
+        // new atomic, scanned against a small recent-canonical window.
+        if (embedding && Array.isArray(embedding) && embedding.length > 0) {
+          try {
+            const { data: nearby } = await db
+              .from("canonical_claims")
+              .select("id, claim_text, normalised_claim_text, embedding, contradiction_count")
+              .neq("id", canonical.id)
+              .neq("normalised_claim_text", norm)
+              .not("embedding", "is", null)
+              .order("updated_at", { ascending: false })
+              .limit(400);
+            let bestId: string | null = null;
+            let bestText: string | null = null;
+            let bestSim = 0;
+            let bestCount = 0;
+            const a = embedding;
+            let aNorm = 0;
+            for (let i = 0; i < a.length; i++) aNorm += a[i] * a[i];
+            aNorm = Math.sqrt(aNorm);
+            if (aNorm > 0) {
+              for (const cand of (nearby ?? [])) {
+                const b = (cand as { embedding?: unknown }).embedding;
+                if (!Array.isArray(b) || b.length !== a.length) continue;
+                let dot = 0;
+                let bNorm = 0;
+                for (let i = 0; i < a.length; i++) {
+                  dot += a[i] * (b[i] as number);
+                  bNorm += (b[i] as number) * (b[i] as number);
+                }
+                bNorm = Math.sqrt(bNorm);
+                if (bNorm <= 0) continue;
+                const sim = dot / (aNorm * bNorm);
+                if (sim > bestSim) {
+                  bestSim = sim;
+                  bestId = (cand as { id: string }).id;
+                  bestText = (cand as { claim_text: string }).claim_text;
+                  bestCount = Number((cand as { contradiction_count?: number | null }).contradiction_count ?? 0);
+                }
+              }
+            }
+            if (bestId && bestText && bestSim >= 0.82) {
+              const stance = await classifyStance(bestText, c.claim_text);
+              if (stance.stance === "contradicts" && stance.confidence >= 0.6) {
+                await db.from("claim_lineage").insert({
+                  canonical_claim_id: bestId,
+                  source_id: src.id,
+                  document_id: doc.id,
+                  url: doc.url,
+                  published_at: publishedAt ?? new Date().toISOString(),
+                  relation_to_origin: "contradiction",
+                  is_likely_copy: false,
+                  origin_confidence: Number(stance.confidence.toFixed(2)),
+                });
+                await db.from("canonical_claims").update({
+                  contradiction_count: bestCount + 1,
+                  updated_at: new Date().toISOString(),
+                }).eq("id", bestId);
+                notes.push(`Cross-claim contradiction: "${c.claim_text.slice(0, 80)}" vs canonical (${stance.confidence.toFixed(2)}, sim ${bestSim.toFixed(2)}).`);
+              }
+            }
+          } catch { /* best-effort */ }
+        }
+
+
+
 
         newClaims.push({
           id: atomic.id,
