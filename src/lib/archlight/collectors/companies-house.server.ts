@@ -24,7 +24,7 @@ export interface CompaniesHouseDoc {
 interface CHSearchResp {
   items?: Array<{ company_number?: string; title?: string }>;
 }
-interface CHChargeItem {
+export interface CHChargeItem {
   id?: string;
   charge_number?: number;
   created_on?: string;
@@ -35,7 +35,7 @@ interface CHChargeItem {
   links?: { self?: string };
 }
 interface CHChargesResp { items?: CHChargeItem[] }
-interface CHFilingItem {
+export interface CHFilingItem {
   transaction_id?: string;
   date?: string;
   description?: string;
@@ -44,7 +44,7 @@ interface CHFilingItem {
   links?: { self?: string };
 }
 interface CHFilingResp { items?: CHFilingItem[] }
-interface CHOfficerItem {
+export interface CHOfficerItem {
   name?: string;
   officer_role?: string;
   resigned_on?: string;
