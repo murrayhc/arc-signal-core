@@ -331,3 +331,217 @@ export async function autoAnalyseTopEvents(opts: { scanRunId?: string | null; ma
     return { analysed: 0, notes };
   }
 }
+
+// ============================================================================
+// Multi-model analyst PANEL: run K independent assessments, aggregate the
+// spread as a first-class disagreement signal.
+// ============================================================================
+
+type PanelStance = "risk" | "opportunity" | "benign" | "unclear";
+type Consensus = "unanimous" | "majority" | "split";
+
+interface PanelOpinion {
+  model: string;
+  probability: number;
+  stance: PanelStance;
+  rationale: string;
+  ok: boolean;
+  error?: string;
+}
+
+function coerceStance(v: unknown): PanelStance {
+  return v === "risk" || v === "opportunity" || v === "benign" || v === "unclear" ? v : "unclear";
+}
+function clamp01(n: unknown): number {
+  const v = Number(n);
+  if (!Number.isFinite(v)) return 0;
+  return Math.max(0, Math.min(1, v));
+}
+
+// Three distinct models on the Lovable AI gateway. Kept small on purpose: cost
+// bounded, opinions genuinely independent (different families/sizes).
+const PANEL_MODELS: string[] = [
+  "google/gemini-2.5-pro",
+  "google/gemini-2.5-flash",
+  "google/gemini-3-flash-preview",
+];
+
+const PANEL_FRAMINGS: string[] = [
+  "You are a senior risk analyst. Read the evidence sceptically and prefer the plainest reading. Weight contradictions and low-reliability sources heavily.",
+  "You are an opportunity-side analyst. Read the evidence for plausible upside and second-order consequences, but do not invent anything not in the brief.",
+  "You are a base-rate analyst. Anchor on how often events like this actually resolve as described and treat thin sourcing as a strong prior against.",
+];
+
+async function runOnePanelOpinion(opts: { evidence: string; model: string; framing: string }): Promise<PanelOpinion> {
+  const user =
+    `${opts.evidence}\n\n` +
+    `Assess whether the event's main judgment is materially correct. ` +
+    `Return STRICT JSON: {"probability": 0..1, "stance": "risk"|"opportunity"|"benign"|"unclear", "rationale": string}. ` +
+    `probability = your independent probability that the event's main judgment is materially correct. ` +
+    `stance = your independent read (risk / opportunity / benign / unclear). ` +
+    `rationale = one sentence, grounded ONLY in the evidence above. ` +
+    `Do NOT invent external facts. Do NOT give financial advice.`;
+  const r = await callJson<{ probability?: number; stance?: string; rationale?: string }>({
+    task: "contradiction_analysis",
+    model: opts.model,
+    system:
+      `${opts.framing} Grounded strictly in the provided evidence. Do NOT invent external facts. Do NOT give financial advice: no buy/sell/hold, no target price, no portfolio allocation.`,
+    user,
+    temperature: 0.2,
+    maxTokens: 500,
+  });
+  if (!r.ok || !r.data) {
+    return { model: opts.model, probability: 0, stance: "unclear", rationale: "", ok: false, error: r.error ?? "no data" };
+  }
+  return {
+    model: opts.model,
+    probability: clamp01(r.data.probability),
+    stance: coerceStance(r.data.stance),
+    rationale: safeText(r.data.rationale, 400),
+    ok: true,
+  };
+}
+
+function aggregatePanel(opinions: PanelOpinion[]): { mean: number; disagreement: number; consensus: Consensus } {
+  const ok = opinions.filter((o) => o.ok);
+  if (ok.length === 0) return { mean: 0, disagreement: 0, consensus: "split" };
+  const probs = ok.map((o) => o.probability);
+  const mean = probs.reduce((a, b) => a + b, 0) / probs.length;
+  const spread = Math.max(...probs) - Math.min(...probs);
+  const stances = new Set(ok.map((o) => o.stance));
+  const allSameStance = stances.size === 1;
+  let consensus: Consensus;
+  if (allSameStance && spread <= 0.15) consensus = "unanimous";
+  else if (!allSameStance || spread >= 0.35) consensus = "split";
+  else consensus = "majority";
+  return { mean: clamp01(mean), disagreement: clamp01(spread), consensus };
+}
+
+export const panelEvent = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => AnalyseInput.parse(d))
+  .handler(async ({ data }) => {
+    const db = await admin();
+    const brief = await buildBrief(db, data.eventId);
+    if (!brief) return { ok: false as const, error: "Event not found" };
+    const evidence = briefToPrompt(brief);
+
+    const opinions: PanelOpinion[] = [];
+    for (let i = 0; i < PANEL_MODELS.length; i++) {
+      const op = await runOnePanelOpinion({
+        evidence,
+        model: PANEL_MODELS[i],
+        framing: PANEL_FRAMINGS[i] ?? PANEL_FRAMINGS[0],
+      });
+      opinions.push(op);
+    }
+
+    const successful = opinions.filter((o) => o.ok);
+    if (successful.length === 0) {
+      return { ok: false as const, error: "All panel opinions failed" };
+    }
+
+    const { mean, disagreement, consensus } = aggregatePanel(opinions);
+    const nowIso = new Date().toISOString();
+
+    const panelJson = opinions as unknown as Database["public"]["Tables"]["event_panel"]["Insert"]["panel"];
+    const { data: existing } = await db
+      .from("event_panel")
+      .select("id")
+      .eq("event_candidate_id", data.eventId)
+      .maybeSingle();
+    if (existing) {
+      await db.from("event_panel").update({
+        panel: panelJson,
+        mean_probability: Number(mean.toFixed(4)),
+        disagreement: Number(disagreement.toFixed(4)),
+        consensus,
+        paneled_at: nowIso,
+      }).eq("id", existing.id);
+    } else {
+      await db.from("event_panel").insert({
+        event_candidate_id: data.eventId,
+        panel: panelJson,
+        mean_probability: Number(mean.toFixed(4)),
+        disagreement: Number(disagreement.toFixed(4)),
+        consensus,
+        paneled_at: nowIso,
+      });
+    }
+
+    // Contested-assessment review_queue (idempotent) if the user is exposed.
+    if (consensus === "split") {
+      const { data: hits } = await db
+        .from("exposure_hits")
+        .select("id")
+        .eq("event_candidate_id", data.eventId)
+        .limit(1);
+      if ((hits ?? []).length > 0) {
+        const { data: openRow } = await db
+          .from("review_queue")
+          .select("id")
+          .eq("item_type", "contested_assessment")
+          .eq("item_id", data.eventId)
+          .eq("status", "pending")
+          .limit(1);
+        if (!openRow || openRow.length === 0) {
+          const reason = `Analyst panel is SPLIT on "${brief.eventTitle.slice(0, 140)}" — mean ${(mean * 100).toFixed(0)}%, spread ${(disagreement * 100).toFixed(0)}% across ${successful.length} models. Treat headline confidence as contested.`;
+          await db.from("review_queue").insert({
+            item_type: "contested_assessment",
+            item_id: data.eventId,
+            reason: reason.slice(0, 500),
+            status: "pending",
+          });
+        }
+      }
+    }
+
+    return {
+      ok: true as const,
+      panel: opinions,
+      mean_probability: mean,
+      disagreement,
+      consensus,
+    };
+  });
+
+export const getEventPanel = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => AnalyseInput.parse(d))
+  .handler(async ({ data }) => {
+    const db = await admin();
+    const { data: row } = await db
+      .from("event_panel")
+      .select("*")
+      .eq("event_candidate_id", data.eventId)
+      .maybeSingle();
+    return { panel: row ?? null };
+  });
+
+// Bounded, non-fatal auto-panel for the top N events of a scan.
+export async function autoPanelTopEvents(opts: { scanRunId?: string | null; max?: number } = {}): Promise<{ paneled: number; notes: string[] }> {
+  const notes: string[] = [];
+  const max = Math.max(1, Math.min(5, opts.max ?? 3));
+  try {
+    const db = await admin();
+    let query = db
+      .from("event_candidates")
+      .select("id, risk_score, created_from_scan_run_id")
+      .order("risk_score", { ascending: false })
+      .limit(max);
+    if (opts.scanRunId) query = query.eq("created_from_scan_run_id", opts.scanRunId);
+    const { data: evs } = await query;
+    let paneled = 0;
+    for (const ev of evs ?? []) {
+      try {
+        const r = await panelEvent({ data: { eventId: ev.id } });
+        if (r.ok) paneled++;
+      } catch (err) {
+        notes.push(`Auto-panel failed for event ${ev.id.slice(0, 8)}: ${err instanceof Error ? err.message : String(err)}`);
+      }
+    }
+    if (paneled) notes.push(`Analyst panel convened for ${paneled} top event(s).`);
+    return { paneled, notes };
+  } catch (err) {
+    notes.push(`Auto-panel skipped: ${err instanceof Error ? err.message : String(err)}`);
+    return { paneled: 0, notes };
+  }
+}
