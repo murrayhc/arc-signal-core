@@ -32,6 +32,7 @@ import { Route as CompaniesNameRouteImport } from './routes/companies.$name'
 import { Route as ArcsIdRouteImport } from './routes/arcs.$id'
 import { Route as AdminRoutingRouteImport } from './routes/admin.routing'
 import { Route as ApiPublicHooksScanRouteImport } from './routes/api/public/hooks/scan'
+import { Route as ApiPublicHooksBriefingRouteImport } from './routes/api/public/hooks/briefing'
 import { Route as ApiPublicExportsEventsRouteImport } from './routes/api/public/exports/events'
 
 const WatchlistRoute = WatchlistRouteImport.update({
@@ -149,6 +150,11 @@ const ApiPublicHooksScanRoute = ApiPublicHooksScanRouteImport.update({
   path: '/api/public/hooks/scan',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicHooksBriefingRoute = ApiPublicHooksBriefingRouteImport.update({
+  id: '/api/public/hooks/briefing',
+  path: '/api/public/hooks/briefing',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicExportsEventsRoute = ApiPublicExportsEventsRouteImport.update({
   id: '/api/public/exports/events',
   path: '/api/public/exports/events',
@@ -179,6 +185,7 @@ export interface FileRoutesByFullPath {
   '/sources/$id': typeof SourcesIdRoute
   '/opportunities/': typeof OpportunitiesIndexRoute
   '/api/public/exports/events': typeof ApiPublicExportsEventsRoute
+  '/api/public/hooks/briefing': typeof ApiPublicHooksBriefingRoute
   '/api/public/hooks/scan': typeof ApiPublicHooksScanRoute
 }
 export interface FileRoutesByTo {
@@ -204,6 +211,7 @@ export interface FileRoutesByTo {
   '/sources/$id': typeof SourcesIdRoute
   '/opportunities': typeof OpportunitiesIndexRoute
   '/api/public/exports/events': typeof ApiPublicExportsEventsRoute
+  '/api/public/hooks/briefing': typeof ApiPublicHooksBriefingRoute
   '/api/public/hooks/scan': typeof ApiPublicHooksScanRoute
 }
 export interface FileRoutesById {
@@ -231,6 +239,7 @@ export interface FileRoutesById {
   '/sources/$id': typeof SourcesIdRoute
   '/opportunities/': typeof OpportunitiesIndexRoute
   '/api/public/exports/events': typeof ApiPublicExportsEventsRoute
+  '/api/public/hooks/briefing': typeof ApiPublicHooksBriefingRoute
   '/api/public/hooks/scan': typeof ApiPublicHooksScanRoute
 }
 export interface FileRouteTypes {
@@ -259,6 +268,7 @@ export interface FileRouteTypes {
     | '/sources/$id'
     | '/opportunities/'
     | '/api/public/exports/events'
+    | '/api/public/hooks/briefing'
     | '/api/public/hooks/scan'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -284,6 +294,7 @@ export interface FileRouteTypes {
     | '/sources/$id'
     | '/opportunities'
     | '/api/public/exports/events'
+    | '/api/public/hooks/briefing'
     | '/api/public/hooks/scan'
   id:
     | '__root__'
@@ -310,6 +321,7 @@ export interface FileRouteTypes {
     | '/sources/$id'
     | '/opportunities/'
     | '/api/public/exports/events'
+    | '/api/public/hooks/briefing'
     | '/api/public/hooks/scan'
   fileRoutesById: FileRoutesById
 }
@@ -332,6 +344,7 @@ export interface RootRouteChildren {
   SettingsDeliveryRoute: typeof SettingsDeliveryRoute
   SettingsScanRoute: typeof SettingsScanRoute
   ApiPublicExportsEventsRoute: typeof ApiPublicExportsEventsRoute
+  ApiPublicHooksBriefingRoute: typeof ApiPublicHooksBriefingRoute
   ApiPublicHooksScanRoute: typeof ApiPublicHooksScanRoute
 }
 
@@ -498,6 +511,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksScanRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/briefing': {
+      id: '/api/public/hooks/briefing'
+      path: '/api/public/hooks/briefing'
+      fullPath: '/api/public/hooks/briefing'
+      preLoaderRoute: typeof ApiPublicHooksBriefingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/exports/events': {
       id: '/api/public/exports/events'
       path: '/api/public/exports/events'
@@ -574,6 +594,7 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsDeliveryRoute: SettingsDeliveryRoute,
   SettingsScanRoute: SettingsScanRoute,
   ApiPublicExportsEventsRoute: ApiPublicExportsEventsRoute,
+  ApiPublicHooksBriefingRoute: ApiPublicHooksBriefingRoute,
   ApiPublicHooksScanRoute: ApiPublicHooksScanRoute,
 }
 export const routeTree = rootRouteImport
