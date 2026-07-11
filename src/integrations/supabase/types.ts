@@ -147,6 +147,44 @@ export type Database = {
           },
         ]
       }
+      briefings: {
+        Row: {
+          briefing_date: string
+          created_at: string
+          delivered_at: string | null
+          id: string
+          profile_id: string
+          stats: Json
+          summary: string
+        }
+        Insert: {
+          briefing_date: string
+          created_at?: string
+          delivered_at?: string | null
+          id?: string
+          profile_id: string
+          stats?: Json
+          summary: string
+        }
+        Update: {
+          briefing_date?: string
+          created_at?: string
+          delivered_at?: string | null
+          id?: string
+          profile_id?: string
+          stats?: Json
+          summary?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "briefings_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "exposure_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       canonical_claims: {
         Row: {
           claim_text: string

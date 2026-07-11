@@ -20,6 +20,7 @@ import { Route as InterrogateRouteImport } from './routes/interrogate'
 import { Route as ExposuresRouteImport } from './routes/exposures'
 import { Route as DigestRouteImport } from './routes/digest'
 import { Route as CompaniesRouteImport } from './routes/companies'
+import { Route as BriefingsRouteImport } from './routes/briefings'
 import { Route as ArcsRouteImport } from './routes/arcs'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as OpportunitiesIndexRouteImport } from './routes/opportunities.index'
@@ -32,6 +33,7 @@ import { Route as CompaniesNameRouteImport } from './routes/companies.$name'
 import { Route as ArcsIdRouteImport } from './routes/arcs.$id'
 import { Route as AdminRoutingRouteImport } from './routes/admin.routing'
 import { Route as ApiPublicHooksScanRouteImport } from './routes/api/public/hooks/scan'
+import { Route as ApiPublicHooksBriefingRouteImport } from './routes/api/public/hooks/briefing'
 import { Route as ApiPublicExportsEventsRouteImport } from './routes/api/public/exports/events'
 
 const WatchlistRoute = WatchlistRouteImport.update({
@@ -87,6 +89,11 @@ const DigestRoute = DigestRouteImport.update({
 const CompaniesRoute = CompaniesRouteImport.update({
   id: '/companies',
   path: '/companies',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BriefingsRoute = BriefingsRouteImport.update({
+  id: '/briefings',
+  path: '/briefings',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ArcsRoute = ArcsRouteImport.update({
@@ -149,6 +156,11 @@ const ApiPublicHooksScanRoute = ApiPublicHooksScanRouteImport.update({
   path: '/api/public/hooks/scan',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicHooksBriefingRoute = ApiPublicHooksBriefingRouteImport.update({
+  id: '/api/public/hooks/briefing',
+  path: '/api/public/hooks/briefing',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicExportsEventsRoute = ApiPublicExportsEventsRouteImport.update({
   id: '/api/public/exports/events',
   path: '/api/public/exports/events',
@@ -158,6 +170,7 @@ const ApiPublicExportsEventsRoute = ApiPublicExportsEventsRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/arcs': typeof ArcsRouteWithChildren
+  '/briefings': typeof BriefingsRoute
   '/companies': typeof CompaniesRouteWithChildren
   '/digest': typeof DigestRoute
   '/exposures': typeof ExposuresRoute
@@ -179,11 +192,13 @@ export interface FileRoutesByFullPath {
   '/sources/$id': typeof SourcesIdRoute
   '/opportunities/': typeof OpportunitiesIndexRoute
   '/api/public/exports/events': typeof ApiPublicExportsEventsRoute
+  '/api/public/hooks/briefing': typeof ApiPublicHooksBriefingRoute
   '/api/public/hooks/scan': typeof ApiPublicHooksScanRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/arcs': typeof ArcsRouteWithChildren
+  '/briefings': typeof BriefingsRoute
   '/companies': typeof CompaniesRouteWithChildren
   '/digest': typeof DigestRoute
   '/exposures': typeof ExposuresRoute
@@ -204,12 +219,14 @@ export interface FileRoutesByTo {
   '/sources/$id': typeof SourcesIdRoute
   '/opportunities': typeof OpportunitiesIndexRoute
   '/api/public/exports/events': typeof ApiPublicExportsEventsRoute
+  '/api/public/hooks/briefing': typeof ApiPublicHooksBriefingRoute
   '/api/public/hooks/scan': typeof ApiPublicHooksScanRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/arcs': typeof ArcsRouteWithChildren
+  '/briefings': typeof BriefingsRoute
   '/companies': typeof CompaniesRouteWithChildren
   '/digest': typeof DigestRoute
   '/exposures': typeof ExposuresRoute
@@ -231,6 +248,7 @@ export interface FileRoutesById {
   '/sources/$id': typeof SourcesIdRoute
   '/opportunities/': typeof OpportunitiesIndexRoute
   '/api/public/exports/events': typeof ApiPublicExportsEventsRoute
+  '/api/public/hooks/briefing': typeof ApiPublicHooksBriefingRoute
   '/api/public/hooks/scan': typeof ApiPublicHooksScanRoute
 }
 export interface FileRouteTypes {
@@ -238,6 +256,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/arcs'
+    | '/briefings'
     | '/companies'
     | '/digest'
     | '/exposures'
@@ -259,11 +278,13 @@ export interface FileRouteTypes {
     | '/sources/$id'
     | '/opportunities/'
     | '/api/public/exports/events'
+    | '/api/public/hooks/briefing'
     | '/api/public/hooks/scan'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/arcs'
+    | '/briefings'
     | '/companies'
     | '/digest'
     | '/exposures'
@@ -284,11 +305,13 @@ export interface FileRouteTypes {
     | '/sources/$id'
     | '/opportunities'
     | '/api/public/exports/events'
+    | '/api/public/hooks/briefing'
     | '/api/public/hooks/scan'
   id:
     | '__root__'
     | '/'
     | '/arcs'
+    | '/briefings'
     | '/companies'
     | '/digest'
     | '/exposures'
@@ -310,12 +333,14 @@ export interface FileRouteTypes {
     | '/sources/$id'
     | '/opportunities/'
     | '/api/public/exports/events'
+    | '/api/public/hooks/briefing'
     | '/api/public/hooks/scan'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ArcsRoute: typeof ArcsRouteWithChildren
+  BriefingsRoute: typeof BriefingsRoute
   CompaniesRoute: typeof CompaniesRouteWithChildren
   DigestRoute: typeof DigestRoute
   ExposuresRoute: typeof ExposuresRoute
@@ -332,6 +357,7 @@ export interface RootRouteChildren {
   SettingsDeliveryRoute: typeof SettingsDeliveryRoute
   SettingsScanRoute: typeof SettingsScanRoute
   ApiPublicExportsEventsRoute: typeof ApiPublicExportsEventsRoute
+  ApiPublicHooksBriefingRoute: typeof ApiPublicHooksBriefingRoute
   ApiPublicHooksScanRoute: typeof ApiPublicHooksScanRoute
 }
 
@@ -412,6 +438,13 @@ declare module '@tanstack/react-router' {
       path: '/companies'
       fullPath: '/companies'
       preLoaderRoute: typeof CompaniesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/briefings': {
+      id: '/briefings'
+      path: '/briefings'
+      fullPath: '/briefings'
+      preLoaderRoute: typeof BriefingsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/arcs': {
@@ -498,6 +531,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksScanRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/briefing': {
+      id: '/api/public/hooks/briefing'
+      path: '/api/public/hooks/briefing'
+      fullPath: '/api/public/hooks/briefing'
+      preLoaderRoute: typeof ApiPublicHooksBriefingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/exports/events': {
       id: '/api/public/exports/events'
       path: '/api/public/exports/events'
@@ -558,6 +598,7 @@ const SourcesRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ArcsRoute: ArcsRouteWithChildren,
+  BriefingsRoute: BriefingsRoute,
   CompaniesRoute: CompaniesRouteWithChildren,
   DigestRoute: DigestRoute,
   ExposuresRoute: ExposuresRoute,
@@ -574,6 +615,7 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsDeliveryRoute: SettingsDeliveryRoute,
   SettingsScanRoute: SettingsScanRoute,
   ApiPublicExportsEventsRoute: ApiPublicExportsEventsRoute,
+  ApiPublicHooksBriefingRoute: ApiPublicHooksBriefingRoute,
   ApiPublicHooksScanRoute: ApiPublicHooksScanRoute,
 }
 export const routeTree = rootRouteImport
