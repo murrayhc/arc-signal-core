@@ -167,6 +167,11 @@ function CompanyDetailPage() {
               </section>
             )}
 
+            {/* Belief state — deterministic, decayed, one-hop propagated stress */}
+            {entityId && belief?.entity && (
+              <BeliefStatePanel belief={belief} />
+            )}
+
             {/* Ownership & control — Companies House registry-verified edges */}
             {entityId && (
               <section className="glass-panel rounded-xl p-4">
