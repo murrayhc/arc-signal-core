@@ -59,6 +59,11 @@ function EventDetailPage() {
     queryFn: () => getEventPredictions({ data: { eventId: id } }),
     enabled: !!data?.event,
   });
+  const exposure = useQuery({
+    queryKey: ["archlight", "event", id, "exposure"],
+    queryFn: () => listEventExposureHits({ data: { eventId: id } }),
+    enabled: !!data?.event,
+  });
   const projectMut = useMutation({
     mutationFn: () => projectEventForward({ data: { id } }),
     onSuccess: (r) => {
