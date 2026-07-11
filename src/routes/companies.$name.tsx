@@ -26,6 +26,13 @@ function CompanyDetailPage() {
     queryKey: ["archlight", "company", "deep", decoded],
     queryFn: () => getCompanyDeep({ data: { name: decoded } }),
   });
+  const entityId = data?.entity?.id as string | undefined;
+  const { data: distress } = useQuery({
+    queryKey: ["archlight", "distress-profile", entityId],
+    queryFn: () => getEntityDistressProfile({ data: { entityId: entityId! } }),
+    enabled: !!entityId,
+  });
+
 
   const propagatedImpacts = (data?.impacts ?? []).filter((i) => (i.metadata as { propagated?: boolean } | null)?.propagated);
   const primaryImpacts = (data?.impacts ?? []).filter((i) => !(i.metadata as { propagated?: boolean } | null)?.propagated);
