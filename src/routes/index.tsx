@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
-import { useMutation, useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { AppShell, InterrogateSearch } from "@/components/archlight/AppShell";
 import { IntelligenceBrain, type GNode } from "@/components/archlight/IntelligenceBrain";
@@ -11,8 +11,9 @@ import { dashboardQueryOptions } from "@/lib/archlight/queries";
 import { runScan } from "@/lib/archlight/pipeline.functions";
 import { getScanSettings } from "@/lib/archlight/settings.functions";
 import { countKnobsOffDefault } from "@/lib/archlight/settings.defaults";
+import { listExposureHits, markHitSeen } from "@/lib/archlight/exposure.functions";
 import { toast } from "sonner";
-import { Settings } from "lucide-react";
+import { Crosshair, Settings } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
