@@ -1004,6 +1004,8 @@ export const runScan = createServerFn({ method: "POST" }).handler(async () => {
     sources_succeeded: sourcesSucceeded,
     sources_failed: sourcesFailed,
     documents_collected: documentsCollected,
+    fetched_bodies: fetchedBodies,
+
     atomic_claims_created: atomicClaimsCreated,
     events_created: eventsCreated,
     events_skipped: eventsSkipped,
