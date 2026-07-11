@@ -159,12 +159,35 @@ export async function ingestDocument(db: DbAdmin, opts: IngestOpts): Promise<Ing
   const srcGroup = (src.independence_group ?? "").trim() ||
     deriveIndependenceGroup(src.base_url ?? src.feed_url ?? null, src.name, !!src.is_synthetic, src.id);
 
+  // Best-effort full-article body enrichment BEFORE claim extraction, so the
+  // model sees real prose instead of a headline snippet. Bounded, polite,
+  // never throws. Skips synthetic sources and non-http(s) urls.
+  let fetchedBody = false;
+  let effectiveBody = doc.body ?? body;
+  if (
+    opts.enrichBody &&
+    !isSynthetic &&
+    /^https?:\/\//i.test(url) &&
+    (!opts.bodyBudget || opts.bodyBudget.remaining > 0)
+  ) {
+    if (opts.bodyBudget) opts.bodyBudget.remaining -= 1;
+    const fetched = await fetchArticleBody(url);
+    if (fetched && fetched.length > (effectiveBody?.length ?? 0)) {
+      effectiveBody = fetched;
+      fetchedBody = true;
+      const nowIso = new Date().toISOString();
+      await db.from("documents").update({ full_text: fetched, body_fetched_at: nowIso }).eq("id", doc.id);
+      notes.push(`${src.name}: fetched full article body (${fetched.length} chars).`);
+    }
+  }
+
   const ext = await callJson<{ claims: Array<{ claim_text: string; claim_type: string; entities: string[]; sectors: string[]; regions: string[]; commodities: string[]; specificity: number }> }>({
     task: "atomic_claim_extraction",
     system: "Extract atomic factual claims from the article. Each claim must be a single verifiable statement, no opinion. Return JSON: {\"claims\":[{\"claim_text\":string,\"claim_type\":one of layoff|hiring|regulatory|procurement|supply_chain|market|commodity|company_statement|executive|legal|complaint|demand|funding|macro|unknown,\"entities\":string[],\"sectors\":string[],\"regions\":string[],\"commodities\":string[],\"specificity\":0..1}]}. Do not invent, do not give financial advice.",
-    user: `TITLE: ${doc.title}\n\nBODY: ${doc.body}`,
+    user: `TITLE: ${doc.title}\n\nBODY: ${effectiveBody}`,
   });
   await logTask(db, "atomic_claim_extraction", ext, stage);
+
 
   const newClaims: IngestedClaim[] = [];
   let atomicsCreated = 0;
