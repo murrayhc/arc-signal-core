@@ -615,24 +615,42 @@ export const resolveOutcomes = createServerFn({ method: "POST" }).handler(async 
 
       if (decision) {
         const y: 0 | 1 = decision.outcome === "happened" ? 1 : 0;
-        // lead_time_days only when event+happened AND a non-synthetic supporting source published_at > first_detected_at.
+        // Lead time vs mainstream press: how many days earlier (positive) or
+        // later (negative) Archlight detected this compared to the first
+        // mainstream-tier report. Null + before_mainstream=true means no
+        // mainstream outlet covered it at all (an exclusive).
         let leadTimeDays: number | null = null;
+        let beforeMainstream = false;
         if (decision.outcome === "happened" && ev.first_detected_at) {
           const firstDetected = new Date(ev.first_detected_at).getTime();
-          const candidates: number[] = [];
-          for (const sid of newSourceIds) {
-            const meta = srcMap.get(sid);
-            if (!meta || meta.is_synthetic) continue;
-            for (const l of snap.bySource.get(sid) ?? []) {
-              if (!l.published_at) continue;
-              const ts = new Date(l.published_at).getTime();
-              if (!Number.isFinite(ts) || ts <= firstDetected) continue;
-              candidates.push(ts);
+          const allSids = Array.from(snap.bySource.keys());
+          let mainstreamFirstMs: number | null = null;
+          if (allSids.length) {
+            const { data: tierRows } = await db
+              .from("sources")
+              .select("id, tier")
+              .in("id", allSids);
+            const mainstreamSet = new Set(
+              (tierRows ?? [])
+                .filter((r) => (r as { tier?: string }).tier === "mainstream")
+                .map((r) => r.id as string),
+            );
+            for (const sid of allSids) {
+              if (!mainstreamSet.has(sid)) continue;
+              for (const l of snap.bySource.get(sid) ?? []) {
+                if (!l.published_at) continue;
+                const ts = new Date(l.published_at).getTime();
+                if (!Number.isFinite(ts)) continue;
+                if (mainstreamFirstMs == null || ts < mainstreamFirstMs) mainstreamFirstMs = ts;
+              }
             }
           }
-          if (candidates.length) {
-            const earliest = Math.min(...candidates);
-            leadTimeDays = Math.max(0, Math.round((earliest - firstDetected) / DAY_MS));
+          if (mainstreamFirstMs != null) {
+            // Positive = Archlight was earlier than the first mainstream report.
+            leadTimeDays = Number(((mainstreamFirstMs - firstDetected) / DAY_MS).toFixed(2));
+          } else {
+            leadTimeDays = null;
+            beforeMainstream = true;
           }
         }
         const { error } = await db
@@ -647,6 +665,7 @@ export const resolveOutcomes = createServerFn({ method: "POST" }).handler(async 
             brier_first: brier(Number(eventReceipt.predicted_probability), y),
             brier_final: brier(Number(eventReceipt.final_probability), y),
             lead_time_days: leadTimeDays,
+            before_mainstream: beforeMainstream,
           })
           .eq("id", eventReceipt.id);
         if (!error) {
