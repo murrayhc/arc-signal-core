@@ -915,6 +915,19 @@ export const runScan = createServerFn({ method: "POST" }).handler(async () => {
     notes.push(`Precognition pass skipped: ${err instanceof Error ? err.message : String(err)}`);
   }
 
+  // ============ BELIEF STATE PASS ============
+  // Update belief_stress on entities touched by this scan + their one-hop
+  // verified registry neighbours. Deterministic, single damped pass. Non-fatal.
+  try {
+    const { updateBeliefs } = await import("./beliefs.functions");
+    const b = await updateBeliefs({ data: { scanRunId: run.id } });
+    for (const n of b.notes) notes.push(n);
+  } catch (err) {
+    notes.push(`Belief pass skipped: ${err instanceof Error ? err.message : String(err)}`);
+  }
+
+
+
   // ============ ACTIVE INVESTIGATION (GDELT) ============
   // For events with OPEN outcome_predictions (nearest deadline first), search
   // GDELT for corroborating/contradicting coverage and ingest real matches so

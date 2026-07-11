@@ -4,7 +4,8 @@ import { AppShell } from "@/components/archlight/AppShell";
 import { getCompanyDeep } from "@/lib/archlight/precognition.functions";
 import { getEntityDistressProfile } from "@/lib/archlight/signatures.functions";
 import { getRegistryEdges, rebuildRegistryGraph } from "@/lib/archlight/registry.functions";
-import { ArrowLeft, Building2, CheckCircle2, Fingerprint, GitBranch, Landmark, Loader2, Radar, RefreshCw, Sparkles, TriangleAlert, Users, Zap } from "lucide-react";
+import { getBeliefState } from "@/lib/archlight/beliefs.functions";
+import { Activity, ArrowDown, ArrowLeft, ArrowUp, Building2, CheckCircle2, Fingerprint, GitBranch, Landmark, Loader2, Minus, Radar, RefreshCw, Sparkles, TriangleAlert, Users, Zap } from "lucide-react";
 
 
 
@@ -37,6 +38,11 @@ function CompanyDetailPage() {
   const { data: registry } = useQuery({
     queryKey: ["archlight", "registry-edges", entityId],
     queryFn: () => getRegistryEdges({ data: { entityId: entityId! } }),
+    enabled: !!entityId,
+  });
+  const { data: belief } = useQuery({
+    queryKey: ["archlight", "belief", entityId],
+    queryFn: () => getBeliefState({ data: { entityId: entityId! } }),
     enabled: !!entityId,
   });
   const qc = useQueryClient();
@@ -159,6 +165,11 @@ function CompanyDetailPage() {
                   );
                 })()}
               </section>
+            )}
+
+            {/* Belief state — deterministic, decayed, one-hop propagated stress */}
+            {entityId && belief?.entity && (
+              <BeliefStatePanel belief={belief} />
             )}
 
             {/* Ownership & control — Companies House registry-verified edges */}
@@ -445,3 +456,106 @@ function RegistryColumn({ title, rows, arrow }: { title: string; rows: RegistryR
   );
 }
 
+
+type BeliefResp = {
+  entity: { id: string; canonical_name: string; belief_stress: number; belief_trajectory: number; belief_updated_at: string | null; belief_components: unknown } | null;
+  history: Array<{ id: string; at: string; stress: number; trajectory: number; trigger: string }>;
+};
+
+function BeliefStatePanel({ belief }: { belief: BeliefResp }) {
+  const ent = belief.entity;
+  if (!ent) return null;
+  const stress = Number(ent.belief_stress ?? 0);
+  const trajectory = Number(ent.belief_trajectory ?? 0);
+  const pct = Math.round(stress * 100);
+  const color = stress >= 0.66 ? "var(--color-risk)" : stress >= 0.34 ? "var(--color-signal)" : "var(--color-growth)";
+
+  const comp = (ent.belief_components ?? {}) as {
+    decayed_from?: number;
+    decayed_now?: number;
+    own?: { total?: number; evidences?: Array<{ event_id: string; contribution: number; risk: number; confidence: number }>; distress_profile_score?: number | null };
+    inherited?: { total?: number; sources?: Array<{ neighbour_id: string; neighbour_name: string; relationship_type: string; contribution: number }> };
+    computed_at?: string;
+  };
+  const own = comp.own ?? { total: 0, evidences: [], distress_profile_score: null };
+  const inh = comp.inherited ?? { total: 0, sources: [] };
+
+  const spark = [...belief.history].reverse();
+  const sparkMax = Math.max(0.05, ...spark.map((h) => h.stress));
+
+  const trajArrow = trajectory > 0.02 ? <ArrowUp className="h-3.5 w-3.5"/> : trajectory < -0.02 ? <ArrowDown className="h-3.5 w-3.5"/> : <Minus className="h-3.5 w-3.5"/>;
+  const trajColor = trajectory > 0.02 ? "var(--color-risk)" : trajectory < -0.02 ? "var(--color-growth)" : "var(--color-muted)";
+
+  return (
+    <section className="glass-panel rounded-xl p-4">
+      <div className="flex items-center gap-2 mb-3">
+        <Activity className="h-4 w-4" style={{ color }}/>
+        <h2 className="font-display text-sm">Belief state</h2>
+        <span className="ml-auto text-[10px] font-mono text-muted-foreground">
+          {ent.belief_updated_at ? `updated ${new Date(ent.belief_updated_at).toLocaleString()}` : "never computed"}
+        </span>
+      </div>
+      <div className="grid md:grid-cols-3 gap-3">
+        <div className="rounded-md border border-border/50 p-3 bg-background/30">
+          <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">Stress</div>
+          <div className="font-display text-3xl mt-1" style={{ color }}>{pct}%</div>
+          <div className="mt-1 inline-flex items-center gap-1 text-[10px] font-mono" style={{ color: trajColor }}>
+            {trajArrow}
+            <span>trajectory {trajectory >= 0 ? "+" : ""}{(trajectory * 100).toFixed(0)}%</span>
+          </div>
+          {spark.length > 1 && (
+            <svg viewBox="0 0 120 30" className="mt-2 w-full h-8">
+              <polyline
+                fill="none"
+                stroke={color}
+                strokeWidth="1.5"
+                points={spark.map((h, i) => `${(i / (spark.length - 1)) * 120},${30 - (h.stress / sparkMax) * 28}`).join(" ")}
+              />
+            </svg>
+          )}
+        </div>
+        <div className="rounded-md border border-border/50 p-3 bg-background/30">
+          <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">Own signals</div>
+          <div className="font-display text-lg mt-1">{((own.total ?? 0) * 100).toFixed(0)}%</div>
+          {own.distress_profile_score != null && (
+            <div className="text-[10px] font-mono text-muted-foreground mt-0.5">distress profile {(own.distress_profile_score * 100).toFixed(0)}%</div>
+          )}
+          {(own.evidences ?? []).length === 0 ? (
+            <div className="text-[11px] text-muted-foreground italic mt-2">No direct events contributed this pass.</div>
+          ) : (
+            <ul className="mt-2 space-y-1">
+              {(own.evidences ?? []).slice(0, 4).map((e) => (
+                <li key={e.event_id} className="flex items-baseline justify-between gap-2 text-[11px]">
+                  <Link to="/events/$id" params={{ id: e.event_id }} className="truncate hover:text-[color:var(--color-signal)]">event · {e.event_id.slice(0, 8)}</Link>
+                  <span className="font-mono text-muted-foreground">+{(e.contribution * 100).toFixed(0)}% · r{(e.risk * 100).toFixed(0)} c{(e.confidence * 100).toFixed(0)}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+        <div className="rounded-md border border-border/50 p-3 bg-background/30">
+          <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">Inherited (one-hop, verified)</div>
+          <div className="font-display text-lg mt-1">{((inh.total ?? 0) * 100).toFixed(0)}%</div>
+          <div className="text-[10px] font-mono text-muted-foreground mt-0.5">capped at 50% · damping 0.4</div>
+          {(inh.sources ?? []).length === 0 ? (
+            <div className="text-[11px] text-muted-foreground italic mt-2">No connected companies contributed.</div>
+          ) : (
+            <ul className="mt-2 space-y-1">
+              {(inh.sources ?? []).slice(0, 5).map((s) => (
+                <li key={s.neighbour_id + s.relationship_type} className="flex items-baseline justify-between gap-2 text-[11px]">
+                  <Link to="/companies/$name" params={{ name: encodeURIComponent(s.neighbour_name) }} className="truncate hover:text-[color:var(--color-signal)]">
+                    {s.neighbour_name}
+                  </Link>
+                  <span className="font-mono text-muted-foreground">{s.relationship_type} · +{(s.contribution * 100).toFixed(0)}%</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+      <div className="mt-3 text-[11px] text-muted-foreground italic border-t border-border/40 pt-2">
+        Deterministic: 30-day decay, own signals from this scan, single damped propagation across verified registry edges. Every change is stored in belief history.
+      </div>
+    </section>
+  );
+}

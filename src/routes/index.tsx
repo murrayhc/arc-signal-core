@@ -12,8 +12,9 @@ import { runScan } from "@/lib/archlight/pipeline.functions";
 import { getScanSettings } from "@/lib/archlight/settings.functions";
 import { countKnobsOffDefault } from "@/lib/archlight/settings.defaults";
 import { listExposureHits, markHitSeen } from "@/lib/archlight/exposure.functions";
+import { getRisingStressRail } from "@/lib/archlight/beliefs.functions";
 import { toast } from "sonner";
-import { Crosshair, Settings } from "lucide-react";
+import { Activity, ArrowDown, ArrowUp, Crosshair, Minus, Settings } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -99,6 +100,8 @@ function Dashboard() {
 
 
       <YourExposuresRail />
+      <RisingStressRail />
+
 
       {/* Lower grid */}
       <div className="grid grid-cols-12 gap-5">
@@ -272,4 +275,57 @@ function buildTicker(data: { system: { source_coverage: number; model_health: nu
     `Sources online ${data.counts.sources_online} / ${data.counts.sources_total}`,
     "No financial advice · Public signals only",
   ];
+}
+
+function RisingStressRail() {
+  const { data, isLoading } = useQuery({
+    queryKey: ["archlight", "rising-stress"],
+    queryFn: () => getRisingStressRail(),
+    staleTime: 30_000,
+  });
+  const rows = data?.rows ?? [];
+  return (
+    <section className="glass-panel rounded-xl p-4">
+      <div className="flex items-center gap-2 mb-3">
+        <Activity className="h-4 w-4" style={{ color: "var(--color-risk)" }}/>
+        <h3 className="font-display text-sm tracking-wide">Rising stress</h3>
+        <span className="ml-auto text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+          belief state · your exposures
+        </span>
+      </div>
+      {isLoading && <div className="text-xs text-muted-foreground">Loading…</div>}
+      {!isLoading && rows.length === 0 && (
+        <div className="text-xs text-muted-foreground italic">
+          No belief stress on tracked entities yet. Runs a scan and add exposures to populate.
+        </div>
+      )}
+      {rows.length > 0 && (
+        <ul className="grid md:grid-cols-2 xl:grid-cols-4 gap-2">
+          {rows.map((r) => {
+            const color = r.stress >= 0.66 ? "var(--color-risk)" : r.stress >= 0.34 ? "var(--color-signal)" : "var(--color-growth)";
+            const arrow = r.trajectory > 0.02 ? <ArrowUp className="h-3 w-3"/> : r.trajectory < -0.02 ? <ArrowDown className="h-3 w-3"/> : <Minus className="h-3 w-3"/>;
+            const trajColor = r.trajectory > 0.02 ? "var(--color-risk)" : r.trajectory < -0.02 ? "var(--color-growth)" : "var(--color-muted)";
+            return (
+              <li key={r.entity_id} className="rounded-lg border border-border/50 bg-background/30 p-3">
+                <Link to="/companies/$name" params={{ name: encodeURIComponent(r.name) }} className="block">
+                  <div className="flex items-baseline gap-2">
+                    <span className="font-display text-sm truncate">{r.name}</span>
+                    <span className="ml-auto font-mono text-sm" style={{ color }}>{Math.round(r.stress * 100)}%</span>
+                  </div>
+                  <div className="mt-1 flex items-center gap-2 text-[10px] font-mono text-muted-foreground">
+                    {r.sector && <span>{r.sector}</span>}
+                    {r.region && <span>· {r.region}</span>}
+                    <span className="ml-auto inline-flex items-center gap-1" style={{ color: trajColor }}>
+                      {arrow}
+                      {r.trajectory >= 0 ? "+" : ""}{(r.trajectory * 100).toFixed(0)}%
+                    </span>
+                  </div>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
+  );
 }
