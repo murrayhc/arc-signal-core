@@ -2064,6 +2064,7 @@ export type Database = {
           item_id: string
           item_type: string
           reason: string | null
+          reviewed_by: string
           reviewer_notes: string | null
           status: Database["public"]["Enums"]["review_status"]
           updated_at: string
@@ -2074,6 +2075,7 @@ export type Database = {
           item_id: string
           item_type: string
           reason?: string | null
+          reviewed_by?: string
           reviewer_notes?: string | null
           status?: Database["public"]["Enums"]["review_status"]
           updated_at?: string
@@ -2084,9 +2086,58 @@ export type Database = {
           item_id?: string
           item_type?: string
           reason?: string | null
+          reviewed_by?: string
           reviewer_notes?: string | null
           status?: Database["public"]["Enums"]["review_status"]
           updated_at?: string
+        }
+        Relationships: []
+      }
+      reviewer_verdicts: {
+        Row: {
+          brier: number | null
+          created_at: string
+          graded_at: string | null
+          id: string
+          item_type: string | null
+          outcome: string | null
+          predicted_at: string
+          review_item_id: string | null
+          reviewer: string
+          subject_id: string | null
+          subject_kind: string | null
+          updated_at: string
+          verdict: string | null
+        }
+        Insert: {
+          brier?: number | null
+          created_at?: string
+          graded_at?: string | null
+          id?: string
+          item_type?: string | null
+          outcome?: string | null
+          predicted_at?: string
+          review_item_id?: string | null
+          reviewer?: string
+          subject_id?: string | null
+          subject_kind?: string | null
+          updated_at?: string
+          verdict?: string | null
+        }
+        Update: {
+          brier?: number | null
+          created_at?: string
+          graded_at?: string | null
+          id?: string
+          item_type?: string | null
+          outcome?: string | null
+          predicted_at?: string
+          review_item_id?: string | null
+          reviewer?: string
+          subject_id?: string | null
+          subject_kind?: string | null
+          updated_at?: string
+          verdict?: string | null
         }
         Relationships: []
       }
