@@ -470,6 +470,50 @@ export type Database = {
           },
         ]
       }
+      delivery_channels: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          kind: string
+          label: string | null
+          min_relevance: number
+          profile_id: string | null
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          kind: string
+          label?: string | null
+          min_relevance?: number
+          profile_id?: string | null
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          kind?: string
+          label?: string | null
+          min_relevance?: number
+          profile_id?: string | null
+          updated_at?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_channels_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "exposure_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       digest_snapshots: {
         Row: {
           created_at: string
@@ -900,6 +944,7 @@ export type Database = {
       exposure_hits: {
         Row: {
           created_at: string
+          delivered_at: string | null
           direction: string
           event_candidate_id: string
           exposure_item_id: string
@@ -912,6 +957,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          delivered_at?: string | null
           direction: string
           event_candidate_id: string
           exposure_item_id: string
@@ -924,6 +970,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          delivered_at?: string | null
           direction?: string
           event_candidate_id?: string
           exposure_item_id?: string

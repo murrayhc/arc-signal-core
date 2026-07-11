@@ -1,8 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Crosshair, Plus, Trash2, Check, X, Pencil } from "lucide-react";
+import { Crosshair, Plus, Trash2, Check, X, Pencil, Radio } from "lucide-react";
 import { AppShell } from "@/components/archlight/AppShell";
 import {
   addExposureItem,
@@ -57,6 +57,14 @@ function ExposuresPage() {
           <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
             Tell Archlight what you hold or care about. Every synthesised event is scored against these items, and the "why this matters to you" rail is built from those matches.
           </p>
+          <div className="mt-3">
+            <Link
+              to="/settings/delivery"
+              className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md text-[11px] border border-border/60 text-muted-foreground hover:text-foreground hover:bg-accent/40"
+            >
+              <Radio className="h-3 w-3"/> Delivery channels (Slack / webhook)
+            </Link>
+          </div>
         </header>
 
         <section className="glass-panel rounded-xl p-4">

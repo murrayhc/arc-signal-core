@@ -880,6 +880,18 @@ export const runScan = createServerFn({ method: "POST" }).handler(async () => {
     notes.push(`Exposure scoring skipped: ${err instanceof Error ? err.message : String(err)}`);
   }
 
+  // ============ EXPOSURE DELIVERY (Slack / webhooks) ============
+  // Push new exposure hits to configured delivery channels. Non-fatal.
+  let exposureHitsDelivered = 0;
+  try {
+    const { deliverExposureHits } = await import("./delivery.functions");
+    const dl = await deliverExposureHits({ scanRunId: run.id });
+    exposureHitsDelivered = dl.delivered;
+    for (const n of dl.notes) notes.push(n);
+  } catch (err) {
+    notes.push(`Exposure delivery skipped: ${err instanceof Error ? err.message : String(err)}`);
+  }
+
   // ============ PRECOGNITION PASS ============
   // Project newest high-signal events forward (4 horizons) + propagate impacts
   // across supplier / customer / competitor / peer relationships.
@@ -997,6 +1009,7 @@ export const runScan = createServerFn({ method: "POST" }).handler(async () => {
     contracts_finder_ingested: contractsFinderIngested,
     companies_house_ingested: companiesHouseIngested,
     exposure_hits_created: exposureHitsCreated,
+    exposure_hits_delivered: exposureHitsDelivered,
 
     notes,
   };
