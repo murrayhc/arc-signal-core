@@ -637,3 +637,95 @@ function PredictionStatusBadge({ status, outcome }: { status: string; outcome: s
     : "var(--color-signal)";
   return <span className="text-[10px] font-mono px-1.5 py-0.5 rounded border uppercase tracking-widest" style={{ borderColor: c, color: c }}>{label}</span>;
 }
+
+type EventAnalysisRow = {
+  red_team_case: string | null;
+  red_team_strength: "weak" | "moderate" | "strong" | null;
+  hypotheses: Array<{ label: string; consistency: number; consistent: string[]; inconsistent: string[] }>;
+  leading_hypothesis: string | null;
+  evidence_ambiguity: "clear" | "contested" | "ambiguous" | null;
+  discriminating_evidence: string | null;
+  analysed_at: string | null;
+};
+
+function AnalysisPanels({ a }: { a: EventAnalysisRow }) {
+  const hyps = Array.isArray(a.hypotheses) ? a.hypotheses : [];
+  const ambiguity = a.evidence_ambiguity;
+  const strengthColor = a.red_team_strength === "strong"
+    ? "var(--color-risk)"
+    : a.red_team_strength === "moderate"
+      ? "var(--color-reason)"
+      : "var(--color-muted-foreground)";
+  const ambigStyles = ambiguity === "ambiguous" || ambiguity === "contested"
+    ? { border: "1px solid color-mix(in oklch, var(--color-reason) 55%, transparent)", background: "color-mix(in oklch, var(--color-reason) 12%, transparent)", color: "var(--color-reason)" }
+    : { border: "1px solid color-mix(in oklch, var(--color-opportunity) 55%, transparent)", background: "color-mix(in oklch, var(--color-opportunity) 10%, transparent)", color: "var(--color-opportunity)" };
+  const ambigMsg = ambiguity === "ambiguous"
+    ? "Evidence is AMBIGUOUS — competing readings are near-equal. Treat the leading hypothesis with caution."
+    : ambiguity === "contested"
+      ? "Evidence is CONTESTED — hypotheses conflict and dissent is real."
+      : "Evidence is CLEAR — hypotheses do not seriously compete.";
+  return (
+    <div className="grid grid-cols-12 gap-5">
+      {a.red_team_case && (
+        <section className="col-span-12 lg:col-span-6 glass-panel rounded-xl p-4 border-l-2" style={{ borderLeftColor: strengthColor }}>
+          <div className="flex items-center gap-2 mb-3">
+            <Swords className="h-4 w-4" style={{ color: strengthColor }}/>
+            <h2 className="font-display text-sm">Red team — the case against</h2>
+            {a.red_team_strength && (
+              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded border uppercase tracking-widest" style={{ borderColor: strengthColor, color: strengthColor }}>
+                case: {a.red_team_strength}
+              </span>
+            )}
+            <span className="ml-auto text-[10px] font-mono uppercase tracking-widest text-muted-foreground">disconfirming</span>
+          </div>
+          <p className="text-xs text-foreground/90 whitespace-pre-wrap">{a.red_team_case}</p>
+        </section>
+      )}
+      {(hyps.length > 0 || a.leading_hypothesis) && (
+        <section className="col-span-12 lg:col-span-6 glass-panel rounded-xl p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <ShieldAlert className="h-4 w-4" style={{ color: "var(--color-signal)" }}/>
+            <h2 className="font-display text-sm">Competing hypotheses</h2>
+            <span className="ml-auto text-[10px] font-mono uppercase tracking-widest text-muted-foreground">{hyps.length} candidate{hyps.length === 1 ? "" : "s"}</span>
+          </div>
+          {ambiguity && (
+            <div className="rounded-md px-3 py-2 mb-3 text-[11px] font-mono uppercase tracking-widest" style={ambigStyles}>
+              {ambigMsg}
+            </div>
+          )}
+          <ul className="space-y-2">
+            {hyps.map((h, i) => {
+              const isLeading = a.leading_hypothesis && h.label.trim().toLowerCase() === a.leading_hypothesis.trim().toLowerCase();
+              const cons = Math.max(0, Math.min(1, Number(h.consistency ?? 0)));
+              const barColor = isLeading ? "var(--color-opportunity)" : "var(--color-signal)";
+              return (
+                <li key={i} className="rounded-lg border p-2.5" style={{ borderColor: isLeading ? "color-mix(in oklch, var(--color-opportunity) 60%, transparent)" : "color-mix(in oklch, var(--color-border) 80%, transparent)", background: isLeading ? "color-mix(in oklch, var(--color-opportunity) 8%, transparent)" : "color-mix(in oklch, var(--color-background) 60%, transparent)" }}>
+                  <div className="flex items-center gap-2">
+                    <span className="font-display text-xs flex-1">{h.label}</span>
+                    {isLeading && <span className="text-[10px] font-mono uppercase tracking-widest px-1.5 py-0.5 rounded border" style={{ borderColor: barColor, color: barColor }}>leading</span>}
+                    <span className="text-[10px] font-mono text-muted-foreground">consistency {(cons * 100).toFixed(0)}%</span>
+                  </div>
+                  <div className="mt-1.5 h-1 rounded bg-border/40 overflow-hidden">
+                    <div className="h-full rounded" style={{ width: `${cons * 100}%`, background: barColor }}/>
+                  </div>
+                  {h.consistent.length > 0 && (
+                    <div className="mt-2 text-[11px]"><span className="text-foreground/70">Consistent:</span> <span className="text-muted-foreground">{h.consistent.join("; ")}</span></div>
+                  )}
+                  {h.inconsistent.length > 0 && (
+                    <div className="mt-0.5 text-[11px]"><span className="text-foreground/70">Inconsistent:</span> <span className="text-muted-foreground">{h.inconsistent.join("; ")}</span></div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+          {a.discriminating_evidence && (
+            <div className="mt-3 rounded-md border border-border/50 bg-background/30 p-2.5 text-[11px]">
+              <span className="text-foreground/80 font-mono uppercase tracking-widest text-[10px]">most-discriminating evidence · </span>
+              <span className="text-foreground/90">{a.discriminating_evidence}</span>
+            </div>
+          )}
+        </section>
+      )}
+    </div>
+  );
+}
