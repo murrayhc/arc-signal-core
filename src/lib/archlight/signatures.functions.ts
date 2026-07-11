@@ -435,6 +435,13 @@ export async function resolveCohort(opts: ResolveCohortOpts = {}): Promise<{
     flagged_at: string; survive_after: string;
   }>;
 
+  // Preload entity names (for Gazette title-match fallback).
+  const entityIds = rows.map((r) => r.entity_id);
+  const { data: entRows } = entityIds.length
+    ? await db.from("entities").select("id, canonical_name").in("id", entityIds)
+    : { data: [] as Array<{ id: string; canonical_name: string }> };
+  const nameByEntity = new Map((entRows ?? []).map((e) => [e.id, e.canonical_name] as const));
+
   let checked = 0;
   let failed = 0;
   let survived = 0;
@@ -465,32 +472,28 @@ export async function resolveCohort(opts: ResolveCohortOpts = {}): Promise<{
       }
     }
 
-    // 2. Fallback: any Gazette document referencing this entity, dated after flagged_at.
+    // 2. Fallback: Gazette corporate-insolvency document whose title contains
+    //    the entity's canonical name and is dated after flagged_at.
     if (!markedFailed && gazetteIds.length > 0) {
-      const { data: docs } = await db
-        .from("documents")
-        .select("id, published_at, title")
-        .in("source_id", gazetteIds)
-        .gte("published_at", row.flagged_at)
-        .not("published_at", "is", null);
-      const entityDocs = docs ?? [];
-      if (entityDocs.length > 0) {
-        // Filter by entity_id via document_entities join if it exists.
-        const { data: docLinks } = await db
-          .from("document_entities" as never)
-          .select("document_id, entity_id")
-          .in("document_id", entityDocs.map((d) => d.id))
-          .eq("entity_id", row.entity_id)
+      const name = nameByEntity.get(row.entity_id);
+      if (name && name.trim().length >= 4) {
+        const escaped = name.replace(/[%_\\]/g, (m) => "\\" + m);
+        const { data: docs } = await db
+          .from("documents")
+          .select("id, published_at, title")
+          .in("source_id", gazetteIds)
+          .gte("published_at", row.flagged_at)
+          .not("published_at", "is", null)
+          .ilike("title", `%${escaped}%`)
           .limit(1);
-        // If the join table is absent or returns empty, we do NOT auto-mark
-        // — only real linked evidence counts.
-        if (docLinks && docLinks.length > 0) {
-          const hit = entityDocs.find((d) => d.id === (docLinks[0] as { document_id: string }).document_id);
+        if (docs && docs.length > 0) {
           markedFailed = true;
-          failDetail = `gazette_notice=${(hit?.title ?? "").slice(0, 200)}`;
+          failDetail = `gazette_notice=${(docs[0].title ?? "").slice(0, 200)}`;
         }
       }
     }
+
+
 
     if (markedFailed) {
       await db.from("distress_cohort").update({
