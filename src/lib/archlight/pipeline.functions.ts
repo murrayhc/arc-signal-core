@@ -867,6 +867,19 @@ export const runScan = createServerFn({ method: "POST" }).handler(async () => {
     notes: packed.slice(0, 2000),
   }).eq("id", run.id);
 
+  // ============ EXPOSURE SCORING ============
+  // Score every event created this scan against active exposure profiles so
+  // the UI can show "why this matters to you". Non-fatal.
+  let exposureHitsCreated = 0;
+  try {
+    const { scoreExposures } = await import("./exposure.functions");
+    const ex = await scoreExposures({ scanRunId: run.id });
+    exposureHitsCreated = ex.hits_created;
+    for (const n of ex.notes) notes.push(n);
+  } catch (err) {
+    notes.push(`Exposure scoring skipped: ${err instanceof Error ? err.message : String(err)}`);
+  }
+
   // ============ PRECOGNITION PASS ============
   // Project newest high-signal events forward (4 horizons) + propagate impacts
   // across supplier / customer / competitor / peer relationships.
