@@ -149,6 +149,13 @@ function EventDetailPage() {
                 <Metric k="Evidence" v={String(data.event.evidence_count)}/>
                 <Metric k="Src diversity" v={Number(data.event.source_diversity_score).toFixed(2)}/>
               </div>
+              {panel.data?.panel?.consensus === "split" && (
+                <div className="mt-3 rounded-md px-3 py-2 text-[11px] font-mono uppercase tracking-widest flex items-center gap-2"
+                     style={{ border: "1px solid color-mix(in oklch, var(--color-reason) 65%, transparent)", background: "color-mix(in oklch, var(--color-reason) 14%, transparent)", color: "var(--color-reason)" }}>
+                  <TriangleAlert className="h-3.5 w-3.5"/>
+                  Contested assessment — analyst panel is split. Headline confidence should be read as uncertain.
+                </div>
+              )}
               <div className="mt-3 flex flex-wrap items-center gap-2 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
                 <span className="px-2 py-1 rounded border border-border/60">sector · {data.event.affected_sector ?? "—"}</span>
                 <span className="px-2 py-1 rounded border border-border/60">region · {data.event.affected_region ?? "—"}</span>
@@ -163,14 +170,22 @@ function EventDetailPage() {
                 <button onClick={() => analyseMut.mutate()} disabled={analyseMut.isPending} className="h-7 px-3 rounded-md text-[10px] border border-[color:var(--color-risk)]/60 text-[color:var(--color-risk)] hover:bg-[color:var(--color-risk)]/10 disabled:opacity-50 flex items-center gap-1.5">
                   <Swords className="h-3 w-3"/>{analyseMut.isPending ? "Analysing…" : (analysis.data?.analysis ? "Re-analyse (red team)" : "Analyse (red team)")}
                 </button>
+                <button onClick={() => panelMut.mutate()} disabled={panelMut.isPending} className="h-7 px-3 rounded-md text-[10px] border border-[color:var(--color-reason)]/60 text-[color:var(--color-reason)] hover:bg-[color:var(--color-reason)]/10 disabled:opacity-50 flex items-center gap-1.5">
+                  <Users className="h-3 w-3"/>{panelMut.isPending ? "Convening…" : (panel.data?.panel ? "Reconvene panel" : "Convene panel")}
+                </button>
               </div>
             </header>
 
             <ForensicReport subjectType="event" subjectId={data.event.id} title={data.event.title} />
 
+            {panel.data?.panel && (
+              <PanelSection p={panel.data.panel as unknown as EventPanelRow}/>
+            )}
+
             {analysis.data?.analysis && (
               <AnalysisPanels a={analysis.data.analysis as unknown as EventAnalysisRow}/>
             )}
+
 
 
             {(exposure.data?.hits?.length ?? 0) > 0 && (
