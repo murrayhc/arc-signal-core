@@ -143,10 +143,18 @@ function EventDetailPage() {
                 <button onClick={() => projectMut.mutate()} disabled={projectMut.isPending} className="ml-auto h-7 px-3 rounded-md text-[10px] border border-[color:var(--color-signal)]/60 text-[color:var(--color-signal)] hover:bg-[color:var(--color-signal)]/10 disabled:opacity-50">
                   {projectMut.isPending ? "Projecting…" : (scen.data?.scenarios?.length ? "Re-project" : "Project forward")}
                 </button>
+                <button onClick={() => analyseMut.mutate()} disabled={analyseMut.isPending} className="h-7 px-3 rounded-md text-[10px] border border-[color:var(--color-risk)]/60 text-[color:var(--color-risk)] hover:bg-[color:var(--color-risk)]/10 disabled:opacity-50 flex items-center gap-1.5">
+                  <Swords className="h-3 w-3"/>{analyseMut.isPending ? "Analysing…" : (analysis.data?.analysis ? "Re-analyse (red team)" : "Analyse (red team)")}
+                </button>
               </div>
             </header>
 
             <ForensicReport subjectType="event" subjectId={data.event.id} title={data.event.title} />
+
+            {analysis.data?.analysis && (
+              <AnalysisPanels a={analysis.data.analysis as EventAnalysisRow}/>
+            )}
+
 
             {(exposure.data?.hits?.length ?? 0) > 0 && (
               <section className="glass-panel rounded-xl p-4 border-l-2" style={{ borderLeftColor: "var(--color-signal)" }}>
