@@ -152,7 +152,7 @@ function EventDetailPage() {
             <ForensicReport subjectType="event" subjectId={data.event.id} title={data.event.title} />
 
             {analysis.data?.analysis && (
-              <AnalysisPanels a={analysis.data.analysis as EventAnalysisRow}/>
+              <AnalysisPanels a={analysis.data.analysis as unknown as EventAnalysisRow}/>
             )}
 
 
