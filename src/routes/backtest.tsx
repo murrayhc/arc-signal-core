@@ -106,8 +106,14 @@ function BacktestPage() {
     onSuccess: (r) => { setBanner(`Distress profiles: checked ${r.companies_checked}, wrote ${r.profiles_written}, ${r.review_queue_added} raised for review.`); invalidateAll(); },
     onError: (e: Error) => setBanner(`Profile run failed: ${e.message}`),
   });
+  const resolveM = useMutation({
+    mutationFn: () => resolveCohortNow({ data: { maxChecks: 30 } }),
+    onSuccess: (r) => { setBanner(`Cohort: checked ${r.checked}, failed ${r.failed}, survived ${r.survived}, still open ${r.still_open}.`); invalidateAll(); },
+    onError: (e: Error) => setBanner(`Cohort resolution failed: ${e.message}`),
+  });
 
-  const busy = importM.isPending || runM.isPending || recomputeM.isPending || mineM.isPending || profileM.isPending;
+  const busy = importM.isPending || runM.isPending || recomputeM.isPending || mineM.isPending || profileM.isPending || resolveM.isPending;
+
   const cases = casesData.cases;
   const runs = runsData.runs;
   const signatures = sigData.signatures;
