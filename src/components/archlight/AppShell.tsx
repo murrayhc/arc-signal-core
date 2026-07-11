@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Bell, Building2, Command, Compass, Crosshair, Database, Download, Eye, Flame, Gauge, GitBranch, Layers, Play, Radar, Search, Settings, Shield, Sparkles, Target } from "lucide-react";
+import { Bell, Building2, Command, Compass, Crosshair, Database, Download, Eye, FlaskConical, Flame, Gauge, GitBranch, Layers, Play, Radar, Search, Settings, Shield, Sparkles, Target } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { getDashboard } from "@/lib/archlight/pipeline.functions";
 
