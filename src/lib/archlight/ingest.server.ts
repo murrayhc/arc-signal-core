@@ -282,7 +282,7 @@ export async function ingestDocument(db: DbAdmin, opts: IngestOpts): Promise<Ing
           is_likely_copy: boolean | null;
           published_at: string | null;
         }>;
-        const supportingRows = allRows.filter((l) => l.relation_to_origin !== "contradiction");
+        const supportingRows = allRows.filter((l) => l.relation_to_origin !== "contradiction" && l.relation_to_origin !== "neutral");
         const linSrcIds = Array.from(new Set(
           supportingRows.map((l) => l.source_id).filter((x): x is string => !!x),
         ));
