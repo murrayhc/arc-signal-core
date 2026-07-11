@@ -32,7 +32,9 @@ export interface TrackRecord {
   coin_flip_brier: number;
   calibration: CalibrationBucket[];
   mean_lead_time_days: number | null;
+  median_lead_time_days: number | null;
   lead_time_n: number;
+  before_mainstream_count: number;
   // Scenario-level
   scenario_count: number;
   scenario_mean_brier: number | null;
