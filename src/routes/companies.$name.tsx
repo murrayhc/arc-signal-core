@@ -4,7 +4,8 @@ import { AppShell } from "@/components/archlight/AppShell";
 import { getCompanyDeep } from "@/lib/archlight/precognition.functions";
 import { getEntityDistressProfile } from "@/lib/archlight/signatures.functions";
 import { getRegistryEdges, rebuildRegistryGraph } from "@/lib/archlight/registry.functions";
-import { ArrowLeft, Building2, CheckCircle2, Fingerprint, GitBranch, Landmark, Loader2, Radar, RefreshCw, Sparkles, TriangleAlert, Users, Zap } from "lucide-react";
+import { getBeliefState } from "@/lib/archlight/beliefs.functions";
+import { Activity, ArrowDown, ArrowLeft, ArrowUp, Building2, CheckCircle2, Fingerprint, GitBranch, Landmark, Loader2, Minus, Radar, RefreshCw, Sparkles, TriangleAlert, Users, Zap } from "lucide-react";
 
 
 
