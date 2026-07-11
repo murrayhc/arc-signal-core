@@ -897,6 +897,148 @@ export type Database = {
           },
         ]
       }
+      exposure_hits: {
+        Row: {
+          created_at: string
+          direction: string
+          event_candidate_id: string
+          exposure_item_id: string
+          id: string
+          match_kind: string | null
+          profile_id: string
+          rationale: string | null
+          relevance: number
+          seen: boolean
+        }
+        Insert: {
+          created_at?: string
+          direction: string
+          event_candidate_id: string
+          exposure_item_id: string
+          id?: string
+          match_kind?: string | null
+          profile_id: string
+          rationale?: string | null
+          relevance: number
+          seen?: boolean
+        }
+        Update: {
+          created_at?: string
+          direction?: string
+          event_candidate_id?: string
+          exposure_item_id?: string
+          id?: string
+          match_kind?: string | null
+          profile_id?: string
+          rationale?: string | null
+          relevance?: number
+          seen?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exposure_hits_event_candidate_id_fkey"
+            columns: ["event_candidate_id"]
+            isOneToOne: false
+            referencedRelation: "event_candidates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exposure_hits_exposure_item_id_fkey"
+            columns: ["exposure_item_id"]
+            isOneToOne: false
+            referencedRelation: "exposure_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exposure_hits_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "exposure_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exposure_items: {
+        Row: {
+          created_at: string
+          entity_id: string | null
+          id: string
+          kind: string
+          name: string
+          notes: string | null
+          profile_id: string
+          updated_at: string
+          value_gbp: number | null
+          weight: number
+        }
+        Insert: {
+          created_at?: string
+          entity_id?: string | null
+          id?: string
+          kind: string
+          name: string
+          notes?: string | null
+          profile_id: string
+          updated_at?: string
+          value_gbp?: number | null
+          weight?: number
+        }
+        Update: {
+          created_at?: string
+          entity_id?: string | null
+          id?: string
+          kind?: string
+          name?: string
+          notes?: string | null
+          profile_id?: string
+          updated_at?: string
+          value_gbp?: number | null
+          weight?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exposure_items_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exposure_items_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "exposure_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exposure_profiles: {
+        Row: {
+          active: boolean
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       forensic_reports: {
         Row: {
           confidence: number | null
