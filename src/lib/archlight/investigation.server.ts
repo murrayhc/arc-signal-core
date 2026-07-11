@@ -10,6 +10,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { gdeltSearch, type GdeltArticle } from "./search/gdelt.server";
 import { ingestDocument, type IngestSource } from "./ingest.server";
+import { classifyStance } from "./stance.server";
 
 type DbAdmin = SupabaseClient<Database>;
 
