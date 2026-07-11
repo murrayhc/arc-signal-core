@@ -328,14 +328,18 @@ export const runScan = createServerFn({ method: "POST" }).handler(async () => {
           recentShingleSets,
           copyLoopJaccard: settings.copy_loop_jaccard,
           logStage: "scan_intake",
+          enrichBody: true,
+          bodyBudget,
         });
         for (const n of ing.notes) notes.push(n);
         if (ing.skipped) continue;
         documentsCollected++;
         atomicClaimsCreated += ing.atomicsCreated;
+        if (ing.fetchedBody) fetchedBodies++;
         for (const c of ing.newClaims) newClaims.push(c);
         sourceProducedAtLeastOne = true;
       }
+
 
       if (!sourceProducedAtLeastOne) throw new Error("no usable docs from source");
 
