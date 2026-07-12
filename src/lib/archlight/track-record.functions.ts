@@ -2,6 +2,7 @@
 // Hard data, no LLM. Public read via track_record_snapshots.
 
 import { createServerFn } from "@tanstack/react-start";
+import { requireOwner } from "@/lib/archlight/owner-auth.server";
 import { z } from "zod";
 
 async function admin() {

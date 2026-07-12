@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { requireOwner } from "@/lib/archlight/owner-auth.server";
 import { z } from "zod";
 import { DEFAULT_SCAN_SETTINGS, type ScanSettings } from "./settings.defaults";
 

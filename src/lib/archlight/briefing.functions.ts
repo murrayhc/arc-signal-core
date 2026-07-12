@@ -2,6 +2,7 @@
 // a schedule to any configured delivery channels. Service-role only.
 
 import { createServerFn } from "@tanstack/react-start";
+import { requireOwner } from "@/lib/archlight/owner-auth.server";
 import { z } from "zod";
 import { callJson, guardFinancialAdvice } from "./ai-gateway.server";
 

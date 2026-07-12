@@ -3,6 +3,7 @@
 // change afterwards; the DB trigger enforces immutability of the rest.
 
 import { createServerFn } from "@tanstack/react-start";
+import { requireOwner } from "@/lib/archlight/owner-auth.server";
 import { z } from "zod";
 import { callJson, guardFinancialAdvice } from "./ai-gateway.server";
 import { deriveIndependenceGroup } from "./text.server";

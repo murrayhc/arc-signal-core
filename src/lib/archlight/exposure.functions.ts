@@ -6,6 +6,7 @@
 // guard violation we fall back to a neutral, factual sentence.
 
 import { createServerFn } from "@tanstack/react-start";
+import { requireOwner } from "@/lib/archlight/owner-auth.server";
 import { z } from "zod";
 import { guardFinancialAdvice } from "./ai-gateway.server";
 

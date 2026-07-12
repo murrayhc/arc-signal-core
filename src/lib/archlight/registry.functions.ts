@@ -8,6 +8,7 @@
 // Guardrails: real CH data only, bounded API usage, respects 429/403.
 
 import { createServerFn } from "@tanstack/react-start";
+import { requireOwner } from "@/lib/archlight/owner-auth.server";
 import { z } from "zod";
 import {
   chPSC,
