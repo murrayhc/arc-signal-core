@@ -403,6 +403,8 @@ export interface BacktestSummary {
   window_days: number;
   signal_type_stats: Record<string, { count: number; cases: number; median_lead_days: number | null }>;
   most_predictive_type: { type: string; median_lead_days: number } | null;
+  earliest_warning_type: { type: string; median_lead_days: number } | null;
+  most_common_type: { type: string; cases: number } | null;
 }
 
 async function computeSummaryCore(windowDays: number = DEFAULT_WINDOW_DAYS): Promise<BacktestSummary> {
