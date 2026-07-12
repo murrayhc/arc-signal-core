@@ -135,10 +135,13 @@ function SideNav() {
     if (saved !== null) setEngineOpen(saved === "true");
   }, []);
 
-  useEffect(() => {
-    console.log("writing engineOpen to localStorage:", engineOpen);
-    localStorage.setItem("archlight:engine-nav-open", String(engineOpen));
-  }, [engineOpen]);
+  const toggleEngine = () => {
+    setEngineOpen((prev) => {
+      const next = !prev;
+      localStorage.setItem("archlight:engine-nav-open", String(next));
+      return next;
+    });
+  };
 
   const groups = [
     { label: "HOME", items: [{ icon: Gauge, label: "Overview", to: "/" }] },
