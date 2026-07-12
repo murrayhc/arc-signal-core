@@ -275,10 +275,12 @@ export async function deliverExposureHits(_opts: DeliverOpts): Promise<DeliverRe
             url,
           };
       try {
-        const res = await fetch(ch.url, {
+        const safeUrl = assertPublicHttpUrl(ch.url);
+        const res = await fetch(safeUrl, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(body),
+          redirect: "error",
         });
         if (res.ok) {
           const upd = await db.from("exposure_hits")
