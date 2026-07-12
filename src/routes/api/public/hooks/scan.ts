@@ -14,7 +14,7 @@ export const Route = createFileRoute("/api/public/hooks/scan")({
           return new Response("Unauthorized", { status: 401 });
         }
         try {
-          const result = await runScan();
+          const result = await runScanImpl();
           return new Response(JSON.stringify({ ok: true, result }), { headers: { "Content-Type": "application/json" } });
         } catch (err) {
           return new Response(JSON.stringify({ ok: false, error: err instanceof Error ? err.message : String(err) }), { status: 500, headers: { "Content-Type": "application/json" } });
