@@ -50,40 +50,44 @@
 :root {
   --radius: 0.5rem;
 
-  /* Deep navy / near black premium intel */
-  --background: oklch(0.14 0.03 260);
-  --foreground: oklch(0.96 0.01 240);
-  --card: oklch(0.18 0.035 260);
-  --card-foreground: oklch(0.96 0.01 240);
-  --popover: oklch(0.16 0.035 260);
-  --popover-foreground: oklch(0.96 0.01 240);
-  --primary: oklch(0.72 0.19 245);
-  --primary-foreground: oklch(0.1 0.02 260);
-  --secondary: oklch(0.24 0.04 260);
-  --secondary-foreground: oklch(0.96 0.01 240);
-  --muted: oklch(0.22 0.03 260);
-  --muted-foreground: oklch(0.65 0.02 250);
-  --accent: oklch(0.28 0.06 250);
-  --accent-foreground: oklch(0.96 0.01 240);
-  --destructive: oklch(0.63 0.24 27);
-  --destructive-foreground: oklch(0.98 0.01 240);
-  --border: oklch(0.28 0.04 260 / 60%);
-  --input: oklch(0.28 0.04 260);
-  --ring: oklch(0.72 0.19 245);
+  /* LIGHT palette (default) */
+  --background: #FAFBFD;
+  --foreground: #0F1626;
+  --card: #FFFFFF;
+  --card-foreground: #0F1626;
+  --popover: #FFFFFF;
+  --popover-foreground: #0F1626;
+  --primary: #1F63E8;
+  --primary-foreground: #FFFFFF;
+  --secondary: #F3F6FB;
+  --secondary-foreground: #0F1626;
+  --muted: #F3F6FB;
+  --muted-foreground: #55617A;
+  --accent: #EAF1FE;
+  --accent-foreground: #1B54C4;
+  --destructive: #CF322E;
+  --destructive-foreground: #FFFFFF;
+  --border: #E4E9F2;
+  --input: #E4E9F2;
+  --ring: #1F63E8;
 
-  /* Archlight semantic */
-  --signal: oklch(0.72 0.2 245);         /* electric blue */
-  --signal-glow: oklch(0.82 0.18 230);
-  --risk: oklch(0.75 0.18 55);           /* amber */
-  --risk-strong: oklch(0.65 0.24 27);    /* red */
-  --opportunity: oklch(0.82 0.16 90);    /* gold */
-  --opportunity-alt: oklch(0.75 0.14 180); /* teal */
-  --growth: oklch(0.72 0.16 165);        /* teal-green */
-  --reason: oklch(0.68 0.19 305);        /* purple */
-  --weak: oklch(0.5 0.02 260);
-  --panel: oklch(0.19 0.035 260 / 85%);
-  --panel-2: oklch(0.22 0.04 260 / 70%);
-  --grid: oklch(0.4 0.04 260 / 25%);
+  --signal: #1F63E8;
+  --signal-glow: #5C9CFF;
+  --risk: #CF322E;
+  --risk-strong: #9E241F;
+  --opportunity: #177E52;
+  --opportunity-alt: #0E9E96;
+  --growth: #177E52;
+  --reason: #6A4BC4;
+  --weak: #8A94A8;
+  --panel: #FFFFFF;
+  --panel-2: #F3F6FB;
+  --grid: #E4E9F2;
+
+  --glass-bg: #FFFFFF;
+  --glass-border: #E4E9F2;
+  --glass-shadow: 0 1px 2px rgba(16,22,38,.05), 0 8px 24px rgba(16,22,38,.06);
+  --page-bg: #FAFBFD;
 
   --chart-1: var(--signal);
   --chart-2: var(--opportunity);
@@ -92,46 +96,94 @@
   --chart-5: var(--growth);
 }
 
-.dark { color-scheme: dark; }
+.dark {
+  color-scheme: dark;
+
+  --background: #0A0E17;
+  --foreground: #E7ECF4;
+  --card: #10151F;
+  --card-foreground: #E7ECF4;
+  --popover: #10151F;
+  --popover-foreground: #E7ECF4;
+  --primary: #5C9CFF;
+  --primary-foreground: #08111F;
+  --secondary: #161C28;
+  --secondary-foreground: #E7ECF4;
+  --muted: #161C28;
+  --muted-foreground: #97A2B6;
+  --accent: #13233F;
+  --accent-foreground: #8FB8FF;
+  --destructive: #FF6E68;
+  --destructive-foreground: #0A0E17;
+  --border: #1E2634;
+  --input: #1E2634;
+  --ring: #5C9CFF;
+
+  --signal: #5C9CFF;
+  --signal-glow: #8FB8FF;
+  --risk: #FF6E68;
+  --risk-strong: #FF5D5A;
+  --opportunity: #46B583;
+  --opportunity-alt: #46B583;
+  --growth: #46B583;
+  --reason: #A78BFA;
+  --weak: #626D84;
+  --panel: #10151F;
+  --panel-2: #161C28;
+  --grid: #1E2634;
+
+  --glass-bg: rgba(20,27,42,.55);
+  --glass-border: rgba(120,140,180,.15);
+  --glass-shadow: 0 1px 0 rgba(255,255,255,.04) inset, 0 30px 60px -30px rgba(0,0,0,.6);
+  --page-bg: #0A0E17;
+}
 
 @layer base {
   * { border-color: var(--color-border); }
   html, body { background: var(--background); color: var(--foreground); font-family: var(--font-sans); }
   body {
+    background: var(--page-bg);
+    background-attachment: fixed;
+    min-height: 100vh;
+  }
+  .dark body {
     background-image:
       radial-gradient(ellipse 80% 60% at 20% 0%, oklch(0.28 0.12 260 / 0.35), transparent 60%),
       radial-gradient(ellipse 60% 50% at 100% 20%, oklch(0.3 0.14 245 / 0.25), transparent 60%),
       radial-gradient(ellipse 60% 50% at 50% 100%, oklch(0.22 0.1 280 / 0.25), transparent 70%),
       linear-gradient(180deg, oklch(0.12 0.03 260), oklch(0.1 0.02 260));
-    background-attachment: fixed;
-    min-height: 100vh;
   }
   h1,h2,h3,h4 { font-family: var(--font-display); letter-spacing: -0.01em; }
 }
 
 @utility glass-panel {
-  background:
-    linear-gradient(180deg, oklch(0.24 0.04 260 / 0.55), oklch(0.16 0.03 260 / 0.55));
-  border: 1px solid oklch(0.6 0.05 250 / 0.15);
-  backdrop-filter: blur(14px) saturate(140%);
-  box-shadow:
-    0 1px 0 oklch(1 0 0 / 0.04) inset,
-    0 30px 60px -30px oklch(0 0 0 / 0.6);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  .dark & {
+    backdrop-filter: blur(14px) saturate(140%);
+  }
 }
 
 @utility grid-bg {
   background-image:
-    linear-gradient(oklch(0.5 0.05 250 / 0.08) 1px, transparent 1px),
-    linear-gradient(90deg, oklch(0.5 0.05 250 / 0.08) 1px, transparent 1px);
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
   background-size: 32px 32px;
 }
 
 @utility text-glow-signal {
-  text-shadow: 0 0 12px oklch(0.72 0.2 245 / 0.5);
+  color: var(--signal);
+  .dark & {
+    text-shadow: 0 0 12px color-mix(in srgb, var(--signal) 50%, transparent);
+  }
 }
 
 @utility ring-signal {
-  box-shadow: 0 0 0 1px oklch(0.72 0.2 245 / 0.4), 0 0 20px oklch(0.72 0.2 245 / 0.35);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--signal) 30%, transparent);
+  .dark & {
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--signal) 40%, transparent), 0 0 20px color-mix(in srgb, var(--signal) 35%, transparent);
+  }
 }
 
 @keyframes pulse-node {
@@ -150,10 +202,10 @@
   100% { transform: translateX(400%); }
 }
 
-/* Slim dark scrollbar for side panels */
+/* Slim scrollbar for side panels */
 .slim-scroll {
   scrollbar-width: thin;
-  scrollbar-color: oklch(0.35 0.02 260 / 0.7) transparent;
+  scrollbar-color: color-mix(in srgb, var(--muted-foreground) 50%, transparent) transparent;
 }
 .slim-scroll::-webkit-scrollbar {
   width: 6px;
@@ -163,9 +215,9 @@
   background: transparent;
 }
 .slim-scroll::-webkit-scrollbar-thumb {
-  background: oklch(0.3 0.02 260 / 0.7);
+  background: color-mix(in srgb, var(--muted-foreground) 40%, transparent);
   border-radius: 3px;
 }
 .slim-scroll::-webkit-scrollbar-thumb:hover {
-  background: oklch(0.45 0.03 260 / 0.9);
+  background: color-mix(in srgb, var(--muted-foreground) 70%, transparent);
 }
