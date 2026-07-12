@@ -160,7 +160,7 @@ function EventDetailPage() {
               )}
 
               {(exposure.data?.hits?.length ?? 0) > 0 && (
-                <section className="mt-4 rounded-xl p-4 border-l-2 bg-background/30" style={{ borderLeftColor: "var(--color-signal)" }}>
+                <section className="mt-4 glass-panel rounded-xl p-4 border-l-2" style={{ borderLeftColor: "var(--color-signal)" }}>
                   <div className="flex items-center gap-2 mb-3">
                     <Crosshair className="h-4 w-4" style={{ color: "var(--color-signal)" }}/>
                     <h2 className="font-display text-sm">Why this matters to you</h2>
