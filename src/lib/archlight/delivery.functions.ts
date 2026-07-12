@@ -170,10 +170,12 @@ export const sendTestMessage = createServerFn({ method: "POST" }).middleware([re
       ? { text: "Archlight delivery test — this channel is wired up and receiving exposure hits." }
       : { type: "delivery_test", message: "Archlight delivery test", at: new Date().toISOString() };
     try {
-      const res = await fetch(ch.url, {
+      const safeUrl = assertPublicHttpUrl(ch.url);
+      const res = await fetch(safeUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
+        redirect: "error",
       });
       return { ok: res.ok, status: res.status };
     } catch (err) {
