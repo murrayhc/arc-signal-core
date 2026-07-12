@@ -84,9 +84,9 @@ function BacktestPage() {
     onError: (e: Error) => setBanner(`Import failed: ${e.message}`),
   });
   const runM = useMutation({
-    mutationFn: () => runBacktest({ data: { maxCases: 15 } }),
+    mutationFn: () => runBacktest({ data: { maxCases: 500 } }),
     onSuccess: (r) => {
-      setBanner(`Backtest: processed ${r.cases_processed} case(s), resolved ${r.cases_resolved}, inserted ${r.signals_inserted} signal(s).`);
+      setBanner(`Backtest: processed ${r.cases_processed} case(s), resolved ${r.cases_resolved}, inserted ${r.signals_inserted} signal(s) (window ${r.window_days}d).${r.notes?.length ? ` ${r.notes[0]}` : ""}`);
       invalidateAll();
     },
     onError: (e: Error) => setBanner(`Backtest failed: ${e.message}`),
