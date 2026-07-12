@@ -171,7 +171,7 @@ function TrackRecordPage() {
                       {r.resolved_by && <span className="text-[10px] font-mono text-muted-foreground">via · {r.resolved_by}</span>}
                       {r.brier_first != null && <span className="text-[10px] font-mono text-muted-foreground">brier · {Number(r.brier_first).toFixed(3)}</span>}
                       {r.lead_time_days != null && <span className="text-[10px] font-mono text-muted-foreground">lead · {Number(r.lead_time_days).toFixed(1)}d</span>}
-                      <span className="text-[10px] font-mono text-muted-foreground">{r.resolved_at ? new Date(r.resolved_at).toLocaleString() : ""}</span>
+                      <span className="text-[10px] font-mono text-muted-foreground"><LocalDate date={r.resolved_at} /></span>
                     </div>
                     <p className="text-sm mt-1.5">{r.prediction_text}</p>
                     {r.resolution_rationale && (
@@ -201,7 +201,7 @@ function TrackRecordPage() {
               <tbody>
                 {snaps.snapshots.map((s) => (
                   <tr key={s.id} className="border-t border-border/40">
-                    <Td className="font-mono">{new Date(s.created_at).toLocaleString()}</Td>
+                    <Td className="font-mono"><LocalDate date={s.created_at} /></Td>
                     <Td className="font-mono">{s.resolved_count}</Td>
                     <Td className="font-mono">{s.base_rate == null ? "—" : `${Math.round(Number(s.base_rate) * 100)}%`}</Td>
                     <Td className="font-mono">{s.mean_brier_first == null ? "—" : Number(s.mean_brier_first).toFixed(3)}</Td>
