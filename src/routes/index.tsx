@@ -208,10 +208,10 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 
 function DoNextCard({ icon, title, line, to, action }: { icon: React.ReactNode; title: string; line: string; to: string; action: string }) {
   return (
-    <div className="glass-panel rounded-xl p-4 flex flex-col gap-1">
+    <div className="glass-panel rounded-xl p-4 flex flex-col gap-1 border border-border/50 bg-background/30 hover:border-[color:var(--color-signal)]/40 transition">
       <div className="flex items-center gap-2">
         {icon}
-        <h3 className="font-display text-sm">{title}</h3>
+        <h3 className="font-display text-sm font-medium">{title}</h3>
       </div>
       <p className="text-xs text-muted-foreground">{line}</p>
       <Link
@@ -248,8 +248,12 @@ function ScanTuningPill() {
   );
 }
 
+function directionColor(dir: string) {
+  return dir === "risk" ? "var(--color-risk)" : dir === "opportunity" ? "var(--color-opportunity)" : "var(--color-signal)";
+}
+
 function directionBadge(dir: string) {
-  const color = dir === "risk" ? "var(--color-risk)" : dir === "opportunity" ? "var(--color-opportunity)" : "var(--color-reason)";
+  const color = directionColor(dir);
   return (
     <span className="text-[10px] font-mono uppercase tracking-widest px-1.5 py-0.5 rounded border" style={{ borderColor: `color-mix(in oklch, ${color} 60%, transparent)`, color }}>
       {dir}
@@ -273,6 +277,9 @@ function YourExposuresRail() {
   const eventMap = new Map((data?.events ?? []).map((e) => [e.id, e] as const));
   const itemMap = new Map((data?.items ?? []).map((i) => [i.id, i] as const));
 
+  const riskCount = hits.filter((h) => h.direction === "risk").length;
+  const oppCount = hits.filter((h) => h.direction === "opportunity").length;
+
   return (
     <section className="glass-panel rounded-xl p-4">
       <div className="flex items-center gap-2 mb-3">
@@ -285,53 +292,70 @@ function YourExposuresRail() {
 
       {isLoading && <div className="text-xs text-muted-foreground">Loading…</div>}
 
-      {!isLoading && hits.length === 0 && (
-        <div className="text-center py-6">
-          <p className="text-sm text-muted-foreground">
-            No exposure profiles yet — tell Archlight what you hold and it will watch it for you.
-          </p>
-          <Link
-            to="/exposures"
-            className="mt-3 inline-flex items-center gap-1.5 h-8 px-3 rounded-md text-xs border border-[color:var(--color-signal)]/60 text-[color:var(--color-signal)] hover:bg-[color:var(--color-signal)]/10"
-          >
-            <Crosshair className="h-3.5 w-3.5"/> Set up exposures
-          </Link>
-        </div>
-      )}
+      {!isLoading && (
+        <>
+          <div className="grid grid-cols-3 gap-3 mb-4">
+            <Kpi k="New hits" v={String(hits.length)} accent="var(--color-signal)"/>
+            <Kpi k="To your risk" v={String(riskCount)} accent="var(--color-risk)"/>
+            <Kpi k="Openings for you" v={String(oppCount)} accent="var(--color-opportunity)"/>
+          </div>
 
-      {hits.length > 0 && (
-        <ul className="grid md:grid-cols-2 gap-2">
-          {hits.map((h) => {
-            const ev = eventMap.get(h.event_candidate_id);
-            const it = itemMap.get(h.exposure_item_id);
-            if (!ev || !it) return null;
-            return (
-              <li key={h.id} className="rounded-lg border border-border/50 bg-background/30 p-3 hover:border-[color:var(--color-signal)]/40 transition">
-                <Link
-                  to="/events/$id"
-                  params={{ id: ev.id }}
-                  onClick={() => seen.mutate(h.id)}
-                  className="block"
-                >
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">{it.kind}</span>
-                    <span className="font-display text-sm">{it.name}</span>
-                    <span className="ml-auto text-[10px] font-mono text-[color:var(--color-signal)]">
-                      {(Number(h.relevance) * 100).toFixed(0)}%
-                    </span>
-                  </div>
-                  <div className="text-xs text-foreground/90 mt-1 line-clamp-2">{ev.title}</div>
-                  <div className="mt-2 flex items-center gap-2 flex-wrap">
-                    {directionBadge(h.direction ?? "mixed")}
-                    <span className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
-                      via · {h.match_kind}
-                    </span>
-                  </div>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
+          {hits.length === 0 ? (
+            <div className="text-center py-6">
+              <p className="text-sm text-muted-foreground">
+                No exposure profiles yet — tell Archlight what you hold and it will watch it for you.
+              </p>
+              <Link
+                to="/exposures"
+                className="mt-3 inline-flex items-center gap-1.5 h-8 px-3 rounded-md text-xs border border-[color:var(--color-signal)]/60 text-[color:var(--color-signal)] hover:bg-[color:var(--color-signal)]/10"
+              >
+                <Crosshair className="h-3.5 w-3.5"/> Set up exposures
+              </Link>
+            </div>
+          ) : (
+            <div className="rounded-xl border border-border/50 bg-background/30 overflow-hidden">
+              <ul className="divide-y divide-border/40">
+                {hits.map((h) => {
+                  const ev = eventMap.get(h.event_candidate_id);
+                  const it = itemMap.get(h.exposure_item_id);
+                  if (!ev || !it) return null;
+                  const color = directionColor(h.direction ?? "mixed");
+                  return (
+                    <li key={h.id} className="group flex items-stretch hover:bg-muted/30 transition">
+                      <div className="w-1 shrink-0 rounded-l" style={{ backgroundColor: color }} />
+                      <div className="flex-1 min-w-0 p-3">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {directionBadge(h.direction ?? "mixed")}
+                          <span className="font-display text-sm font-medium">{it.name}</span>
+                          <span className="text-[10px] font-mono uppercase tracking-widest px-1.5 py-0.5 rounded border border-border/60 text-muted-foreground">
+                            {it.kind}
+                          </span>
+                        </div>
+                        <div className="text-xs text-foreground/90 mt-1 line-clamp-2">{ev.title}</div>
+                        <div className="mt-1.5 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+                          via {h.match_kind}
+                        </div>
+                      </div>
+                      <div className="shrink-0 flex flex-col items-end justify-center gap-1 p-3 text-right">
+                        <span className="font-display text-lg" style={{ color }}>
+                          {(Number(h.relevance) * 100).toFixed(0)}%
+                        </span>
+                        <Link
+                          to="/events/$id"
+                          params={{ id: ev.id }}
+                          onClick={() => seen.mutate(h.id)}
+                          className="inline-flex items-center gap-1 text-[10px] font-medium text-[color:var(--color-signal)] hover:underline"
+                        >
+                          Investigate →
+                        </Link>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
+        </>
       )}
     </section>
   );
