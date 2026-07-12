@@ -403,6 +403,8 @@ export interface BacktestSummary {
   window_days: number;
   signal_type_stats: Record<string, { count: number; cases: number; median_lead_days: number | null }>;
   most_predictive_type: { type: string; median_lead_days: number } | null;
+  earliest_warning_type: { type: string; median_lead_days: number } | null;
+  most_common_type: { type: string; cases: number } | null;
 }
 
 async function computeSummaryCore(windowDays: number = DEFAULT_WINDOW_DAYS): Promise<BacktestSummary> {
@@ -428,6 +430,8 @@ async function computeSummaryCore(windowDays: number = DEFAULT_WINDOW_DAYS): Pro
       window_days: windowDays,
       signal_type_stats: {},
       most_predictive_type: null,
+      earliest_warning_type: null,
+      most_common_type: null,
     };
   }
 
@@ -435,8 +439,8 @@ async function computeSummaryCore(windowDays: number = DEFAULT_WINDOW_DAYS): Pro
     .from("backtest_signals")
     .select("case_id, signal_type, lead_days, in_window");
   const rows = (signals ?? []) as Array<{ case_id: string; signal_type: string; lead_days: number; in_window: boolean }>;
-  // Headline restricted to in-window signals on processed cases only.
-  const inWindow = rows.filter((r) => r.in_window && processedIds.has(r.case_id));
+  // Compute in-window at READ time from the actual lead — the stored flag was defaulted true on early rows and can't be trusted.
+  const inWindow = rows.filter((r) => r.lead_days <= windowDays && processedIds.has(r.case_id));
 
   const earliestByCase = new Map<string, number>();
   const perType = new Map<string, { leads: number[]; caseSet: Set<string> }>();
@@ -468,6 +472,15 @@ async function computeSummaryCore(windowDays: number = DEFAULT_WINDOW_DAYS): Pro
       most_predictive_type = { type: t, median_lead_days: v.median_lead_days };
     }
   }
+  // "Earliest-warning" is the signal type with the longest in-window median lead — same shape as most_predictive_type but honestly named.
+  const earliest_warning_type = most_predictive_type;
+
+  let most_common_type: BacktestSummary["most_common_type"] = null;
+  for (const [t, v] of Object.entries(signal_type_stats)) {
+    if (!most_common_type || v.cases > most_common_type.cases) {
+      most_common_type = { type: t, cases: v.cases };
+    }
+  }
 
   return {
     cases_imported,
@@ -480,6 +493,8 @@ async function computeSummaryCore(windowDays: number = DEFAULT_WINDOW_DAYS): Pro
     window_days: windowDays,
     signal_type_stats,
     most_predictive_type,
+    earliest_warning_type,
+    most_common_type,
   };
 }
 

@@ -170,11 +170,23 @@ function BacktestPage() {
             color="var(--color-signal)"
           />
           <Tile
-            label="Most predictive signal (in-window)"
-            value={summary.most_predictive_type ? formatType(summary.most_predictive_type.type) : "—"}
-            sub={summary.most_predictive_type ? `${Math.round(summary.most_predictive_type.median_lead_days)}d median lead` : "Awaiting signals"}
+            label="Earliest-warning signal (in-window)"
+            value={summary.earliest_warning_type ? formatType(summary.earliest_warning_type.type) : "—"}
+            sub={summary.earliest_warning_type ? `${Math.round(summary.earliest_warning_type.median_lead_days)}d median lead — longest in-window` : "Awaiting signals"}
             color="var(--color-opportunity)"
           />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <Tile
+            label="Most common signal (in-window)"
+            value={summary.most_common_type ? formatType(summary.most_common_type.type) : "—"}
+            sub={summary.most_common_type ? `present in ${summary.most_common_type.cases} of ${summary.cases_processed} processed case(s)` : "Awaiting signals"}
+            color="var(--color-signal)"
+          />
+          <div className="glass-panel rounded-xl p-4 text-xs text-muted-foreground flex items-center">
+            Neither is a failure probability — how often a signal LEADS to failure needs the survivor control group (the prospective calibration cohort below).
+          </div>
         </div>
 
         <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
