@@ -108,6 +108,8 @@ function EventDetailPage() {
     onError: (e) => toast.error("Panel failed", { description: e instanceof Error ? e.message : String(e) }),
   });
 
+  const [tab, setTab] = useState<"summary" | "who" | "evidence" | "scenarios" | "track">("summary");
+
   const claimsById = useMemo(() => {
     const m = new Map<string, SupportingClaim>();
     (data?.supporting_claims as SupportingClaim[] | undefined)?.forEach((c) => m.set(c.id, c));
@@ -156,7 +158,43 @@ function EventDetailPage() {
                   Contested assessment — analyst panel is split. Headline confidence should be read as uncertain.
                 </div>
               )}
-              <div className="mt-3 flex flex-wrap items-center gap-2 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+
+              {(exposure.data?.hits?.length ?? 0) > 0 && (
+                <section className="mt-4 glass-panel rounded-xl p-4 border-l-2" style={{ borderLeftColor: "var(--color-signal)" }}>
+                  <div className="flex items-center gap-2 mb-3">
+                    <Crosshair className="h-4 w-4" style={{ color: "var(--color-signal)" }}/>
+                    <h2 className="font-display text-sm">Why this matters to you</h2>
+                    <span className="ml-auto text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+                      {exposure.data!.hits.length} exposure hit{exposure.data!.hits.length === 1 ? "" : "s"}
+                    </span>
+                  </div>
+                  <ul className="grid md:grid-cols-2 gap-2">
+                    {exposure.data!.hits.map((h) => {
+                      const it = exposure.data!.items.find((x) => x.id === h.exposure_item_id);
+                      const pr = exposure.data!.profiles.find((x) => x.id === h.profile_id);
+                      const dir = h.direction ?? "mixed";
+                      const dirColor = dir === "risk" ? "var(--color-risk)" : dir === "opportunity" ? "var(--color-opportunity)" : "var(--color-reason)";
+                      return (
+                        <li key={h.id} className="rounded-lg border border-border/50 bg-background/30 p-3">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {it && <span className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">{it.kind}</span>}
+                            <span className="font-display text-sm">{it?.name ?? "—"}</span>
+                            {pr && <span className="text-[10px] font-mono text-muted-foreground">· {pr.name}</span>}
+                            <span className="ml-auto text-[10px] font-mono" style={{ color: "var(--color-signal)" }}>{(Number(h.relevance) * 100).toFixed(0)}%</span>
+                          </div>
+                          <div className="mt-2 flex items-center gap-2 flex-wrap">
+                            <span className="text-[10px] font-mono uppercase tracking-widest px-1.5 py-0.5 rounded border" style={{ borderColor: `color-mix(in oklch, ${dirColor} 60%, transparent)`, color: dirColor }}>{dir}</span>
+                            <span className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">via · {h.match_kind}</span>
+                          </div>
+                          {h.rationale && <p className="text-xs text-foreground/90 mt-2">{h.rationale}</p>}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </section>
+              )}
+
+              <div className="mt-4 flex flex-wrap items-center gap-2 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
                 <span className="px-2 py-1 rounded border border-border/60">sector · {data.event.affected_sector ?? "—"}</span>
                 <span className="px-2 py-1 rounded border border-border/60">region · {data.event.affected_region ?? "—"}</span>
                 <span className="px-2 py-1 rounded border border-border/60">severity · {data.event.severity}</span>
@@ -176,301 +214,298 @@ function EventDetailPage() {
               </div>
             </header>
 
-            <ForensicReport subjectType="event" subjectId={data.event.id} title={data.event.title} />
+            <nav role="tablist" aria-label="Event dossier" className="flex flex-wrap gap-1 border-b border-border/40">
+              {([
+                { label: "Summary", value: "summary" },
+                { label: "Who's affected", value: "who" },
+                { label: "Evidence", value: "evidence" },
+                { label: "Scenarios", value: "scenarios" },
+                { label: "Track record", value: "track" },
+              ] as const).map((t) => {
+                const active = tab === t.value;
+                return (
+                  <button
+                    key={t.value}
+                    role="tab"
+                    aria-selected={active}
+                    onClick={() => setTab(t.value)}
+                    className={`px-3 py-2.5 text-[11px] font-mono uppercase tracking-widest transition-colors ${
+                      active
+                        ? "text-[color:var(--color-signal)] border-b-2 border-[color:var(--color-signal)]"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {t.label}
+                  </button>
+                );
+              })}
+            </nav>
 
-            {panel.data?.panel && (
-              <PanelSection p={panel.data.panel as unknown as EventPanelRow}/>
+            {tab === "summary" && (
+              <div className="flex flex-col gap-5">
+                <ForensicReport subjectType="event" subjectId={data.event.id} title={data.event.title} />
+
+                {panel.data?.panel && (
+                  <PanelSection p={panel.data.panel as unknown as EventPanelRow}/>
+                )}
+
+                {analysis.data?.analysis && (
+                  <AnalysisPanels a={analysis.data.analysis as unknown as EventAnalysisRow}/>
+                )}
+
+                {data.contradictions.length > 0 && (
+                  <section className="glass-panel rounded-xl p-4 border-l-2" style={{ borderLeftColor: "var(--color-risk)" }}>
+                    <div className="flex items-center gap-2 mb-2">
+                      <TriangleAlert className="h-4 w-4" style={{ color: "var(--color-risk)" }}/>
+                      <h2 className="font-display text-sm">Contradiction notes</h2>
+                      <span className="ml-auto text-[10px] font-mono uppercase tracking-widest text-muted-foreground">flagged for review</span>
+                    </div>
+                    <ul className="space-y-1.5">
+                      {data.contradictions.map((c) => (
+                        <li key={c.id} className="text-xs flex gap-2">
+                          <span className="text-[10px] font-mono text-muted-foreground shrink-0 mt-0.5">CTR-{shortId(c.id)}</span>
+                          <span className="text-foreground/90">{c.reason}</span>
+                          <span className="ml-auto text-[10px] font-mono uppercase tracking-widest text-muted-foreground shrink-0">{c.status}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                )}
+              </div>
             )}
 
-            {analysis.data?.analysis && (
-              <AnalysisPanels a={analysis.data.analysis as unknown as EventAnalysisRow}/>
-            )}
+            {tab === "who" && (
+              <div className="flex flex-col gap-5">
+                {propagated.length > 0 && (
+                  <section className="glass-panel rounded-xl p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <GitBranch className="h-4 w-4" style={{ color: "var(--color-reason)" }}/>
+                      <h2 className="font-display text-sm">Propagated impacts (peer / supplier / competitor graph)</h2>
+                      <span className="ml-auto text-[10px] font-mono text-muted-foreground">{propagated.length}</span>
+                    </div>
+                    <ul className="grid md:grid-cols-2 gap-2">
+                      {propagated.map((im) => {
+                        const meta = (im.metadata ?? {}) as { relationship_type?: string; decay?: number };
+                        return (
+                          <li key={im.id} className="rounded-lg border border-border/50 bg-background/30 p-3">
+                            <div className="flex items-start justify-between gap-2">
+                              <Link to="/companies/$name" params={{ name: encodeURIComponent(im.company_name) }} className="font-display text-sm hover:text-[color:var(--color-signal)]">{im.company_name}</Link>
+                              <ImpactTag t={im.impact_type}/>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-1">{im.impact_pathway}</p>
+                            <div className="mt-2 flex flex-wrap gap-3 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+                              <span>via · {meta.relationship_type ?? "peer"}</span>
+                              {meta.decay != null && <span>decay {Number(meta.decay).toFixed(2)}</span>}
+                              <span>risk {pct(im.risk_score)}</span>
+                              <span>opp {pct(im.opportunity_score)}</span>
+                              <span>conf {pct(im.confidence)}</span>
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </section>
+                )}
 
+                <div className="grid grid-cols-12 gap-5">
+                  <section className="col-span-12 lg:col-span-6 glass-panel rounded-xl p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Building2 className="h-4 w-4" style={{ color: "var(--color-opportunity)" }}/>
+                      <h2 className="font-display text-sm">Company impacts</h2>
+                      <span className="ml-auto text-[10px] font-mono text-muted-foreground">{data.impacts.length}</span>
+                    </div>
+                    {data.impacts.length === 0 && <Empty>No company impacts synthesized.</Empty>}
+                    <ul className="space-y-2">
+                      {data.impacts.map((im) => (
+                        <li key={im.id} className="rounded-lg border border-border/50 bg-background/30 p-3">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="font-display text-sm">{im.company_name}</div>
+                            <ImpactTag t={im.impact_type}/>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1">{im.impact_pathway}</p>
+                          <div className="mt-2 flex flex-wrap gap-3 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+                            <span>risk {pct(im.risk_score)}</span>
+                            <span>opp {pct(im.opportunity_score)}</span>
+                            <span>conf {pct(im.confidence)}</span>
+                          </div>
+                          {(im.watch_signals ?? []).length > 0 && (
+                            <div className="mt-2 flex flex-wrap gap-1.5">
+                              {im.watch_signals.map((w: string, i: number) => (
+                                <span key={i} className="text-[10px] px-1.5 py-0.5 rounded border border-border/50">◇ {w}</span>
+                              ))}
+                            </div>
+                          )}
+                          {(im.evidence_ids ?? []).length > 0 && (
+                            <div className="mt-2 pt-2 border-t border-border/30">
+                              <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mb-1">evidence</div>
+                              <div className="flex flex-wrap gap-1">
+                                {(im.evidence_ids as string[]).map((eid) => {
+                                  const cl = claimsById.get(eid);
+                                  return (
+                                    <a key={eid} href={`#claim-${eid}`} title={cl?.claim_text ?? eid} className="text-[10px] font-mono px-1.5 py-0.5 rounded border border-[color:var(--color-signal)]/40 text-[color:var(--color-signal)] hover:bg-[color:var(--color-signal)]/10">
+                                      EV-{shortId(eid)}
+                                    </a>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
 
+                  <section className="col-span-12 lg:col-span-6 glass-panel rounded-xl p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Sparkles className="h-4 w-4" style={{ color: "var(--color-opportunity)" }}/>
+                      <h2 className="font-display text-sm">Opportunity cards</h2>
+                      <span className="ml-auto text-[10px] font-mono text-muted-foreground">{data.opportunities.length}</span>
+                    </div>
+                    {data.opportunities.length === 0 && <Empty>No commercial angle synthesized for this event.</Empty>}
+                    <ul className="space-y-2">
+                      {data.opportunities.map((op) => (
+                        <li key={op.id} className="rounded-lg border border-border/50 bg-background/30 p-3">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="font-display text-sm">{op.title}</div>
+                            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded border" style={{ borderColor: "var(--color-opportunity)", color: "var(--color-opportunity)" }}>
+                              val {pct(op.commercial_value_score)}
+                            </span>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1">{op.summary}</p>
+                          {op.buyer_pain && <p className="text-[11px] mt-1"><span className="text-foreground/80">Buyer pain:</span> {op.buyer_pain}</p>}
+                          {op.suggested_offer && <p className="text-[11px] mt-1"><span className="text-foreground/80">Suggested offer:</span> {op.suggested_offer}</p>}
+                          {op.next_best_action && <p className="text-[11px] mt-1"><span className="text-foreground/80">Next best action:</span> {op.next_best_action}</p>}
+                          {op.opportunity_logic && <p className="text-[11px] text-muted-foreground mt-1"><span className="text-foreground/80">Logic:</span> {op.opportunity_logic}</p>}
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
 
-            {(exposure.data?.hits?.length ?? 0) > 0 && (
-              <section className="glass-panel rounded-xl p-4 border-l-2" style={{ borderLeftColor: "var(--color-signal)" }}>
-                <div className="flex items-center gap-2 mb-3">
-                  <Crosshair className="h-4 w-4" style={{ color: "var(--color-signal)" }}/>
-                  <h2 className="font-display text-sm">Why this matters to you</h2>
-                  <span className="ml-auto text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
-                    {exposure.data!.hits.length} exposure hit{exposure.data!.hits.length === 1 ? "" : "s"}
-                  </span>
+                  <section className="col-span-12 glass-panel rounded-xl p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <ShieldAlert className="h-4 w-4" style={{ color: "var(--color-reason)" }}/>
+                      <h2 className="font-display text-sm">Strategic positioning examples</h2>
+                      <span className="ml-auto text-[10px] font-mono uppercase tracking-widest text-muted-foreground">not financial advice</span>
+                    </div>
+                    {data.positioning.length === 0 && <Empty>No positioning example generated.</Empty>}
+                    <ul className="grid md:grid-cols-2 gap-3">
+                      {data.positioning.map((p) => (
+                        <li key={p.id} className="rounded-lg border border-border/50 bg-background/30 p-3">
+                          <div className="font-display text-sm">{p.title}</div>
+                          <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mt-1">{p.user_type} · conf {pct(p.confidence)}</div>
+                          <p className="text-xs mt-2"><span className="text-foreground/80">Angle:</span> {p.positioning_angle}</p>
+                          <p className="text-xs mt-1"><span className="text-foreground/80">How it could be used:</span> {p.how_it_could_be_used}</p>
+                          <p className="text-xs mt-1"><span className="text-foreground/80">Why it may matter:</span> {p.why_it_may_matter}</p>
+                          {p.constraints && <p className="text-[11px] text-muted-foreground mt-1"><span className="text-foreground/80">Constraints:</span> {p.constraints}</p>}
+                          {p.evidence_summary && <p className="text-[11px] text-muted-foreground mt-1"><span className="text-foreground/80">Evidence:</span> {p.evidence_summary}</p>}
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
                 </div>
-                <ul className="grid md:grid-cols-2 gap-2">
-                  {exposure.data!.hits.map((h) => {
-                    const it = exposure.data!.items.find((x) => x.id === h.exposure_item_id);
-                    const pr = exposure.data!.profiles.find((x) => x.id === h.profile_id);
-                    const dir = h.direction ?? "mixed";
-                    const dirColor = dir === "risk" ? "var(--color-risk)" : dir === "opportunity" ? "var(--color-opportunity)" : "var(--color-reason)";
-                    return (
-                      <li key={h.id} className="rounded-lg border border-border/50 bg-background/30 p-3">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          {it && <span className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">{it.kind}</span>}
-                          <span className="font-display text-sm">{it?.name ?? "—"}</span>
-                          {pr && <span className="text-[10px] font-mono text-muted-foreground">· {pr.name}</span>}
-                          <span className="ml-auto text-[10px] font-mono" style={{ color: "var(--color-signal)" }}>{(Number(h.relevance) * 100).toFixed(0)}%</span>
+              </div>
+            )}
+
+            {tab === "evidence" && (
+              <div className="flex flex-col gap-5">
+                <section className="glass-panel rounded-xl p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <FileText className="h-4 w-4" style={{ color: "var(--color-signal)" }}/>
+                    <h2 className="font-display text-sm">Evidence ledger</h2>
+                    <span className="ml-auto text-[10px] font-mono text-muted-foreground">{data.supporting_claims.length} atomic claims</span>
+                  </div>
+                  {data.supporting_claims.length === 0 && <Empty>No atomic claims linked. Run a scan to populate evidence.</Empty>}
+                  <ul className="space-y-2">
+                    {(data.supporting_claims as SupportingClaim[]).map((c) => (
+                      <EvidenceRow key={c.id} c={c} shortId={shortId}/>
+                    ))}
+                  </ul>
+                </section>
+
+                <section className="glass-panel rounded-xl p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Radar className="h-4 w-4" style={{ color: "var(--color-signal)" }}/>
+                    <h2 className="font-display text-sm">Evidence arc</h2>
+                    <span className="ml-auto text-[10px] font-mono text-muted-foreground">{data.arc.nodes.length} nodes · {data.arc.edges.length} edges</span>
+                  </div>
+                  {data.arc.nodes.length === 0 && <Empty>No graph traced yet. Run a scan.</Empty>}
+                  <ul className="grid md:grid-cols-2 lg:grid-cols-3 gap-2">
+                    {(data.arc.nodes as Array<{ id: string; node_type: string; title: string; summary: string | null; confidence: number; risk_score: number; opportunity_score: number }>).map((n) => (
+                      <li key={n.id} className="rounded border border-border/40 p-2 bg-background/30">
+                        <div className="flex items-center justify-between text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+                          <span>{n.node_type}</span>
+                          <span>conf {Number(n.confidence).toFixed(2)}</span>
                         </div>
-                        <div className="mt-2 flex items-center gap-2 flex-wrap">
-                          <span className="text-[10px] font-mono uppercase tracking-widest px-1.5 py-0.5 rounded border" style={{ borderColor: `color-mix(in oklch, ${dirColor} 60%, transparent)`, color: dirColor }}>{dir}</span>
-                          <span className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">via · {h.match_kind}</span>
-                        </div>
-                        {h.rationale && <p className="text-xs text-foreground/90 mt-2">{h.rationale}</p>}
+                        <div className="text-xs mt-1 truncate">{n.title}</div>
                       </li>
-                    );
-                  })}
-                </ul>
-              </section>
+                    ))}
+                  </ul>
+                </section>
+              </div>
             )}
 
-
-
-
-
-            {/* Contradictions banner */}
-            {data.contradictions.length > 0 && (
-              <section className="glass-panel rounded-xl p-4 border-l-2" style={{ borderLeftColor: "var(--color-risk)" }}>
-                <div className="flex items-center gap-2 mb-2">
-                  <TriangleAlert className="h-4 w-4" style={{ color: "var(--color-risk)" }}/>
-                  <h2 className="font-display text-sm">Contradiction notes</h2>
-                  <span className="ml-auto text-[10px] font-mono uppercase tracking-widest text-muted-foreground">flagged for review</span>
-                </div>
-                <ul className="space-y-1.5">
-                  {data.contradictions.map((c) => (
-                    <li key={c.id} className="text-xs flex gap-2">
-                      <span className="text-[10px] font-mono text-muted-foreground shrink-0 mt-0.5">CTR-{shortId(c.id)}</span>
-                      <span className="text-foreground/90">{c.reason}</span>
-                      <span className="ml-auto text-[10px] font-mono uppercase tracking-widest text-muted-foreground shrink-0">{c.status}</span>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            )}
-
-            {/* Forward scenarios */}
-            <section className="glass-panel rounded-xl p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <Zap className="h-4 w-4" style={{ color: "var(--color-signal)" }}/>
-                <h2 className="font-display text-sm">Forward scenarios</h2>
-                <span className="ml-auto text-[10px] font-mono text-muted-foreground">
-                  {scen.data?.scenarios?.length ?? 0} projected
-                </span>
-              </div>
-              {(!scen.data?.scenarios?.length) && (
-                <Empty>No forward projection yet. Click "Project forward" above to generate scenarios across immediate (0-7d), near (8-30d), medium (1-3mo), and strategic (3-12mo) horizons.</Empty>
-              )}
-              {(scen.data?.scenarios?.length ?? 0) > 0 && scen.data && (
-                <div className="grid md:grid-cols-2 gap-3">
-                  {scen.data.scenarios.map((s) => <ScenarioCard key={s.id} s={s as ScenarioRow} label={scen.data.horizon_labels?.[s.horizon as keyof typeof scen.data.horizon_labels] ?? s.horizon}/>)}
-                </div>
-              )}
-            </section>
-
-            {/* Predictions ledger */}
-            <section className="glass-panel rounded-xl p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <Target className="h-4 w-4" style={{ color: "var(--color-signal)" }}/>
-                <h2 className="font-display text-sm">Predictions</h2>
-                <span className="ml-auto text-[10px] font-mono text-muted-foreground">
-                  {preds.data?.predictions?.length ?? 0} receipt{(preds.data?.predictions?.length ?? 0) === 1 ? "" : "s"} · frozen at scan time
-                </span>
-              </div>
-              {(!preds.data?.predictions?.length) && (
-                <Empty>No receipts frozen for this event yet — they are created at the end of the scan that produced the event.</Empty>
-              )}
-              {(preds.data?.predictions?.length ?? 0) > 0 && (
-                <ul className="space-y-2">
-                  {preds.data!.predictions.map((p) => (
-                    <li key={p.id} className="rounded-lg border border-border/50 bg-background/30 p-3">
-                      <div className="flex items-start justify-between gap-2 flex-wrap">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded border border-border/60 uppercase tracking-widest">{p.subject_kind}</span>
-                          {p.horizon && <span className="text-[10px] font-mono px-1.5 py-0.5 rounded border border-border/60 uppercase tracking-widest text-muted-foreground">{p.horizon}</span>}
-                          <PredictionStatusBadge status={p.status} outcome={p.outcome}/>
-                          {p.resolved_by && <span className="text-[10px] font-mono text-muted-foreground">via · {p.resolved_by}</span>}
-                        </div>
-                        <div className="flex items-center gap-2 shrink-0 text-[10px] font-mono">
-                          <span className="px-1.5 py-0.5 rounded border border-border/60 text-muted-foreground">stated {pct(p.predicted_probability)}%</span>
-                          <span className="px-1.5 py-0.5 rounded border border-border/60 text-muted-foreground">live {pct(p.final_probability)}%</span>
-                          <span className="text-muted-foreground">by {new Date(p.deadline).toISOString().slice(0, 10)}</span>
-                        </div>
-                      </div>
-                      <p className="text-sm mt-2">{p.prediction_text}</p>
-                      {p.resolution_rationale && (
-                        <p className="text-[11px] mt-1 text-muted-foreground"><span className="text-foreground/80">Rationale:</span> {p.resolution_rationale}</p>
-                      )}
-                      {p.brier_first != null && (
-                        <div className="mt-1 text-[10px] font-mono text-muted-foreground">brier · {Number(p.brier_first).toFixed(3)}{p.lead_time_days != null ? ` · lead ${Number(p.lead_time_days).toFixed(1)}d` : ""}</div>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </section>
-
-            {/* Propagated impacts */}
-            {propagated.length > 0 && (
+            {tab === "scenarios" && (
               <section className="glass-panel rounded-xl p-4">
                 <div className="flex items-center gap-2 mb-3">
-                  <GitBranch className="h-4 w-4" style={{ color: "var(--color-reason)" }}/>
-                  <h2 className="font-display text-sm">Propagated impacts (peer / supplier / competitor graph)</h2>
-                  <span className="ml-auto text-[10px] font-mono text-muted-foreground">{propagated.length}</span>
+                  <Zap className="h-4 w-4" style={{ color: "var(--color-signal)" }}/>
+                  <h2 className="font-display text-sm">Forward scenarios</h2>
+                  <span className="ml-auto text-[10px] font-mono text-muted-foreground">
+                    {scen.data?.scenarios?.length ?? 0} projected
+                  </span>
                 </div>
-                <ul className="grid md:grid-cols-2 gap-2">
-                  {propagated.map((im) => {
-                    const meta = (im.metadata ?? {}) as { relationship_type?: string; decay?: number };
-                    return (
-                      <li key={im.id} className="rounded-lg border border-border/50 bg-background/30 p-3">
-                        <div className="flex items-start justify-between gap-2">
-                          <Link to="/companies/$name" params={{ name: encodeURIComponent(im.company_name) }} className="font-display text-sm hover:text-[color:var(--color-signal)]">{im.company_name}</Link>
-                          <ImpactTag t={im.impact_type}/>
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-1">{im.impact_pathway}</p>
-                        <div className="mt-2 flex flex-wrap gap-3 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
-                          <span>via · {meta.relationship_type ?? "peer"}</span>
-                          {meta.decay != null && <span>decay {Number(meta.decay).toFixed(2)}</span>}
-                          <span>risk {pct(im.risk_score)}</span>
-                          <span>opp {pct(im.opportunity_score)}</span>
-                          <span>conf {pct(im.confidence)}</span>
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
+                {(!scen.data?.scenarios?.length) && (
+                  <Empty>No forward projection yet. Click "Project forward" above to generate scenarios across immediate (0-7d), near (8-30d), medium (1-3mo), and strategic (3-12mo) horizons.</Empty>
+                )}
+                {(scen.data?.scenarios?.length ?? 0) > 0 && scen.data && (
+                  <div className="grid md:grid-cols-2 gap-3">
+                    {scen.data.scenarios.map((s) => <ScenarioCard key={s.id} s={s as ScenarioRow} label={scen.data.horizon_labels?.[s.horizon as keyof typeof scen.data.horizon_labels] ?? s.horizon}/>)}
+                  </div>
+                )}
               </section>
             )}
 
-            {/* Evidence ledger */}
-            <section className="glass-panel rounded-xl p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <FileText className="h-4 w-4" style={{ color: "var(--color-signal)" }}/>
-                <h2 className="font-display text-sm">Evidence ledger</h2>
-                <span className="ml-auto text-[10px] font-mono text-muted-foreground">{data.supporting_claims.length} atomic claims</span>
-              </div>
-              {data.supporting_claims.length === 0 && <Empty>No atomic claims linked. Run a scan to populate evidence.</Empty>}
-              <ul className="space-y-2">
-                {(data.supporting_claims as SupportingClaim[]).map((c) => (
-                  <EvidenceRow key={c.id} c={c} shortId={shortId}/>
-                ))}
-              </ul>
-            </section>
-
-            <div className="grid grid-cols-12 gap-5">
-              <section className="col-span-12 lg:col-span-6 glass-panel rounded-xl p-4">
+            {tab === "track" && (
+              <section className="glass-panel rounded-xl p-4">
                 <div className="flex items-center gap-2 mb-3">
-                  <Building2 className="h-4 w-4" style={{ color: "var(--color-opportunity)" }}/>
-                  <h2 className="font-display text-sm">Company impacts</h2>
-                  <span className="ml-auto text-[10px] font-mono text-muted-foreground">{data.impacts.length}</span>
+                  <Target className="h-4 w-4" style={{ color: "var(--color-signal)" }}/>
+                  <h2 className="font-display text-sm">Predictions</h2>
+                  <span className="ml-auto text-[10px] font-mono text-muted-foreground">
+                    {preds.data?.predictions?.length ?? 0} receipt{(preds.data?.predictions?.length ?? 0) === 1 ? "" : "s"} · frozen at scan time
+                  </span>
                 </div>
-                {data.impacts.length === 0 && <Empty>No company impacts synthesized.</Empty>}
-                <ul className="space-y-2">
-                  {data.impacts.map((im) => (
-                    <li key={im.id} className="rounded-lg border border-border/50 bg-background/30 p-3">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="font-display text-sm">{im.company_name}</div>
-                        <ImpactTag t={im.impact_type}/>
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-1">{im.impact_pathway}</p>
-                      <div className="mt-2 flex flex-wrap gap-3 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
-                        <span>risk {pct(im.risk_score)}</span>
-                        <span>opp {pct(im.opportunity_score)}</span>
-                        <span>conf {pct(im.confidence)}</span>
-                      </div>
-                      {(im.watch_signals ?? []).length > 0 && (
-                        <div className="mt-2 flex flex-wrap gap-1.5">
-                          {im.watch_signals.map((w: string, i: number) => (
-                            <span key={i} className="text-[10px] px-1.5 py-0.5 rounded border border-border/50">◇ {w}</span>
-                          ))}
-                        </div>
-                      )}
-                      {(im.evidence_ids ?? []).length > 0 && (
-                        <div className="mt-2 pt-2 border-t border-border/30">
-                          <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mb-1">evidence</div>
-                          <div className="flex flex-wrap gap-1">
-                            {(im.evidence_ids as string[]).map((eid) => {
-                              const cl = claimsById.get(eid);
-                              return (
-                                <a key={eid} href={`#claim-${eid}`} title={cl?.claim_text ?? eid} className="text-[10px] font-mono px-1.5 py-0.5 rounded border border-[color:var(--color-signal)]/40 text-[color:var(--color-signal)] hover:bg-[color:var(--color-signal)]/10">
-                                  EV-{shortId(eid)}
-                                </a>
-                              );
-                            })}
+                {(!preds.data?.predictions?.length) && (
+                  <Empty>No receipts frozen for this event yet — they are created at the end of the scan that produced the event.</Empty>
+                )}
+                {(preds.data?.predictions?.length ?? 0) > 0 && (
+                  <ul className="space-y-2">
+                    {preds.data!.predictions.map((p) => (
+                      <li key={p.id} className="rounded-lg border border-border/50 bg-background/30 p-3">
+                        <div className="flex items-start justify-between gap-2 flex-wrap">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded border border-border/60 uppercase tracking-widest">{p.subject_kind}</span>
+                            {p.horizon && <span className="text-[10px] font-mono px-1.5 py-0.5 rounded border border-border/60 uppercase tracking-widest text-muted-foreground">{p.horizon}</span>}
+                            <PredictionStatusBadge status={p.status} outcome={p.outcome}/>
+                            {p.resolved_by && <span className="text-[10px] font-mono text-muted-foreground">via · {p.resolved_by}</span>}
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0 text-[10px] font-mono">
+                            <span className="px-1.5 py-0.5 rounded border border-border/60 text-muted-foreground">stated {pct(p.predicted_probability)}%</span>
+                            <span className="px-1.5 py-0.5 rounded border border-border/60 text-muted-foreground">live {pct(p.final_probability)}%</span>
+                            <span className="text-muted-foreground">by {new Date(p.deadline).toISOString().slice(0, 10)}</span>
                           </div>
                         </div>
-                      )}
-                    </li>
-                  ))}
-                </ul>
+                        <p className="text-sm mt-2">{p.prediction_text}</p>
+                        {p.resolution_rationale && (
+                          <p className="text-[11px] mt-1 text-muted-foreground"><span className="text-foreground/80">Rationale:</span> {p.resolution_rationale}</p>
+                        )}
+                        {p.brier_first != null && (
+                          <div className="mt-1 text-[10px] font-mono text-muted-foreground">brier · {Number(p.brier_first).toFixed(3)}{p.lead_time_days != null ? ` · lead ${Number(p.lead_time_days).toFixed(1)}d` : ""}</div>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </section>
-
-              <section className="col-span-12 lg:col-span-6 glass-panel rounded-xl p-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <Sparkles className="h-4 w-4" style={{ color: "var(--color-opportunity)" }}/>
-                  <h2 className="font-display text-sm">Opportunity cards</h2>
-                  <span className="ml-auto text-[10px] font-mono text-muted-foreground">{data.opportunities.length}</span>
-                </div>
-                {data.opportunities.length === 0 && <Empty>No commercial angle synthesized for this event.</Empty>}
-                <ul className="space-y-2">
-                  {data.opportunities.map((op) => (
-                    <li key={op.id} className="rounded-lg border border-border/50 bg-background/30 p-3">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="font-display text-sm">{op.title}</div>
-                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded border" style={{ borderColor: "var(--color-opportunity)", color: "var(--color-opportunity)" }}>
-                          val {pct(op.commercial_value_score)}
-                        </span>
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-1">{op.summary}</p>
-                      {op.buyer_pain && <p className="text-[11px] mt-1"><span className="text-foreground/80">Buyer pain:</span> {op.buyer_pain}</p>}
-                      {op.suggested_offer && <p className="text-[11px] mt-1"><span className="text-foreground/80">Suggested offer:</span> {op.suggested_offer}</p>}
-                      {op.next_best_action && <p className="text-[11px] mt-1"><span className="text-foreground/80">Next best action:</span> {op.next_best_action}</p>}
-                      {op.opportunity_logic && <p className="text-[11px] text-muted-foreground mt-1"><span className="text-foreground/80">Logic:</span> {op.opportunity_logic}</p>}
-                    </li>
-                  ))}
-                </ul>
-              </section>
-
-              <section className="col-span-12 glass-panel rounded-xl p-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <ShieldAlert className="h-4 w-4" style={{ color: "var(--color-reason)" }}/>
-                  <h2 className="font-display text-sm">Strategic positioning examples</h2>
-                  <span className="ml-auto text-[10px] font-mono uppercase tracking-widest text-muted-foreground">not financial advice</span>
-                </div>
-                {data.positioning.length === 0 && <Empty>No positioning example generated.</Empty>}
-                <ul className="grid md:grid-cols-2 gap-3">
-                  {data.positioning.map((p) => (
-                    <li key={p.id} className="rounded-lg border border-border/50 bg-background/30 p-3">
-                      <div className="font-display text-sm">{p.title}</div>
-                      <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mt-1">{p.user_type} · conf {pct(p.confidence)}</div>
-                      <p className="text-xs mt-2"><span className="text-foreground/80">Angle:</span> {p.positioning_angle}</p>
-                      <p className="text-xs mt-1"><span className="text-foreground/80">How it could be used:</span> {p.how_it_could_be_used}</p>
-                      <p className="text-xs mt-1"><span className="text-foreground/80">Why it may matter:</span> {p.why_it_may_matter}</p>
-                      {p.constraints && <p className="text-[11px] text-muted-foreground mt-1"><span className="text-foreground/80">Constraints:</span> {p.constraints}</p>}
-                      {p.evidence_summary && <p className="text-[11px] text-muted-foreground mt-1"><span className="text-foreground/80">Evidence:</span> {p.evidence_summary}</p>}
-                    </li>
-                  ))}
-                </ul>
-              </section>
-
-              <section className="col-span-12 glass-panel rounded-xl p-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <Radar className="h-4 w-4" style={{ color: "var(--color-signal)" }}/>
-                  <h2 className="font-display text-sm">Evidence arc</h2>
-                  <span className="ml-auto text-[10px] font-mono text-muted-foreground">{data.arc.nodes.length} nodes · {data.arc.edges.length} edges</span>
-                </div>
-                {data.arc.nodes.length === 0 && <Empty>No graph traced yet. Run a scan.</Empty>}
-                <ul className="grid md:grid-cols-2 lg:grid-cols-3 gap-2">
-                  {(data.arc.nodes as Array<{ id: string; node_type: string; title: string; summary: string | null; confidence: number; risk_score: number; opportunity_score: number }>).map((n) => (
-                    <li key={n.id} className="rounded border border-border/40 p-2 bg-background/30">
-                      <div className="flex items-center justify-between text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
-                        <span>{n.node_type}</span>
-                        <span>conf {Number(n.confidence).toFixed(2)}</span>
-                      </div>
-                      <div className="text-xs mt-1 truncate">{n.title}</div>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            </div>
+            )}
 
             <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
               Archlight surfaces public signals · no buy · no sell · no target price ·{" "}
@@ -823,4 +858,3 @@ function PanelSection({ p }: { p: EventPanelRow }) {
     </section>
   );
 }
-
