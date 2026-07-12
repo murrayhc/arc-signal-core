@@ -142,7 +142,12 @@ function EventDetailPage() {
               <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
                 <Radar className="h-3.5 w-3.5"/> event candidate · {data.event.event_class} · {data.event.status} · <span className="text-foreground/70">EVT-{shortId(data.event.id)}</span>
               </div>
-              <h1 className="font-display text-2xl mt-1">{data.event.title}</h1>
+              <div className="mt-1 flex items-start justify-between gap-3 flex-wrap">
+                <h1 className="font-display text-2xl">{data.event.title}</h1>
+                {primaryImpacts[0]?.company_name && (
+                  <AddToBookButton name={primaryImpacts[0].company_name} kind="company"/>
+                )}
+              </div>
               <p className="text-sm text-muted-foreground mt-2 max-w-3xl">{data.event.summary}</p>
               <div className="mt-4 grid grid-cols-2 md:grid-cols-6 gap-3 text-center">
                 <Metric k="Risk" v={pct(data.event.risk_score)} c="var(--color-risk)"/>
