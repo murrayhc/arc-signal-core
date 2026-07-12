@@ -218,7 +218,6 @@ function AddItemForm({ profileId, onAdded }: { profileId: string; onAdded: () =>
   const [kind, setKind] = useState<Kind>("company");
   const [name, setName] = useState("");
   const [weight, setWeight] = useState("1");
-  const [value, setValue] = useState("");
   const [notes, setNotes] = useState("");
 
   const add = useMutation({
@@ -228,13 +227,12 @@ function AddItemForm({ profileId, onAdded }: { profileId: string; onAdded: () =>
         kind,
         name: name.trim(),
         weight: Number(weight) || 1,
-        value_gbp: value.trim() ? Number(value) : null,
         notes: notes.trim() || null,
       },
     }),
     onSuccess: () => {
       toast.success("Item added — scoring against recent events…");
-      setName(""); setValue(""); setNotes(""); setWeight("1");
+      setName(""); setNotes(""); setWeight("1");
       onAdded();
     },
     onError: (e) => toast.error("Add failed", { description: e instanceof Error ? e.message : String(e) }),
@@ -249,8 +247,7 @@ function AddItemForm({ profileId, onAdded }: { profileId: string; onAdded: () =>
         {KIND_OPTIONS.map((k) => <option key={k} value={k}>{k}</option>)}
       </select>
       <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name (e.g. BAE Systems, Aerospace, Copper)" className="col-span-12 md:col-span-4 h-9 px-3 rounded-md border border-border/60 bg-background/50 text-sm outline-none focus:border-[color:var(--color-signal)]/60"/>
-      <input value={weight} onChange={(e) => setWeight(e.target.value)} type="number" step="0.1" min="0" max="10" placeholder="weight" className="col-span-4 md:col-span-1 h-9 px-2 rounded-md border border-border/60 bg-background/50 text-sm"/>
-      <input value={value} onChange={(e) => setValue(e.target.value)} type="number" step="1" min="0" placeholder="£ value" className="col-span-4 md:col-span-2 h-9 px-2 rounded-md border border-border/60 bg-background/50 text-sm"/>
+      <input value={weight} onChange={(e) => setWeight(e.target.value)} type="number" step="0.1" min="0" max="10" placeholder="priority (0–10)" className="col-span-4 md:col-span-1 h-9 px-2 rounded-md border border-border/60 bg-background/50 text-sm"/>
       <input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="notes" className="col-span-12 md:col-span-2 h-9 px-2 rounded-md border border-border/60 bg-background/50 text-sm"/>
       <button
         type="submit"
@@ -278,8 +275,7 @@ function ItemRow({ item, onRemoved }: { item: ProfileWithItems["items"][number];
             <span className="font-display text-sm truncate">{item.name}</span>
           </div>
           <div className="mt-1 flex flex-wrap gap-2 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
-            <span>weight {Number(item.weight).toFixed(2)}</span>
-            {item.value_gbp != null && <span>£{Number(item.value_gbp).toLocaleString("en-GB")}</span>}
+            <span>Priority {Number(item.weight).toFixed(2)}</span>
             <span className={item.hit_count > 0 ? "text-[color:var(--color-signal)]" : ""}>{item.hit_count} hit{item.hit_count === 1 ? "" : "s"}</span>
           </div>
           {item.notes && <p className="text-[11px] text-muted-foreground mt-1">{item.notes}</p>}
