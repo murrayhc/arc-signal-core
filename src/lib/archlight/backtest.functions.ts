@@ -525,6 +525,7 @@ export const listBacktestCases = createServerFn({ method: "GET" })
       outcome_date: string;
       signals_computed_at: string | null;
       signal_count: number;
+      signal_count_total: number;
       earliest_signal_date: string | null;
       earliest_lead_days: number | null;
       signal_types: string[];
