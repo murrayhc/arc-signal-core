@@ -292,21 +292,7 @@ function YourExposuresRail() {
 
       {isLoading && <div className="text-xs text-muted-foreground">Loading…</div>}
 
-      {!isLoading && hits.length === 0 && (
-        <div className="text-center py-6">
-          <p className="text-sm text-muted-foreground">
-            No exposure profiles yet — tell Archlight what you hold and it will watch it for you.
-          </p>
-          <Link
-            to="/exposures"
-            className="mt-3 inline-flex items-center gap-1.5 h-8 px-3 rounded-md text-xs border border-[color:var(--color-signal)]/60 text-[color:var(--color-signal)] hover:bg-[color:var(--color-signal)]/10"
-          >
-            <Crosshair className="h-3.5 w-3.5"/> Set up exposures
-          </Link>
-        </div>
-      )}
-
-      {!isLoading && hits.length > 0 && (
+      {!isLoading && (
         <>
           <div className="grid grid-cols-3 gap-3 mb-4">
             <Kpi k="New hits" v={String(hits.length)} accent="var(--color-signal)"/>
@@ -314,47 +300,61 @@ function YourExposuresRail() {
             <Kpi k="Openings for you" v={String(oppCount)} accent="var(--color-opportunity)"/>
           </div>
 
-          <div className="rounded-xl border border-border/50 bg-background/30 overflow-hidden">
-            <ul className="divide-y divide-border/40">
-              {hits.map((h) => {
-                const ev = eventMap.get(h.event_candidate_id);
-                const it = itemMap.get(h.exposure_item_id);
-                if (!ev || !it) return null;
-                const color = directionColor(h.direction ?? "mixed");
-                return (
-                  <li key={h.id} className="group flex items-stretch hover:bg-muted/30 transition">
-                    <div className="w-1 shrink-0 rounded-l" style={{ backgroundColor: color }} />
-                    <div className="flex-1 min-w-0 p-3">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        {directionBadge(h.direction ?? "mixed")}
-                        <span className="font-display text-sm font-medium">{it.name}</span>
-                        <span className="text-[10px] font-mono uppercase tracking-widest px-1.5 py-0.5 rounded border border-border/60 text-muted-foreground">
-                          {it.kind}
+          {hits.length === 0 ? (
+            <div className="text-center py-6">
+              <p className="text-sm text-muted-foreground">
+                No exposure profiles yet — tell Archlight what you hold and it will watch it for you.
+              </p>
+              <Link
+                to="/exposures"
+                className="mt-3 inline-flex items-center gap-1.5 h-8 px-3 rounded-md text-xs border border-[color:var(--color-signal)]/60 text-[color:var(--color-signal)] hover:bg-[color:var(--color-signal)]/10"
+              >
+                <Crosshair className="h-3.5 w-3.5"/> Set up exposures
+              </Link>
+            </div>
+          ) : (
+            <div className="rounded-xl border border-border/50 bg-background/30 overflow-hidden">
+              <ul className="divide-y divide-border/40">
+                {hits.map((h) => {
+                  const ev = eventMap.get(h.event_candidate_id);
+                  const it = itemMap.get(h.exposure_item_id);
+                  if (!ev || !it) return null;
+                  const color = directionColor(h.direction ?? "mixed");
+                  return (
+                    <li key={h.id} className="group flex items-stretch hover:bg-muted/30 transition">
+                      <div className="w-1 shrink-0 rounded-l" style={{ backgroundColor: color }} />
+                      <div className="flex-1 min-w-0 p-3">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {directionBadge(h.direction ?? "mixed")}
+                          <span className="font-display text-sm font-medium">{it.name}</span>
+                          <span className="text-[10px] font-mono uppercase tracking-widest px-1.5 py-0.5 rounded border border-border/60 text-muted-foreground">
+                            {it.kind}
+                          </span>
+                        </div>
+                        <div className="text-xs text-foreground/90 mt-1 line-clamp-2">{ev.title}</div>
+                        <div className="mt-1.5 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+                          via {h.match_kind}
+                        </div>
+                      </div>
+                      <div className="shrink-0 flex flex-col items-end justify-center gap-1 p-3 text-right">
+                        <span className="font-display text-lg" style={{ color }}>
+                          {(Number(h.relevance) * 100).toFixed(0)}%
                         </span>
+                        <Link
+                          to="/events/$id"
+                          params={{ id: ev.id }}
+                          onClick={() => seen.mutate(h.id)}
+                          className="inline-flex items-center gap-1 text-[10px] font-medium text-[color:var(--color-signal)] hover:underline"
+                        >
+                          Investigate →
+                        </Link>
                       </div>
-                      <div className="text-xs text-foreground/90 mt-1 line-clamp-2">{ev.title}</div>
-                      <div className="mt-1.5 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
-                        via {h.match_kind}
-                      </div>
-                    </div>
-                    <div className="shrink-0 flex flex-col items-end justify-center gap-1 p-3 text-right">
-                      <span className="font-display text-lg" style={{ color }}>
-                        {(Number(h.relevance) * 100).toFixed(0)}%
-                      </span>
-                      <Link
-                        to="/events/$id"
-                        params={{ id: ev.id }}
-                        onClick={() => seen.mutate(h.id)}
-                        className="inline-flex items-center gap-1 text-[10px] font-medium text-[color:var(--color-signal)] hover:underline"
-                      >
-                        Investigate →
-                      </Link>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
         </>
       )}
     </section>
