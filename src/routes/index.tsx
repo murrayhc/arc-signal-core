@@ -132,7 +132,7 @@ function Dashboard() {
         {/* Hero brain + side lists */}
         <div className="grid grid-cols-12 gap-5">
           <div className="col-span-12 xl:col-span-3 order-2 xl:order-1 xl:h-[560px]">
-            <TopRisks items={data.risks} highlightTitle={null}/>
+            <TopRisks items={data.risks} highlightTitle={selectedNode?.title ?? null}/>
           </div>
           <div className="col-span-12 xl:col-span-6 order-1 xl:order-2">
             <IntelligenceBrain
