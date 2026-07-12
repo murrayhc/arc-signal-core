@@ -1063,7 +1063,9 @@ export async function runScanImpl() {
 
 
 
-});
+}
+
+export const runScan = createServerFn({ method: "POST" }).middleware([requireOwner]).handler(async () => runScanImpl());
 
 function clamp01(n: unknown): number {
   const v = typeof n === "number" ? n : Number(n);
