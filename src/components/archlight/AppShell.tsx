@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Bell, Building2, Command, Compass, Crosshair, Database, Download, Eye, FlaskConical, Flame, Gauge, GitBranch, Layers, Play, Radar, Search, Settings, Shield, Sparkles, Target } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { Bell, Building2, ChevronDown, Command, Compass, Crosshair, Database, Download, Eye, FlaskConical, Flame, Gauge, GitBranch, Layers, Play, Radar, Search, Settings, Shield, Sparkles, Target } from "lucide-react";
+import { useEffect, useState, type ReactNode } from "react";
 import { getDashboard } from "@/lib/archlight/pipeline.functions";
 
 export function AppShell({ children, onRunScan, scanning }: { children: ReactNode; onRunScan?: () => void; scanning?: boolean }) {
@@ -128,43 +128,116 @@ function IconBtn({ children }: { children: ReactNode }) {
 }
 
 function SideNav() {
-  const items: Array<{ icon: typeof Gauge; label: string; to: string; group?: string }> = [
-    { icon: Gauge, label: "Overview", to: "/" },
-    { icon: Layers, label: "Digest", to: "/digest" },
-    { icon: Search, label: "Interrogate", to: "/interrogate" },
-    { icon: Compass, label: "Ask graph", to: "/ask-graph" },
-    { icon: Sparkles, label: "Opportunities", to: "/opportunities" },
-    { icon: Building2, label: "Companies", to: "/companies" },
-    { icon: GitBranch, label: "Evidence arcs", to: "/arcs" },
-    { icon: Eye, label: "Watchlists", to: "/watchlist" },
-    { icon: Crosshair, label: "Exposures", to: "/exposures" },
-    { icon: Target, label: "Interrogations", to: "/interrogations" },
-    { icon: Bell, label: "Briefings", to: "/briefings" },
-    { icon: Flame, label: "Track record", to: "/track-record" },
-    { icon: FlaskConical, label: "Backtest", to: "/backtest" },
-    { icon: Radar, label: "Scans", to: "/scans" },
-    { icon: Database, label: "Sources", to: "/sources" },
-    { icon: Shield, label: "Review queue", to: "/review" },
-    { icon: Settings, label: "Scan settings", to: "/settings/scan" },
-    { icon: Settings, label: "Model routing", to: "/admin/routing" },
+  const [engineOpen, setEngineOpen] = useState(false);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("archlight:engine-nav-open");
+    if (saved !== null) setEngineOpen(saved === "true");
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("archlight:engine-nav-open", String(engineOpen));
+  }, [engineOpen]);
+
+  const groups = [
+    { label: "HOME", items: [{ icon: Gauge, label: "Overview", to: "/" }] },
+    {
+      label: "MY BOOK",
+      items: [
+        { icon: Crosshair, label: "My book", to: "/exposures" },
+        { icon: Eye, label: "Watchlist & alerts", to: "/watchlist" },
+        { icon: Bell, label: "Briefings", to: "/briefings" },
+      ],
+    },
+    {
+      label: "EXPLORE",
+      items: [
+        { icon: Layers, label: "Digest", to: "/digest" },
+        { icon: Search, label: "Research", to: "/interrogate" },
+        { icon: Target, label: "Research history", to: "/interrogations" },
+        { icon: Compass, label: "Graph lookup", to: "/ask-graph" },
+        { icon: Building2, label: "Companies", to: "/companies" },
+        { icon: GitBranch, label: "Evidence", to: "/arcs" },
+      ],
+    },
+    { label: "OPENINGS", items: [{ icon: Sparkles, label: "Opportunities", to: "/opportunities" }] },
+    { label: "PROOF", items: [{ icon: Flame, label: "Track record", to: "/track-record" }] },
+    {
+      label: "ENGINE",
+      collapsible: true,
+      items: [
+        { icon: Radar, label: "Scans", to: "/scans" },
+        { icon: Database, label: "Sources", to: "/sources" },
+        { icon: Settings, label: "Scan settings", to: "/settings/scan" },
+        { icon: Settings, label: "Delivery channels", to: "/settings/delivery" },
+        { icon: Shield, label: "Review queue", to: "/review" },
+        { icon: Settings, label: "Model routing", to: "/admin/routing" },
+        { icon: FlaskConical, label: "Backtest harness", to: "/backtest" },
+      ],
+    },
   ];
+
   return (
     <aside className="hidden md:flex flex-col w-[220px] shrink-0 border-r border-border/60 bg-background/40 backdrop-blur-xl">
-      <div className="p-3 flex-1">
-        <ul className="space-y-0.5">
-          {items.map(({ icon: Icon, label, to }) => (
-            <li key={to}>
-              <Link
-                to={to}
-                className="flex items-center gap-2.5 px-2.5 h-8 rounded-md text-xs transition text-muted-foreground hover:text-foreground hover:bg-accent/40"
-                activeProps={{ className: "flex items-center gap-2.5 px-2.5 h-8 rounded-md text-xs bg-accent/60 text-foreground border border-border/60" }}
-                activeOptions={{ exact: to === "/" }}
-              >
-                <Icon className="h-3.5 w-3.5"/>{label}
-              </Link>
-            </li>
+      <div className="flex-1 overflow-y-auto p-3">
+        <div className="flex flex-col gap-4">
+          {groups.map((group) => (
+            <div key={group.label} className="space-y-0.5">
+              {group.collapsible ? (
+                <>
+                  <button
+                    onClick={() => setEngineOpen((o) => !o)}
+                    className="w-full flex items-center justify-between px-2.5 h-8 rounded-md text-[10px] font-mono uppercase tracking-widest text-muted-foreground hover:text-foreground hover:bg-accent/40 transition"
+                  >
+                    <span>{group.label}</span>
+                    <ChevronDown className={`h-3.5 w-3.5 transition-transform ${!engineOpen ? "-rotate-90" : ""}`} />
+                  </button>
+                  {engineOpen && (
+                    <p className="px-2.5 pb-1 text-[10px] text-muted-foreground">
+                      Operator tools — run the engine, tune sources & settings.
+                    </p>
+                  )}
+                  {engineOpen && (
+                    <ul className="space-y-0.5">
+                      {group.items.map(({ icon: Icon, label, to }) => (
+                        <li key={to}>
+                          <Link
+                            to={to}
+                            className="flex items-center gap-2.5 px-2.5 h-8 rounded-md text-xs transition text-muted-foreground hover:text-foreground hover:bg-accent/40"
+                            activeProps={{ className: "flex items-center gap-2.5 px-2.5 h-8 rounded-md text-xs bg-accent/60 text-foreground border border-border/60" }}
+                            activeOptions={{ exact: to === "/" }}
+                          >
+                            <Icon className="h-3.5 w-3.5"/>{label}
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </>
+              ) : (
+                <>
+                  <div className="px-2.5 h-6 flex items-center text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+                    {group.label}
+                  </div>
+                  <ul className="space-y-0.5">
+                    {group.items.map(({ icon: Icon, label, to }) => (
+                      <li key={to}>
+                        <Link
+                          to={to}
+                          className="flex items-center gap-2.5 px-2.5 h-8 rounded-md text-xs transition text-muted-foreground hover:text-foreground hover:bg-accent/40"
+                          activeProps={{ className: "flex items-center gap-2.5 px-2.5 h-8 rounded-md text-xs bg-accent/60 text-foreground border border-border/60" }}
+                          activeOptions={{ exact: to === "/" }}
+                        >
+                          <Icon className="h-3.5 w-3.5"/>{label}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
+            </div>
           ))}
-        </ul>
+        </div>
       </div>
       <div className="m-3 mt-0 rounded-lg glass-panel p-3 text-[11px] space-y-1.5">
         <div className="flex items-center gap-2 text-xs">
