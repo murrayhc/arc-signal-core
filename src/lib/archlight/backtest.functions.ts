@@ -534,19 +534,25 @@ export const listBacktestCases = createServerFn({ method: "GET" })
     const caseIds = rows.map((c) => c.id);
     const { data: signals } = await db
       .from("backtest_signals")
-      .select("case_id, signal_type, signal_date, lead_days")
+      .select("case_id, signal_type, signal_date, lead_days, in_window")
       .in("case_id", caseIds);
-    const byCase = new Map<string, Array<{ signal_type: string; signal_date: string; lead_days: number }>>();
+    const byCase = new Map<string, Array<{ signal_type: string; signal_date: string; lead_days: number; in_window: boolean }>>();
     for (const s of signals ?? []) {
       const arr = byCase.get(s.case_id as string) ?? [];
-      arr.push({ signal_type: s.signal_type as string, signal_date: s.signal_date as string, lead_days: Number(s.lead_days) });
+      arr.push({
+        signal_type: s.signal_type as string,
+        signal_date: s.signal_date as string,
+        lead_days: Number(s.lead_days),
+        in_window: (s as { in_window?: boolean }).in_window ?? true,
+      });
       byCase.set(s.case_id as string, arr);
     }
 
     const enriched = rows.map((c) => {
       const sigs = byCase.get(c.id) ?? [];
-      const earliest = sigs.length ? sigs.reduce((a, b) => (a.lead_days >= b.lead_days ? a : b)) : null;
-      const types = Array.from(new Set(sigs.map((s) => s.signal_type)));
+      const inWin = sigs.filter((s) => s.in_window);
+      const earliest = inWin.length ? inWin.reduce((a, b) => (a.lead_days >= b.lead_days ? a : b)) : null;
+      const types = Array.from(new Set(inWin.map((s) => s.signal_type)));
       return {
         id: c.id,
         company_name: c.company_name,
@@ -554,7 +560,8 @@ export const listBacktestCases = createServerFn({ method: "GET" })
         outcome_type: c.outcome_type,
         outcome_date: c.outcome_date,
         signals_computed_at: c.signals_computed_at,
-        signal_count: sigs.length,
+        signal_count: inWin.length,
+        signal_count_total: sigs.length,
         earliest_signal_date: earliest?.signal_date ?? null,
         earliest_lead_days: earliest?.lead_days ?? null,
         signal_types: types,
