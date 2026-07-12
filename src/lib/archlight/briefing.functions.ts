@@ -329,6 +329,6 @@ export const listBriefings = createServerFn({ method: "GET" })
   });
 
 // Manual trigger for the UI ("Run today's briefing now").
-export const runDailyBriefingNow = createServerFn({ method: "POST" }).handler(async () => {
+export const runDailyBriefingNow = createServerFn({ method: "POST" }).middleware([requireOwner]).handler(async () => {
   return await runDailyBriefing();
 });

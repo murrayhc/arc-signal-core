@@ -35,7 +35,7 @@ async function loadEntities(db: Awaited<ReturnType<typeof admin>>): Promise<Enti
  * and propagate impact to supplier/customer/competitor/peer companies via
  * entity_relationships (only if the impact isn't already recorded).
  */
-export const projectEventForward = createServerFn({ method: "POST" })
+export const projectEventForward = createServerFn({ method: "POST" }).middleware([requireOwner])
   .inputValidator((d: unknown) => IdInput.parse(d))
   .handler(async ({ data }) => {
     const db = await admin();
@@ -220,7 +220,7 @@ async function refreshCompanyExposure(db: Awaited<ReturnType<typeof admin>>, nam
 // Bulk precognition: project the top N most-recent events forward.
 // ============================================================
 const BulkInput = z.object({ limit: z.number().int().min(1).max(30).default(8) });
-export const projectRecentEvents = createServerFn({ method: "POST" })
+export const projectRecentEvents = createServerFn({ method: "POST" }).middleware([requireOwner])
   .inputValidator((d: unknown) => BulkInput.parse(d))
   .handler(async ({ data }) => {
     const db = await admin();
@@ -247,7 +247,7 @@ export const projectRecentEvents = createServerFn({ method: "POST" })
 // ============================================================
 // Event scenarios (read)
 // ============================================================
-export const getEventScenarios = createServerFn({ method: "POST" })
+export const getEventScenarios = createServerFn({ method: "POST" }).middleware([requireOwner])
   .inputValidator((d: unknown) => IdInput.parse(d))
   .handler(async ({ data }) => {
     const db = await admin();
@@ -259,7 +259,7 @@ export const getEventScenarios = createServerFn({ method: "POST" })
 // Company deep exposure (real page)
 // ============================================================
 const NameInput = z.object({ name: z.string().min(1).max(240) });
-export const getCompanyDeep = createServerFn({ method: "POST" })
+export const getCompanyDeep = createServerFn({ method: "POST" }).middleware([requireOwner])
   .inputValidator((d: unknown) => NameInput.parse(d))
   .handler(async ({ data }) => {
     const db = await admin();
@@ -312,7 +312,7 @@ export const getCompanyDeep = createServerFn({ method: "POST" })
 // ============================================================
 // Weekly digest — generate + read
 // ============================================================
-export const generateDigest = createServerFn({ method: "POST" }).handler(async () => {
+export const generateDigest = createServerFn({ method: "POST" }).middleware([requireOwner]).handler(async () => {
   const db = await admin();
   const windowEnd = new Date();
   const windowStart = new Date(windowEnd.getTime() - 7 * 24 * 3600 * 1000);
@@ -422,7 +422,7 @@ function toTradingViewSymbol(ticker: string | null): string | null {
   return raw;
 }
 
-export const getChartTickers = createServerFn({ method: "POST" })
+export const getChartTickers = createServerFn({ method: "POST" }).middleware([requireOwner])
   .inputValidator((d: unknown) => ChartInput.parse(d))
   .handler(async ({ data }) => {
     const db = await admin();
@@ -516,7 +516,7 @@ async function fetchYahooSeries(symbol: string): Promise<MarketPoint[]> {
   return points.map((p) => ({ ...p, pct: Number((((p.close - first) / first) * 100).toFixed(2)) })).slice(-260);
 }
 
-export const getMarketSeries = createServerFn({ method: "POST" })
+export const getMarketSeries = createServerFn({ method: "POST" }).middleware([requireOwner])
   .inputValidator((d: unknown) => MarketSeriesInput.parse(d))
   .handler(async ({ data }) => {
     const instruments = [data.primary, ...(data.includeCompetitors ? data.competitors : [])];

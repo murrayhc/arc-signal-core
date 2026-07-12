@@ -50,7 +50,7 @@ function median(nums: number[]): number | null {
 
 // ============= 1. mineSignatures =============
 
-export const mineSignatures = createServerFn({ method: "POST" }).handler(async () => {
+export const mineSignatures = createServerFn({ method: "POST" }).middleware([requireOwner]).handler(async () => {
   const db = await admin();
 
   const { data: cases } = await db.from("backtest_cases").select("id, outcome_date");
@@ -113,7 +113,7 @@ export const listSignatures = createServerFn({ method: "GET" }).handler(async ()
   return { signatures: data ?? [] };
 });
 
-export const getEntityDistressProfile = createServerFn({ method: "POST" })
+export const getEntityDistressProfile = createServerFn({ method: "POST" }).middleware([requireOwner])
   .inputValidator((d: unknown) => z.object({ entityId: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
     const db = await admin();
@@ -185,7 +185,7 @@ const ComputeInput = z.object({
   windowMonths: z.number().int().min(1).max(60).optional(),
 }).optional();
 
-export const computeDistressProfiles = createServerFn({ method: "POST" })
+export const computeDistressProfiles = createServerFn({ method: "POST" }).middleware([requireOwner])
   .inputValidator((d: unknown) => ComputeInput.parse(d))
   .handler(async ({ data }) => {
     const db = await admin();
@@ -523,7 +523,7 @@ export async function resolveCohort(opts: ResolveCohortOpts = {}): Promise<{
   return { checked, failed, survived, still_open: stillOpen, notes };
 }
 
-export const resolveCohortNow = createServerFn({ method: "POST" })
+export const resolveCohortNow = createServerFn({ method: "POST" }).middleware([requireOwner])
   .inputValidator((d: unknown) => z.object({ maxChecks: z.number().int().min(1).max(200).optional() }).optional().parse(d))
   .handler(async ({ data }) => resolveCohort({ maxChecks: data?.maxChecks }));
 

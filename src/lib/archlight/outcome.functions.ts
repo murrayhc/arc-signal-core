@@ -61,7 +61,7 @@ function isoPlusDays(iso: string | Date, days: number): string {
 
 interface FreezeInput { scanRunId: string }
 
-export const freezePredictions = createServerFn({ method: "POST" })
+export const freezePredictions = createServerFn({ method: "POST" }).middleware([requireOwner])
   .inputValidator((d: unknown) => z.object({ scanRunId: z.string().uuid() }).parse(d))
   .handler(async ({ data }: { data: FreezeInput }) => {
     const db = await admin();
@@ -255,7 +255,7 @@ export const freezePredictions = createServerFn({ method: "POST" })
 
 // Refresh `final_probability` for open receipts against the live
 // event/scenario probability. Never touches `predicted_probability`.
-export const refreshFinalProbabilities = createServerFn({ method: "POST" }).handler(async () => {
+export const refreshFinalProbabilities = createServerFn({ method: "POST" }).middleware([requireOwner]).handler(async () => {
   const db = await admin();
   const { data: open } = await db
     .from("outcome_predictions")
@@ -480,7 +480,7 @@ async function gradeScenariosViaAI(
   return res.data.results.filter((r) => r && r.scenario_projection_id);
 }
 
-export const resolveOutcomes = createServerFn({ method: "POST" }).handler(async () => {
+export const resolveOutcomes = createServerFn({ method: "POST" }).middleware([requireOwner]).handler(async () => {
   const db = await admin();
   let resolved = 0;
   let pending = 0;
@@ -738,7 +738,7 @@ interface VerdictInput {
   reviewer?: string;
 }
 
-export const applyPredictionVerdict = createServerFn({ method: "POST" })
+export const applyPredictionVerdict = createServerFn({ method: "POST" }).middleware([requireOwner])
   .inputValidator((d: unknown) =>
     z
       .object({

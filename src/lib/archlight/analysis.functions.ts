@@ -198,7 +198,7 @@ function briefToPrompt(brief: Brief): string {
   );
 }
 
-export const analyseEvent = createServerFn({ method: "POST" })
+export const analyseEvent = createServerFn({ method: "POST" }).middleware([requireOwner])
   .inputValidator((d: unknown) => AnalyseInput.parse(d))
   .handler(async ({ data }) => {
     const db = await admin();
@@ -290,7 +290,7 @@ export const analyseEvent = createServerFn({ method: "POST" })
     };
   });
 
-export const getEventAnalysis = createServerFn({ method: "POST" })
+export const getEventAnalysis = createServerFn({ method: "POST" }).middleware([requireOwner])
   .inputValidator((d: unknown) => AnalyseInput.parse(d))
   .handler(async ({ data }) => {
     const db = await admin();
@@ -417,7 +417,7 @@ function aggregatePanel(opinions: PanelOpinion[]): { mean: number; disagreement:
   return { mean: clamp01(mean), disagreement: clamp01(spread), consensus };
 }
 
-export const panelEvent = createServerFn({ method: "POST" })
+export const panelEvent = createServerFn({ method: "POST" }).middleware([requireOwner])
   .inputValidator((d: unknown) => AnalyseInput.parse(d))
   .handler(async ({ data }) => {
     const db = await admin();
@@ -504,7 +504,7 @@ export const panelEvent = createServerFn({ method: "POST" })
     };
   });
 
-export const getEventPanel = createServerFn({ method: "POST" })
+export const getEventPanel = createServerFn({ method: "POST" }).middleware([requireOwner])
   .inputValidator((d: unknown) => AnalyseInput.parse(d))
   .handler(async ({ data }) => {
     const db = await admin();

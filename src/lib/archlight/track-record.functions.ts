@@ -146,7 +146,7 @@ export const computeTrackRecord = createServerFn({ method: "GET" }).handler(asyn
   return computeCore();
 });
 
-export const writeTrackRecordSnapshot = createServerFn({ method: "POST" })
+export const writeTrackRecordSnapshot = createServerFn({ method: "POST" }).middleware([requireOwner])
   .inputValidator((d: unknown) => z.object({ scanRunId: z.string().uuid() }).parse(d))
   .handler(async ({ data }: { data: { scanRunId: string } }) => {
     const db = await admin();

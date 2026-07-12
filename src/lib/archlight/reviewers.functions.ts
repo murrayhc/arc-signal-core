@@ -283,6 +283,6 @@ export const computeReviewerScores = createServerFn({ method: "GET" }).handler(a
 });
 
 // Manual trigger.
-export const gradeReviewerVerdictsNow = createServerFn({ method: "POST" }).handler(async () => {
+export const gradeReviewerVerdictsNow = createServerFn({ method: "POST" }).middleware([requireOwner]).handler(async () => {
   return await gradeReviewerVerdicts();
 });

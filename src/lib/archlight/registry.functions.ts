@@ -313,7 +313,7 @@ export async function buildRegistryEdges(opts: { maxCompanies?: number } = {}): 
 // --- Server function wrappers ---
 
 const BuildInput = z.object({ maxCompanies: z.number().int().positive().max(100).optional() });
-export const rebuildRegistryGraph = createServerFn({ method: "POST" })
+export const rebuildRegistryGraph = createServerFn({ method: "POST" }).middleware([requireOwner])
   .inputValidator((d: unknown) => BuildInput.parse(d ?? {}))
   .handler(async ({ data }) => buildRegistryEdges({ maxCompanies: data.maxCompanies ?? 20 }));
 

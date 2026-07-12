@@ -79,7 +79,7 @@ const AddInput = z.object({
   profileId: z.string().uuid().optional().nullable(),
   minRelevance: z.number().min(0).max(1).optional(),
 });
-export const addDeliveryChannel = createServerFn({ method: "POST" })
+export const addDeliveryChannel = createServerFn({ method: "POST" }).middleware([requireOwner])
   .inputValidator((d: unknown) => AddInput.parse(d))
   .handler(async ({ data }) => {
     const db = await admin();
@@ -95,7 +95,7 @@ export const addDeliveryChannel = createServerFn({ method: "POST" })
     return toPublic(row as ChannelRow);
   });
 
-export const removeDeliveryChannel = createServerFn({ method: "POST" })
+export const removeDeliveryChannel = createServerFn({ method: "POST" }).middleware([requireOwner])
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
     const db = await admin();
@@ -104,7 +104,7 @@ export const removeDeliveryChannel = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-export const sendTestMessage = createServerFn({ method: "POST" })
+export const sendTestMessage = createServerFn({ method: "POST" }).middleware([requireOwner])
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
     const db = await admin();
