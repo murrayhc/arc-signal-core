@@ -104,7 +104,7 @@ export const getDashboard = createServerFn({ method: "GET" }).handler(async () =
 });
 
 // ============ RUN SCAN (full pipeline: collect → extract → cluster → synthesize) ============
-export const runScan = createServerFn({ method: "POST" }).middleware([requireOwner]).handler(async () => {
+export async function runScanImpl() {
   const db = await admin();
   const settings = await loadScanSettings();
   const startedAtMs = Date.now();
