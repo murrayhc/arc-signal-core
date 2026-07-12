@@ -53,6 +53,14 @@ function TrackRecordPage() {
           <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
             Computed only from resolved receipts. No LLM in this pipeline — every number below is a direct count of what happened vs what was predicted.
           </p>
+          <div className="mt-3">
+            <Link
+              to="/opportunities"
+              className="inline-flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-widest text-muted-foreground hover:text-foreground px-2 py-1 rounded border border-border/60 w-fit"
+            >
+              See current openings →
+            </Link>
+          </div>
         </div>
 
         {/* Headline tiles */}

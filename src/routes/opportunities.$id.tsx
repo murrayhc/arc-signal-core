@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/archlight/AppShell";
 import { getOpportunityDetail } from "@/lib/archlight/pipeline.functions";
@@ -19,7 +19,6 @@ export const Route = createFileRoute("/opportunities/$id")({
 
 function OpportunityDetailPage() {
   const { id } = Route.useParams();
-  const router = useRouter();
   const { data, isLoading } = useQuery({
     queryKey: ["archlight", "opportunity", id],
     queryFn: () => getOpportunityDetail({ data: { id } }),
@@ -27,9 +26,9 @@ function OpportunityDetailPage() {
   return (
     <AppShell>
       <div className="max-w-6xl mx-auto w-full flex flex-col gap-5">
-        <button onClick={() => router.history.back()} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground w-fit">
+        <Link to="/opportunities" className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground w-fit">
           <ArrowLeft className="h-3.5 w-3.5"/>Back
-        </button>
+        </Link>
         {isLoading && <div className="glass-panel rounded-xl p-6 flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin"/>Loading…</div>}
         {data && !data.opportunity && <div className="glass-panel rounded-xl p-6 text-sm text-muted-foreground">Opportunity not found.</div>}
         {data?.opportunity && (
@@ -38,6 +37,14 @@ function OpportunityDetailPage() {
               <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground flex items-center gap-2"><Sparkles className="h-3 w-3"/> opportunity card</div>
               <h1 className="font-display text-2xl mt-1">{data.opportunity.title}</h1>
               <p className="text-sm text-muted-foreground mt-2 max-w-3xl">{data.opportunity.summary}</p>
+              <div className="mt-3">
+                <Link
+                  to="/track-record"
+                  className="inline-flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-widest text-muted-foreground hover:text-foreground px-2 py-1 rounded border border-border/60 w-fit"
+                >
+                  How often is Archlight right? — see the track record
+                </Link>
+              </div>
               <div className="mt-4 grid grid-cols-2 md:grid-cols-5 gap-3 text-center">
                 <Metric k="Value" v={String(Math.round(Number(data.opportunity.commercial_value_score) * 100))} c="var(--color-opportunity)"/>
                 <Metric k="Urgency" v={String(Math.round(Number(data.opportunity.urgency_score) * 100))}/>
