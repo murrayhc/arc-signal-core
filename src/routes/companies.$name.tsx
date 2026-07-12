@@ -7,6 +7,7 @@ import { getRegistryEdges } from "@/lib/archlight/registry.functions";
 import { getBeliefState } from "@/lib/archlight/beliefs.functions";
 import { Activity, ArrowDown, ArrowLeft, ArrowUp, Building2, CheckCircle2, Fingerprint, GitBranch, Landmark, Loader2, Minus, Radar, Sparkles, TriangleAlert, Users, Zap } from "lucide-react";
 import { useState } from "react";
+import { AddToBookButton } from "@/components/archlight/AddToBookButton";
 
 export const Route = createFileRoute("/companies/$name")({
   head: ({ params }) => ({
