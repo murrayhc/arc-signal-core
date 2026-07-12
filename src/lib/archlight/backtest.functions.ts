@@ -219,6 +219,8 @@ export const importGazetteCases = createServerFn({ method: "POST" })
 
 // ---------- 2. Run backtest ----------
 
+const DEFAULT_WINDOW_DAYS = 730; // 24 months
+
 interface BuiltSignal {
   signal_type: "charge_registered" | "insolvency_filing" | "officer_resignation";
   signal_date: string; // ISO date
@@ -279,25 +281,25 @@ function buildOfficerSignals(officers: CHOfficerItem[], outcomeDate: string): Bu
 }
 
 export const runBacktest = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) => z.object({ maxCases: z.number().int().min(1).max(100).optional() }).optional().parse(d))
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        maxCases: z.number().int().min(1).max(2000).optional(),
+        windowDays: z.number().int().min(30).max(3650).optional(),
+        batchSize: z.number().int().min(1).max(100).optional(),
+      })
+      .optional()
+      .parse(d),
+  )
   .handler(async ({ data }) => {
     const db = await admin();
-    const maxCases = Math.max(1, Math.min(100, data?.maxCases ?? 15));
+    const maxCases = Math.max(1, Math.min(2000, data?.maxCases ?? 500));
+    const windowDays = data?.windowDays ?? DEFAULT_WINDOW_DAYS;
+    const batchSize = Math.max(1, Math.min(100, data?.batchSize ?? 25));
 
     const apiKey = process.env.COMPANIES_HOUSE_API_KEY;
     if (!apiKey) {
-      return { cases_processed: 0, cases_resolved: 0, signals_inserted: 0, notes: ["COMPANIES_HOUSE_API_KEY not set — skipping."] };
-    }
-
-    const { data: cases } = await db
-      .from("backtest_cases")
-      .select("id, company_name, company_number, outcome_date")
-      .is("signals_computed_at", null)
-      .order("outcome_date", { ascending: false })
-      .limit(maxCases);
-    const candidates = cases ?? [];
-    if (candidates.length === 0) {
-      return { cases_processed: 0, cases_resolved: 0, signals_inserted: 0, notes: ["No cases pending — everything already computed."] };
+      return { cases_processed: 0, cases_resolved: 0, signals_inserted: 0, window_days: windowDays, notes: ["COMPANIES_HOUSE_API_KEY not set — skipping."] };
     }
 
     const notes: string[] = [];
@@ -306,100 +308,124 @@ export const runBacktest = createServerFn({ method: "POST" })
     let signalsInserted = 0;
     let rateLimited = false;
 
-    for (const c of candidates) {
-      if (rateLimited) { notes.push("Stopped — Companies House rate limited."); break; }
-      processed++;
+    outer: while (processed < maxCases && !rateLimited) {
+      const remaining = maxCases - processed;
+      const take = Math.min(batchSize, remaining);
+      const { data: cases } = await db
+        .from("backtest_cases")
+        .select("id, company_name, company_number, outcome_date")
+        .is("signals_computed_at", null)
+        .order("outcome_date", { ascending: false })
+        .limit(take);
+      const candidates = cases ?? [];
+      if (candidates.length === 0) break;
 
-      // Resolve company_number if missing.
-      let number = c.company_number as string | null;
-      if (!number) {
+      for (const c of candidates) {
+        if (rateLimited) break outer;
+        processed++;
+
+        // Resolve company_number if missing.
+        let number = c.company_number as string | null;
+        if (!number) {
+          try {
+            number = await chSearch(c.company_name, apiKey);
+          } catch {
+            rateLimited = true;
+            break outer;
+          }
+          if (!number) {
+            notes.push(`No Companies House match for "${c.company_name}".`);
+            await db.from("backtest_cases").update({ signals_computed_at: new Date().toISOString() }).eq("id", c.id);
+            continue;
+          }
+          await db.from("backtest_cases").update({ company_number: number }).eq("id", c.id);
+        }
+        resolved++;
+
+        let charges: CHChargeItem[] = [];
+        let filings: CHFilingItem[] = [];
+        let officers: CHOfficerItem[] = [];
         try {
-          number = await chSearch(c.company_name, apiKey);
+          charges = await chChargesAll(number, apiKey, 3);
+          filings = await chFilingHistoryAll(number, apiKey, 6);
+          officers = await chOfficersAll(number, apiKey, 3);
         } catch {
           rateLimited = true;
-          break;
         }
-        if (!number) {
-          notes.push(`No Companies House match for "${c.company_name}".`);
-          // Mark computed so we don't retry every run.
-          await db.from("backtest_cases").update({ signals_computed_at: new Date().toISOString() }).eq("id", c.id);
-          continue;
+
+        const built: BuiltSignal[] = [
+          ...buildChargesSignals(charges, c.outcome_date),
+          ...buildFilingSignals(filings, c.outcome_date),
+          ...buildOfficerSignals(officers, c.outcome_date),
+        ];
+
+        if (built.length) {
+          const seen = new Set<string>();
+          const dedup = built.filter((b) => {
+            const k = `${b.signal_type}|${b.signal_date}|${b.detail}`;
+            if (seen.has(k)) return false;
+            seen.add(k);
+            return true;
+          });
+          await db.from("backtest_signals").delete().eq("case_id", c.id);
+          const insertRows = dedup.map((b) => ({
+            case_id: c.id,
+            ...b,
+            in_window: b.lead_days <= windowDays,
+          }));
+          const { error } = await db.from("backtest_signals").insert(insertRows);
+          if (error) {
+            notes.push(`insert failed for ${c.company_name}: ${error.message}`);
+          } else {
+            signalsInserted += insertRows.length;
+          }
         }
-        await db.from("backtest_cases").update({ company_number: number }).eq("id", c.id);
+
+        await db.from("backtest_cases").update({ signals_computed_at: new Date().toISOString() }).eq("id", c.id);
       }
-      resolved++;
-
-      let charges: CHChargeItem[] = [];
-      let filings: CHFilingItem[] = [];
-      let officers: CHOfficerItem[] = [];
-      try {
-        charges = await chChargesAll(number, apiKey, 3);
-        filings = await chFilingHistoryAll(number, apiKey, 6);
-        officers = await chOfficersAll(number, apiKey, 3);
-      } catch {
-        rateLimited = true;
-        // Continue with anything we already have for this case.
-      }
-
-      const built: BuiltSignal[] = [
-        ...buildChargesSignals(charges, c.outcome_date),
-        ...buildFilingSignals(filings, c.outcome_date),
-        ...buildOfficerSignals(officers, c.outcome_date),
-      ];
-
-      if (built.length) {
-        // Dedupe within this case by (type, date, detail).
-        const seen = new Set<string>();
-        const dedup = built.filter((b) => {
-          const k = `${b.signal_type}|${b.signal_date}|${b.detail}`;
-          if (seen.has(k)) return false;
-          seen.add(k);
-          return true;
-        });
-        // Wipe any previous signals for this case so a re-run reflects fresh data.
-        await db.from("backtest_signals").delete().eq("case_id", c.id);
-        const insertRows = dedup.map((b) => ({ case_id: c.id, ...b }));
-        const { error } = await db.from("backtest_signals").insert(insertRows);
-        if (error) {
-          notes.push(`insert failed for ${c.company_name}: ${error.message}`);
-        } else {
-          signalsInserted += insertRows.length;
-        }
-      }
-
-      await db.from("backtest_cases").update({ signals_computed_at: new Date().toISOString() }).eq("id", c.id);
     }
 
-    return { cases_processed: processed, cases_resolved: resolved, signals_inserted: signalsInserted, notes };
+    if (rateLimited) notes.push("Stopped — Companies House rate limited; will resume next run.");
+
+    return { cases_processed: processed, cases_resolved: resolved, signals_inserted: signalsInserted, window_days: windowDays, notes };
   });
 
 // ---------- 3. Aggregate summary + snapshot ----------
 
 export interface BacktestSummary {
-  cases_total: number;
+  cases_imported: number;
+  cases_processed: number;
+  cases_total: number; // alias of cases_processed (headline denominator)
   cases_with_signal: number;
   cases_with_signal_pct: number | null;
   median_lead_days: number | null;
   earliest_lead_days_max: number | null;
+  window_days: number;
   signal_type_stats: Record<string, { count: number; cases: number; median_lead_days: number | null }>;
   most_predictive_type: { type: string; median_lead_days: number } | null;
 }
 
-async function computeSummaryCore(): Promise<BacktestSummary> {
+async function computeSummaryCore(windowDays: number = DEFAULT_WINDOW_DAYS): Promise<BacktestSummary> {
   const db = await admin();
   const { data: cases } = await db
     .from("backtest_cases")
-    .select("id");
-  const caseIds = (cases ?? []).map((c) => c.id);
-  const cases_total = caseIds.length;
+    .select("id, signals_computed_at");
+  const all = cases ?? [];
+  const cases_imported = all.length;
+  const processedCases = all.filter((c) => c.signals_computed_at != null);
+  const cases_processed = processedCases.length;
+  const processedIds = new Set(processedCases.map((c) => c.id));
 
-  if (cases_total === 0) {
+  if (cases_processed === 0) {
     return {
+      cases_imported,
+      cases_processed: 0,
       cases_total: 0,
       cases_with_signal: 0,
       cases_with_signal_pct: null,
       median_lead_days: null,
       earliest_lead_days_max: null,
+      window_days: windowDays,
       signal_type_stats: {},
       most_predictive_type: null,
     };
@@ -407,13 +433,15 @@ async function computeSummaryCore(): Promise<BacktestSummary> {
 
   const { data: signals } = await db
     .from("backtest_signals")
-    .select("case_id, signal_type, lead_days");
-  const rows = (signals ?? []) as Array<{ case_id: string; signal_type: string; lead_days: number }>;
+    .select("case_id, signal_type, lead_days, in_window");
+  const rows = (signals ?? []) as Array<{ case_id: string; signal_type: string; lead_days: number; in_window: boolean }>;
+  // Headline restricted to in-window signals on processed cases only.
+  const inWindow = rows.filter((r) => r.in_window && processedIds.has(r.case_id));
 
   const earliestByCase = new Map<string, number>();
   const perType = new Map<string, { leads: number[]; caseSet: Set<string> }>();
 
-  for (const r of rows) {
+  for (const r of inWindow) {
     const prev = earliestByCase.get(r.case_id);
     if (prev == null || r.lead_days > prev) earliestByCase.set(r.case_id, r.lead_days);
     if (!perType.has(r.signal_type)) perType.set(r.signal_type, { leads: [], caseSet: new Set() });
@@ -424,7 +452,7 @@ async function computeSummaryCore(): Promise<BacktestSummary> {
 
   const earliestLeads = Array.from(earliestByCase.values());
   const cases_with_signal = earliestByCase.size;
-  const cases_with_signal_pct = cases_total > 0 ? Number(((cases_with_signal / cases_total) * 100).toFixed(1)) : null;
+  const cases_with_signal_pct = Number(((cases_with_signal / cases_processed) * 100).toFixed(1));
   const median_lead_days = median(earliestLeads);
   const earliest_lead_days_max = earliestLeads.length ? Math.max(...earliestLeads) : null;
 
@@ -442,11 +470,14 @@ async function computeSummaryCore(): Promise<BacktestSummary> {
   }
 
   return {
-    cases_total,
+    cases_imported,
+    cases_processed,
+    cases_total: cases_processed,
     cases_with_signal,
     cases_with_signal_pct,
     median_lead_days,
     earliest_lead_days_max,
+    window_days: windowDays,
     signal_type_stats,
     most_predictive_type,
   };
@@ -456,14 +487,18 @@ export const computeBacktestSummary = createServerFn({ method: "POST" }).handler
   const db = await admin();
   const summary = await computeSummaryCore();
   const { error } = await db.from("backtest_runs").insert({
-    cases_total: summary.cases_total,
+    cases_total: summary.cases_processed,
+    cases_imported: summary.cases_imported,
+    cases_processed: summary.cases_processed,
     cases_with_signal: summary.cases_with_signal,
     median_lead_days: summary.median_lead_days,
+    window_days: summary.window_days,
     signal_type_stats: JSON.parse(JSON.stringify(summary.signal_type_stats)),
   });
   if (error) return { ...summary, snapshot_error: error.message };
   return summary;
 });
+
 
 // ---------- 4. Read fns for the UI ----------
 
