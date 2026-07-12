@@ -84,9 +84,9 @@ function BacktestPage() {
     onError: (e: Error) => setBanner(`Import failed: ${e.message}`),
   });
   const runM = useMutation({
-    mutationFn: () => runBacktest({ data: { maxCases: 15 } }),
+    mutationFn: () => runBacktest({ data: { maxCases: 500 } }),
     onSuccess: (r) => {
-      setBanner(`Backtest: processed ${r.cases_processed} case(s), resolved ${r.cases_resolved}, inserted ${r.signals_inserted} signal(s).`);
+      setBanner(`Backtest: processed ${r.cases_processed} case(s), resolved ${r.cases_resolved}, inserted ${r.signals_inserted} signal(s) (window ${r.window_days}d).${r.notes?.length ? ` ${r.notes[0]}` : ""}`);
       invalidateAll();
     },
     onError: (e: Error) => setBanner(`Backtest failed: ${e.message}`),
@@ -150,26 +150,37 @@ function BacktestPage() {
 
         {/* Headline tiles */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <Tile label="Known outcomes" value={String(summary.cases_total)} sub={summary.cases_with_signal > 0 ? `${summary.cases_with_signal} with ≥1 signal` : "Import to begin"}/>
           <Tile
-            label="Signal appeared before collapse"
+            label="Cases processed"
+            value={`${summary.cases_processed} / ${summary.cases_imported}`}
+            sub={summary.cases_processed < summary.cases_imported
+              ? `${summary.cases_imported - summary.cases_processed} imported not yet processed`
+              : "all imported cases processed"}
+          />
+          <Tile
+            label={`Signal appeared before collapse · ≤${Math.round(summary.window_days / 30)}mo window`}
             value={summary.cases_with_signal_pct == null ? "—" : `${summary.cases_with_signal_pct}%`}
-            sub={`${summary.cases_with_signal} of ${summary.cases_total}`}
+            sub={`${summary.cases_with_signal} of ${summary.cases_processed} processed · in-window only`}
             color={summary.cases_with_signal_pct != null && summary.cases_with_signal_pct >= 50 ? "var(--color-growth)" : "var(--color-signal)"}
           />
           <Tile
-            label="Median lead"
+            label={`Median lead (in-window)`}
             value={summary.median_lead_days == null ? "—" : `${Math.round(Number(summary.median_lead_days))}d`}
-            sub={summary.earliest_lead_days_max != null ? `earliest seen · ${summary.earliest_lead_days_max}d` : "Run the backtest to populate"}
+            sub={summary.earliest_lead_days_max != null ? `earliest in-window · ${summary.earliest_lead_days_max}d (cap ${summary.window_days}d)` : "Run the backtest to populate"}
             color="var(--color-signal)"
           />
           <Tile
-            label="Most predictive signal"
+            label="Most predictive signal (in-window)"
             value={summary.most_predictive_type ? formatType(summary.most_predictive_type.type) : "—"}
             sub={summary.most_predictive_type ? `${Math.round(summary.most_predictive_type.median_lead_days)}d median lead` : "Awaiting signals"}
             color="var(--color-opportunity)"
           />
         </div>
+
+        <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+          Distress window · {summary.window_days} days ({Math.round(summary.window_days / 30)} months) · signals older than the window are stored but excluded from headline metrics as lifetime history, not distress.
+        </div>
+
 
         {/* Per-signal-type breakdown */}
         {Object.keys(summary.signal_type_stats).length > 0 && (
