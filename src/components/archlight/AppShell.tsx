@@ -44,6 +44,7 @@ function TopNav({ onRunScan, scanning }: { onRunScan?: () => void; scanning?: bo
           </a>
           <div className="mx-1 h-6 w-px bg-border"/>
           <AlertsBell />
+          <ThemeToggle />
           <div className="flex items-center gap-1.5 px-2 py-1 rounded-md border border-border/60 text-[10px] font-mono">
             <span className="h-1.5 w-1.5 rounded-full animate-pulse" style={{ background: "var(--color-signal)" }}/>
             live
@@ -52,6 +53,32 @@ function TopNav({ onRunScan, scanning }: { onRunScan?: () => void; scanning?: bo
         </div>
       </div>
     </header>
+  );
+}
+
+function ThemeToggle() {
+  const [isDark, setIsDark] = useState(false);
+  useEffect(() => {
+    const saved = localStorage.getItem("archlight:theme");
+    const dark = saved === "dark";
+    setIsDark(dark);
+    document.documentElement.classList.toggle("dark", dark);
+  }, []);
+  const toggle = () => {
+    const next = !isDark;
+    setIsDark(next);
+    document.documentElement.classList.toggle("dark", next);
+    localStorage.setItem("archlight:theme", next ? "dark" : "light");
+  };
+  return (
+    <button
+      onClick={toggle}
+      aria-label={isDark ? "Switch to light theme" : "Switch to dark theme"}
+      title={isDark ? "Switch to light theme" : "Switch to dark theme"}
+      className="h-8 w-8 rounded-md border border-border/60 grid place-items-center text-muted-foreground hover:text-foreground hover:bg-accent/40 transition"
+    >
+      {isDark ? <Sun className="h-4 w-4"/> : <Moon className="h-4 w-4"/>}
+    </button>
   );
 }
 
