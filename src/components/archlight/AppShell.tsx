@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Bell, Building2, ChevronDown, Command, Compass, Crosshair, Database, Download, Eye, FlaskConical, Flame, Gauge, GitBranch, Layers, Play, Radar, Search, Settings, Shield, Sparkles, Target } from "lucide-react";
+import { Bell, Building2, ChevronDown, Command, Compass, Crosshair, Database, Download, Eye, FlaskConical, Flame, Gauge, GitBranch, Layers, Moon, Play, Radar, Search, Settings, Shield, Sparkles, Sun, Target } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { getDashboard } from "@/lib/archlight/pipeline.functions";
 
@@ -22,8 +22,8 @@ function TopNav({ onRunScan, scanning }: { onRunScan?: () => void; scanning?: bo
       <div className="flex items-center gap-6 px-5 h-14">
         <Link to="/" className="flex items-center gap-3 shrink-0">
           <div className="relative h-8 w-8 grid place-items-center rounded-md ring-signal"
-               style={{ background: "radial-gradient(circle at 30% 30%, oklch(0.35 0.15 250), oklch(0.15 0.05 260))" }}>
-            <Radar className="h-4 w-4" style={{ color: "var(--color-signal-glow)" }}/>
+               style={{ background: "linear-gradient(135deg, var(--accent), var(--panel-2))" }}>
+            <Radar className="h-4 w-4" style={{ color: "var(--signal)" }}/>
           </div>
           <div className="leading-tight">
             <div className="font-display text-[15px] tracking-wide text-glow-signal">ARCHLIGHT</div>
@@ -44,6 +44,7 @@ function TopNav({ onRunScan, scanning }: { onRunScan?: () => void; scanning?: bo
           </a>
           <div className="mx-1 h-6 w-px bg-border"/>
           <AlertsBell />
+          <ThemeToggle />
           <div className="flex items-center gap-1.5 px-2 py-1 rounded-md border border-border/60 text-[10px] font-mono">
             <span className="h-1.5 w-1.5 rounded-full animate-pulse" style={{ background: "var(--color-signal)" }}/>
             live
@@ -52,6 +53,32 @@ function TopNav({ onRunScan, scanning }: { onRunScan?: () => void; scanning?: bo
         </div>
       </div>
     </header>
+  );
+}
+
+function ThemeToggle() {
+  const [isDark, setIsDark] = useState(false);
+  useEffect(() => {
+    const saved = localStorage.getItem("archlight:theme");
+    const dark = saved === "dark";
+    setIsDark(dark);
+    document.documentElement.classList.toggle("dark", dark);
+  }, []);
+  const toggle = () => {
+    const next = !isDark;
+    setIsDark(next);
+    document.documentElement.classList.toggle("dark", next);
+    localStorage.setItem("archlight:theme", next ? "dark" : "light");
+  };
+  return (
+    <button
+      onClick={toggle}
+      aria-label={isDark ? "Switch to light theme" : "Switch to dark theme"}
+      title={isDark ? "Switch to light theme" : "Switch to dark theme"}
+      className="h-8 w-8 rounded-md border border-border/60 grid place-items-center text-muted-foreground hover:text-foreground hover:bg-accent/40 transition"
+    >
+      {isDark ? <Sun className="h-4 w-4"/> : <Moon className="h-4 w-4"/>}
+    </button>
   );
 }
 
