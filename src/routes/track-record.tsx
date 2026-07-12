@@ -38,6 +38,14 @@ export const Route = createFileRoute("/track-record")({
   component: TrackRecordPage,
 });
 
+function LocalDate({ date }: { date: string | null }) {
+  const [formatted, setFormatted] = useState("");
+  useEffect(() => {
+    if (date) setFormatted(new Date(date).toLocaleString());
+  }, [date]);
+  return <span>{formatted}</span>;
+}
+
 function TrackRecordPage() {
   const { data: tr } = useSuspenseQuery(trackRecordQuery);
   const { data: res } = useSuspenseQuery(resolutionsQuery);
