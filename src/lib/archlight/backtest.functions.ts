@@ -439,8 +439,9 @@ async function computeSummaryCore(windowDays: number = DEFAULT_WINDOW_DAYS): Pro
     .from("backtest_signals")
     .select("case_id, signal_type, lead_days, in_window");
   const rows = (signals ?? []) as Array<{ case_id: string; signal_type: string; lead_days: number; in_window: boolean }>;
-  // Compute in-window at READ time from the actual lead — the stored flag was defaulted true on early rows and can't be trusted.
-  const inWindow = rows.filter((r) => r.lead_days <= windowDays && processedIds.has(r.case_id));
+  // Single source of truth: the stored in_window flag (written by runBacktest,
+  // repaired for legacy rows by migration). Readers never re-derive.
+  const inWindow = rows.filter((r) => r.in_window && processedIds.has(r.case_id));
 
   const earliestByCase = new Map<string, number>();
   const perType = new Map<string, { leads: number[]; caseSet: Set<string> }>();
