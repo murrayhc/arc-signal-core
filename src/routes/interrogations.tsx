@@ -16,7 +16,25 @@ export const Route = createFileRoute("/interrogations")({
   component: InterrogationsPage,
 });
 
-type Brief = { present?: string; watch_signals?: string[]; caveats?: string[]; future_scenarios?: Array<{ label: string; description: string; likelihood: number }> } | null;
+type Brief = {
+  what_is_happening_now?: string;
+  subject_profile?: string;
+  what_to_watch?: string[];
+  caveats?: string[];
+  confidence_overall?: number;
+} | null;
+
+function ResearchTabs({ active }: { active: "research" | "history" }) {
+  const base = "px-3 py-1.5 text-xs rounded-md border border-border/60 transition-colors";
+  const on = "bg-accent/60 text-foreground";
+  const off = "text-muted-foreground hover:bg-accent/30";
+  return (
+    <div className="inline-flex items-center gap-1 p-1 rounded-lg border border-border/50 bg-background/40">
+      <Link to="/interrogate" className={`${base} ${active === "research" ? on : off}`}>Research</Link>
+      <Link to="/interrogations" className={`${base} ${active === "history" ? on : off}`}>History</Link>
+    </div>
+  );
+}
 
 function InterrogationsPage() {
   const { data, isLoading } = useQuery({ queryKey: ["archlight", "interrogations"], queryFn: () => getInterrogations() });
@@ -29,9 +47,7 @@ function InterrogationsPage() {
           <p className="text-sm text-muted-foreground mt-1 max-w-2xl">Every query, its stored brief, evidence IDs, and the model that answered it.</p>
         </header>
 
-        <div>
-          <Link to="/interrogate" className="text-xs px-3 py-1.5 rounded border border-border/60 hover:bg-accent/40">← New interrogation</Link>
-        </div>
+        <ResearchTabs active="history"/>
 
         {isLoading && <div className="glass-panel rounded-xl p-6 flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin"/>Loading…</div>}
 
@@ -39,6 +55,8 @@ function InterrogationsPage() {
           <ul className="space-y-3">
             {data.queries.map((q) => {
               const brief = (q.brief_synth ?? null) as Brief;
+              const snippet = brief?.what_is_happening_now?.trim() || brief?.subject_profile?.trim() || "";
+              const watch = brief?.what_to_watch ?? [];
               return (
                 <li key={q.id} className="glass-panel rounded-xl p-4">
                   <div className="flex items-start justify-between gap-2">
@@ -50,10 +68,10 @@ function InterrogationsPage() {
                     </div>
                     <Link to="/interrogate" search={{ q: q.query_text }} className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground hover:text-foreground border border-border/50 rounded px-2 py-1">re-run</Link>
                   </div>
-                  {brief?.present && <p className="text-xs text-muted-foreground mt-2 line-clamp-3">{brief.present}</p>}
-                  {(brief?.watch_signals ?? []).length > 0 && (
+                  {snippet && <p className="text-xs text-muted-foreground mt-2 line-clamp-3">{snippet}</p>}
+                  {watch.length > 0 && (
                     <div className="mt-2 flex flex-wrap gap-1">
-                      {(brief!.watch_signals ?? []).slice(0, 4).map((s: string, i: number) => (
+                      {watch.slice(0, 4).map((s: string, i: number) => (
                         <span key={i} className="text-[10px] px-1.5 py-0.5 rounded border border-border/50">◇ {s}</span>
                       ))}
                     </div>

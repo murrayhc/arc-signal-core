@@ -60,7 +60,12 @@ function InterrogatePage() {
           <p className="text-sm text-muted-foreground mt-1 max-w-3xl">
             Enter a company, country, commodity, sector, ticker, person, or theme. Archlight pulls live public news, classifies the subject, expands into adjacent queries (weather, supply, competitors, regulators), and synthesises a hedged deep-research brief with cited sources, ranked risks/opportunities, second-order effects and multi-horizon scenarios.
           </p>
+          <div className="mt-3 inline-flex items-center gap-1 p-1 rounded-lg border border-border/50 bg-background/40">
+            <Link to="/interrogate" className="px-3 py-1.5 text-xs rounded-md border border-border/60 bg-accent/60 text-foreground">Research</Link>
+            <Link to="/interrogations" className="px-3 py-1.5 text-xs rounded-md border border-border/60 text-muted-foreground hover:bg-accent/30">History</Link>
+          </div>
         </div>
+
 
         <form
           className="glass-panel rounded-lg p-2 flex items-center gap-2"
