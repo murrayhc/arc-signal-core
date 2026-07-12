@@ -22,8 +22,8 @@ function TopNav({ onRunScan, scanning }: { onRunScan?: () => void; scanning?: bo
       <div className="flex items-center gap-6 px-5 h-14">
         <Link to="/" className="flex items-center gap-3 shrink-0">
           <div className="relative h-8 w-8 grid place-items-center rounded-md ring-signal"
-               style={{ background: "radial-gradient(circle at 30% 30%, oklch(0.35 0.15 250), oklch(0.15 0.05 260))" }}>
-            <Radar className="h-4 w-4" style={{ color: "var(--color-signal-glow)" }}/>
+               style={{ background: "linear-gradient(135deg, var(--accent), var(--panel-2))" }}>
+            <Radar className="h-4 w-4" style={{ color: "var(--signal)" }}/>
           </div>
           <div className="leading-tight">
             <div className="font-display text-[15px] tracking-wide text-glow-signal">ARCHLIGHT</div>
