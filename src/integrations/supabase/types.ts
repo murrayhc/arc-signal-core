@@ -185,6 +185,8 @@ export type Database = {
       }
       backtest_runs: {
         Row: {
+          cases_imported: number | null
+          cases_processed: number | null
           cases_total: number | null
           cases_with_signal: number | null
           created_at: string
@@ -192,8 +194,11 @@ export type Database = {
           median_lead_days: number | null
           ran_at: string
           signal_type_stats: Json
+          window_days: number | null
         }
         Insert: {
+          cases_imported?: number | null
+          cases_processed?: number | null
           cases_total?: number | null
           cases_with_signal?: number | null
           created_at?: string
@@ -201,8 +206,11 @@ export type Database = {
           median_lead_days?: number | null
           ran_at?: string
           signal_type_stats?: Json
+          window_days?: number | null
         }
         Update: {
+          cases_imported?: number | null
+          cases_processed?: number | null
           cases_total?: number | null
           cases_with_signal?: number | null
           created_at?: string
@@ -210,6 +218,7 @@ export type Database = {
           median_lead_days?: number | null
           ran_at?: string
           signal_type_stats?: Json
+          window_days?: number | null
         }
         Relationships: []
       }
@@ -219,6 +228,7 @@ export type Database = {
           created_at: string
           detail: string | null
           id: string
+          in_window: boolean
           lead_days: number
           signal_date: string
           signal_type: string
@@ -228,6 +238,7 @@ export type Database = {
           created_at?: string
           detail?: string | null
           id?: string
+          in_window?: boolean
           lead_days: number
           signal_date: string
           signal_type: string
@@ -237,6 +248,7 @@ export type Database = {
           created_at?: string
           detail?: string | null
           id?: string
+          in_window?: boolean
           lead_days?: number
           signal_date?: string
           signal_type?: string
