@@ -8,6 +8,7 @@ import { listEventExposureHits } from "@/lib/archlight/exposure.functions";
 import { analyseEvent, getEventAnalysis, panelEvent, getEventPanel } from "@/lib/archlight/analysis.functions";
 import { ArrowLeft, Building2, Crosshair, ExternalLink, FileText, GitBranch, Loader2, Radar, ShieldAlert, Sparkles, Swords, Target, TriangleAlert, Users, Zap } from "lucide-react";
 import { ForensicReport } from "@/components/archlight/ForensicReport";
+import { AddToBookButton } from "@/components/archlight/AddToBookButton";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
