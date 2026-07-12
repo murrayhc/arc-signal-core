@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { runScan } from "@/lib/archlight/pipeline.functions";
+import { runScanImpl } from "@/lib/archlight/pipeline.functions";
 
 // Public scan hook called by pg_cron every 6 hours.
 // /api/public/* bypasses auth on published sites — we still gate on the
