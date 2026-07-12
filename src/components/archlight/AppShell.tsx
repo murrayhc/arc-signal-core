@@ -136,6 +136,7 @@ function SideNav() {
   }, []);
 
   useEffect(() => {
+    console.log("writing engineOpen to localStorage:", engineOpen);
     localStorage.setItem("archlight:engine-nav-open", String(engineOpen));
   }, [engineOpen]);
 
