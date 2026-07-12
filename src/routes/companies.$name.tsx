@@ -7,6 +7,7 @@ import { getRegistryEdges } from "@/lib/archlight/registry.functions";
 import { getBeliefState } from "@/lib/archlight/beliefs.functions";
 import { Activity, ArrowDown, ArrowLeft, ArrowUp, Building2, CheckCircle2, Fingerprint, GitBranch, Landmark, Loader2, Minus, Radar, Sparkles, TriangleAlert, Users, Zap } from "lucide-react";
 import { useState } from "react";
+import { AddToBookButton } from "@/components/archlight/AddToBookButton";
 
 export const Route = createFileRoute("/companies/$name")({
   head: ({ params }) => ({
@@ -67,7 +68,10 @@ function CompanyDetailPage() {
           <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground flex items-center gap-2">
             <Building2 className="h-3 w-3"/> company exposure profile
           </div>
-          <h1 className="font-display text-2xl mt-1">{decoded}</h1>
+          <div className="mt-1 flex items-start justify-between gap-3 flex-wrap">
+            <h1 className="font-display text-2xl">{decoded}</h1>
+            <AddToBookButton name={decoded} kind="company"/>
+          </div>
           {data?.entity && (
             <div className="mt-2 flex flex-wrap gap-2 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
               {data.entity.ticker && <span className="px-2 py-1 rounded border border-border/60">ticker · {data.entity.ticker}</span>}
