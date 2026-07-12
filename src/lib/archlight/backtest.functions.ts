@@ -472,6 +472,15 @@ async function computeSummaryCore(windowDays: number = DEFAULT_WINDOW_DAYS): Pro
       most_predictive_type = { type: t, median_lead_days: v.median_lead_days };
     }
   }
+  // "Earliest-warning" is the signal type with the longest in-window median lead — same shape as most_predictive_type but honestly named.
+  const earliest_warning_type = most_predictive_type;
+
+  let most_common_type: BacktestSummary["most_common_type"] = null;
+  for (const [t, v] of Object.entries(signal_type_stats)) {
+    if (!most_common_type || v.cases > most_common_type.cases) {
+      most_common_type = { type: t, cases: v.cases };
+    }
+  }
 
   return {
     cases_imported,
@@ -484,6 +493,8 @@ async function computeSummaryCore(windowDays: number = DEFAULT_WINDOW_DAYS): Pro
     window_days: windowDays,
     signal_type_stats,
     most_predictive_type,
+    earliest_warning_type,
+    most_common_type,
   };
 }
 
