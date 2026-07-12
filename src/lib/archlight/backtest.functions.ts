@@ -7,6 +7,7 @@
 // only, bounded Companies House usage.
 
 import { createServerFn } from "@tanstack/react-start";
+import { requireOwner } from "@/lib/archlight/owner-auth.server";
 import { z } from "zod";
 import {
   chChargesAll,
@@ -137,7 +138,7 @@ async function fetchWithTimeout(url: string, ms: number): Promise<Response> {
   }
 }
 
-export const importGazetteCases = createServerFn({ method: "POST" })
+export const importGazetteCases = createServerFn({ method: "POST" }).middleware([requireOwner])
   .inputValidator((d: unknown) =>
     z
       .object({
@@ -280,7 +281,7 @@ function buildOfficerSignals(officers: CHOfficerItem[], outcomeDate: string): Bu
   return out;
 }
 
-export const runBacktest = createServerFn({ method: "POST" })
+export const runBacktest = createServerFn({ method: "POST" }).middleware([requireOwner])
   .inputValidator((d: unknown) =>
     z
       .object({
@@ -499,7 +500,7 @@ async function computeSummaryCore(windowDays: number = DEFAULT_WINDOW_DAYS): Pro
   };
 }
 
-export const computeBacktestSummary = createServerFn({ method: "POST" }).handler(async () => {
+export const computeBacktestSummary = createServerFn({ method: "POST" }).middleware([requireOwner]).handler(async () => {
   const db = await admin();
   const summary = await computeSummaryCore();
   const { error } = await db.from("backtest_runs").insert({

@@ -6,6 +6,7 @@
 // guard violation we fall back to a neutral, factual sentence.
 
 import { createServerFn } from "@tanstack/react-start";
+import { requireOwner } from "@/lib/archlight/owner-auth.server";
 import { z } from "zod";
 import { guardFinancialAdvice } from "./ai-gateway.server";
 
@@ -283,7 +284,7 @@ const ProfileInput = z.object({
   description: z.string().max(2000).optional().nullable(),
   active: z.boolean().optional(),
 });
-export const createExposureProfile = createServerFn({ method: "POST" })
+export const createExposureProfile = createServerFn({ method: "POST" }).middleware([requireOwner])
   .inputValidator((d: unknown) => ProfileInput.parse(d))
   .handler(async ({ data }) => {
     const db = await admin();
@@ -304,7 +305,7 @@ const ItemInput = z.object({
   value_gbp: z.number().nonnegative().nullable().optional(),
   notes: z.string().max(2000).nullable().optional(),
 });
-export const addExposureItem = createServerFn({ method: "POST" })
+export const addExposureItem = createServerFn({ method: "POST" }).middleware([requireOwner])
   .inputValidator((d: unknown) => ItemInput.parse(d))
   .handler(async ({ data }) => {
     const db = await admin();
@@ -340,7 +341,7 @@ export const addExposureItem = createServerFn({ method: "POST" })
     return row;
   });
 
-export const removeExposureItem = createServerFn({ method: "POST" })
+export const removeExposureItem = createServerFn({ method: "POST" }).middleware([requireOwner])
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
     const db = await admin();
@@ -355,7 +356,7 @@ const UpdateProfileInput = z.object({
   active: z.boolean().optional(),
   description: z.string().max(2000).nullable().optional(),
 });
-export const updateExposureProfile = createServerFn({ method: "POST" })
+export const updateExposureProfile = createServerFn({ method: "POST" }).middleware([requireOwner])
   .inputValidator((d: unknown) => UpdateProfileInput.parse(d))
   .handler(async ({ data }) => {
     const db = await admin();
@@ -368,7 +369,7 @@ export const updateExposureProfile = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-export const deleteExposureProfile = createServerFn({ method: "POST" })
+export const deleteExposureProfile = createServerFn({ method: "POST" }).middleware([requireOwner])
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
     const db = await admin();
@@ -462,7 +463,7 @@ export const listEventExposureHits = createServerFn({ method: "GET" })
     return { hits: hitsArr, items: it.data ?? [], profiles: pr.data ?? [] };
   });
 
-export const markHitSeen = createServerFn({ method: "POST" })
+export const markHitSeen = createServerFn({ method: "POST" }).middleware([requireOwner])
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
     const db = await admin();

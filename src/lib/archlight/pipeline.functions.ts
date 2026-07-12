@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { requireOwner } from "@/lib/archlight/owner-auth.server";
 import { z } from "zod";
 import { callAI, callJson, guardFinancialAdvice, pickModel } from "./ai-gateway.server";
 import { shingles, cosine, centroid, fetchFeed } from "./text.server";
@@ -104,7 +105,7 @@ export const getDashboard = createServerFn({ method: "GET" }).handler(async () =
 });
 
 // ============ RUN SCAN (full pipeline: collect → extract → cluster → synthesize) ============
-export const runScan = createServerFn({ method: "POST" }).handler(async () => {
+export async function runScanImpl() {
   const db = await admin();
   const settings = await loadScanSettings();
   const startedAtMs = Date.now();
@@ -1063,7 +1064,9 @@ export const runScan = createServerFn({ method: "POST" }).handler(async () => {
 
 
 
-});
+}
+
+export const runScan = createServerFn({ method: "POST" }).middleware([requireOwner]).handler(async () => runScanImpl());
 
 function clamp01(n: unknown): number {
   const v = typeof n === "number" ? n : Number(n);
@@ -1614,7 +1617,7 @@ function buildQueries(kind: string, canonical: string, adjacent: string[]): stri
   return Array.from(new Set(base)).slice(0, 8);
 }
 
-export const interrogate = createServerFn({ method: "POST" })
+export const interrogate = createServerFn({ method: "POST" }).middleware([requireOwner])
   .inputValidator((data: unknown) => SearchInput.parse(data))
   .handler(async ({ data }) => {
     const db = await admin();
@@ -1800,7 +1803,7 @@ export const interrogate = createServerFn({ method: "POST" })
 
 // ============ EVENT DETAIL ============
 const EventInput = z.object({ id: z.string().uuid() });
-export const getEventDetail = createServerFn({ method: "POST" })
+export const getEventDetail = createServerFn({ method: "POST" }).middleware([requireOwner])
   .inputValidator((d: unknown) => EventInput.parse(d))
   .handler(async ({ data }) => {
     const db = await admin();
@@ -1997,7 +2000,7 @@ export const getCompanies = createServerFn({ method: "GET" }).handler(async () =
 });
 
 const CompanyInput = z.object({ name: z.string().min(1).max(240) });
-export const getCompanyDetail = createServerFn({ method: "POST" })
+export const getCompanyDetail = createServerFn({ method: "POST" }).middleware([requireOwner])
   .inputValidator((d: unknown) => CompanyInput.parse(d))
   .handler(async ({ data }) => {
     const db = await admin();
@@ -2018,7 +2021,7 @@ export const getOpportunities = createServerFn({ method: "GET" }).handler(async 
 });
 
 const IdInput = z.object({ id: z.string().uuid() });
-export const getOpportunityDetail = createServerFn({ method: "POST" })
+export const getOpportunityDetail = createServerFn({ method: "POST" }).middleware([requireOwner])
   .inputValidator((d: unknown) => IdInput.parse(d))
   .handler(async ({ data }) => {
     const db = await admin();
@@ -2032,7 +2035,7 @@ export const getOpportunityDetail = createServerFn({ method: "POST" })
   });
 
 // ============ SOURCE DETAIL ============
-export const getSourceDetail = createServerFn({ method: "POST" })
+export const getSourceDetail = createServerFn({ method: "POST" }).middleware([requireOwner])
   .inputValidator((d: unknown) => IdInput.parse(d))
   .handler(async ({ data }) => {
     const db = await admin();
@@ -2050,7 +2053,7 @@ export const getEvidenceArcs = createServerFn({ method: "GET" }).handler(async (
   const { data } = await db.from("evidence_arcs").select("*").order("updated_at", { ascending: false }).limit(80);
   return { arcs: data ?? [] };
 });
-export const getEvidenceArcDetail = createServerFn({ method: "POST" })
+export const getEvidenceArcDetail = createServerFn({ method: "POST" }).middleware([requireOwner])
   .inputValidator((d: unknown) => IdInput.parse(d))
   .handler(async ({ data }) => {
     const db = await admin();
@@ -2084,7 +2087,7 @@ const WatchlistCreate = z.object({
   min_opportunity: z.number().min(0).max(1).default(0),
   min_confidence: z.number().min(0).max(1).default(0),
 });
-export const createWatchlist = createServerFn({ method: "POST" })
+export const createWatchlist = createServerFn({ method: "POST" }).middleware([requireOwner])
   .inputValidator((d: unknown) => WatchlistCreate.parse(d))
   .handler(async ({ data }) => {
     const db = await admin();
@@ -2093,7 +2096,7 @@ export const createWatchlist = createServerFn({ method: "POST" })
     return { watchlist: row };
   });
 
-export const deleteWatchlist = createServerFn({ method: "POST" })
+export const deleteWatchlist = createServerFn({ method: "POST" }).middleware([requireOwner])
   .inputValidator((d: unknown) => IdInput.parse(d))
   .handler(async ({ data }) => {
     const db = await admin();
@@ -2111,7 +2114,7 @@ export const getWatchlists = createServerFn({ method: "GET" }).handler(async () 
   return { watchlists: watchlists ?? [], alerts: alerts ?? [] };
 });
 
-export const markAlertSeen = createServerFn({ method: "POST" })
+export const markAlertSeen = createServerFn({ method: "POST" }).middleware([requireOwner])
   .inputValidator((d: unknown) => IdInput.parse(d))
   .handler(async ({ data }) => {
     const db = await admin();
@@ -2126,7 +2129,7 @@ const AddToWatchlistInput = z.object({
   kind: z.enum(["keyword", "sector", "region"]).default("keyword"),
   value: z.string().min(1).max(120),
 });
-export const addToWatchlist = createServerFn({ method: "POST" })
+export const addToWatchlist = createServerFn({ method: "POST" }).middleware([requireOwner])
   .inputValidator((d: unknown) => AddToWatchlistInput.parse(d))
   .handler(async ({ data }) => {
     const db = await admin();

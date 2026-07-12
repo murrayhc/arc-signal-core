@@ -2,6 +2,7 @@
 // a schedule to any configured delivery channels. Service-role only.
 
 import { createServerFn } from "@tanstack/react-start";
+import { requireOwner } from "@/lib/archlight/owner-auth.server";
 import { z } from "zod";
 import { callJson, guardFinancialAdvice } from "./ai-gateway.server";
 
@@ -329,6 +330,6 @@ export const listBriefings = createServerFn({ method: "GET" })
   });
 
 // Manual trigger for the UI ("Run today's briefing now").
-export const runDailyBriefingNow = createServerFn({ method: "POST" }).handler(async () => {
+export const runDailyBriefingNow = createServerFn({ method: "POST" }).middleware([requireOwner]).handler(async () => {
   return await runDailyBriefing();
 });

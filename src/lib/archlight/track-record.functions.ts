@@ -2,6 +2,7 @@
 // Hard data, no LLM. Public read via track_record_snapshots.
 
 import { createServerFn } from "@tanstack/react-start";
+import { requireOwner } from "@/lib/archlight/owner-auth.server";
 import { z } from "zod";
 
 async function admin() {
@@ -146,7 +147,7 @@ export const computeTrackRecord = createServerFn({ method: "GET" }).handler(asyn
   return computeCore();
 });
 
-export const writeTrackRecordSnapshot = createServerFn({ method: "POST" })
+export const writeTrackRecordSnapshot = createServerFn({ method: "POST" }).middleware([requireOwner])
   .inputValidator((d: unknown) => z.object({ scanRunId: z.string().uuid() }).parse(d))
   .handler(async ({ data }: { data: { scanRunId: string } }) => {
     const db = await admin();

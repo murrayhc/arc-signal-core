@@ -5,6 +5,7 @@
 // never returned to the client.
 
 import { createServerFn } from "@tanstack/react-start";
+import { requireOwner } from "@/lib/archlight/owner-auth.server";
 import { z } from "zod";
 
 async function admin() {
@@ -13,8 +14,58 @@ async function admin() {
 }
 
 const KIND = z.enum(["slack", "webhook"]);
-const HttpUrl = z.string().url().refine((u) => /^https?:\/\//i.test(u), {
-  message: "URL must be http(s)",
+
+// SSRF guard: block loopback, link-local, RFC1918 private, cloud-metadata, and
+// non-public hostnames. Only http(s) URLs to public hosts are allowed.
+function isPrivateIPv4(ip: string): boolean {
+  const parts = ip.split(".").map((n) => Number(n));
+  if (parts.length !== 4 || parts.some((n) => !Number.isFinite(n) || n < 0 || n > 255)) return true;
+  const [a, b] = parts;
+  if (a === 10) return true;
+  if (a === 127) return true;
+  if (a === 0) return true;
+  if (a === 169 && b === 254) return true; // link-local + AWS/GCP metadata (169.254.169.254)
+  if (a === 172 && b >= 16 && b <= 31) return true;
+  if (a === 192 && b === 168) return true;
+  if (a === 100 && b >= 64 && b <= 127) return true; // CGNAT
+  if (a >= 224) return true; // multicast / reserved
+  return false;
+}
+function isPrivateIPv6(ip: string): boolean {
+  const s = ip.toLowerCase();
+  if (s === "::1" || s === "::") return true;
+  if (s.startsWith("fe80:") || s.startsWith("fc") || s.startsWith("fd")) return true;
+  if (s.startsWith("::ffff:")) return isPrivateIPv4(s.slice(7));
+  return false;
+}
+function assertPublicHttpUrl(raw: string): string {
+  let u: URL;
+  try { u = new URL(raw); } catch { throw new Error("URL must be http(s)"); }
+  if (u.protocol !== "http:" && u.protocol !== "https:") throw new Error("URL must be http(s)");
+  const host = u.hostname.replace(/^\[|\]$/g, "").toLowerCase();
+  if (!host) throw new Error("URL must include a host");
+  // Block obvious private/reserved hostnames
+  const blockedNames = new Set(["localhost", "ip6-localhost", "ip6-loopback", "broadcasthost", "metadata.google.internal", "metadata"]);
+  if (blockedNames.has(host)) throw new Error("URL host is not publicly routable");
+  if (host.endsWith(".local") || host.endsWith(".internal") || host.endsWith(".localhost")) {
+    throw new Error("URL host is not publicly routable");
+  }
+  // IPv4 literal
+  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(host)) {
+    if (isPrivateIPv4(host)) throw new Error("URL host is not publicly routable");
+  }
+  // IPv6 literal
+  if (host.includes(":")) {
+    if (isPrivateIPv6(host)) throw new Error("URL host is not publicly routable");
+  }
+  return u.toString();
+}
+const HttpUrl = z.string().url().transform((u, ctx) => {
+  try { return assertPublicHttpUrl(u); }
+  catch (err) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: err instanceof Error ? err.message : "invalid URL" });
+    return z.NEVER;
+  }
 });
 
 type ChannelRow = {
@@ -79,7 +130,7 @@ const AddInput = z.object({
   profileId: z.string().uuid().optional().nullable(),
   minRelevance: z.number().min(0).max(1).optional(),
 });
-export const addDeliveryChannel = createServerFn({ method: "POST" })
+export const addDeliveryChannel = createServerFn({ method: "POST" }).middleware([requireOwner])
   .inputValidator((d: unknown) => AddInput.parse(d))
   .handler(async ({ data }) => {
     const db = await admin();
@@ -95,7 +146,7 @@ export const addDeliveryChannel = createServerFn({ method: "POST" })
     return toPublic(row as ChannelRow);
   });
 
-export const removeDeliveryChannel = createServerFn({ method: "POST" })
+export const removeDeliveryChannel = createServerFn({ method: "POST" }).middleware([requireOwner])
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
     const db = await admin();
@@ -104,7 +155,7 @@ export const removeDeliveryChannel = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-export const sendTestMessage = createServerFn({ method: "POST" })
+export const sendTestMessage = createServerFn({ method: "POST" }).middleware([requireOwner])
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
     const db = await admin();
@@ -119,10 +170,12 @@ export const sendTestMessage = createServerFn({ method: "POST" })
       ? { text: "Archlight delivery test — this channel is wired up and receiving exposure hits." }
       : { type: "delivery_test", message: "Archlight delivery test", at: new Date().toISOString() };
     try {
-      const res = await fetch(ch.url, {
+      const safeUrl = assertPublicHttpUrl(ch.url);
+      const res = await fetch(safeUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
+        redirect: "error",
       });
       return { ok: res.ok, status: res.status };
     } catch (err) {
@@ -222,10 +275,12 @@ export async function deliverExposureHits(_opts: DeliverOpts): Promise<DeliverRe
             url,
           };
       try {
-        const res = await fetch(ch.url, {
+        const safeUrl = assertPublicHttpUrl(ch.url);
+        const res = await fetch(safeUrl, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(body),
+          redirect: "error",
         });
         if (res.ok) {
           const upd = await db.from("exposure_hits")
