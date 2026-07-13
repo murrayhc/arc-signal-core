@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Bell, Building2, ChevronDown, Command, Compass, Crosshair, Database, Download, Eye, FlaskConical, Flame, Gauge, GitBranch, HelpCircle, Layers, Moon, Play, Radar, Search, Settings, Shield, Sparkles, Sun, Target } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { getDashboard } from "@/lib/archlight/pipeline.functions";
-import { GuidedTour, startGuidedTour } from "@/components/archlight/GuidedTour";
+import { GuidedTour, NavHoverTooltips, startGuidedTour } from "@/components/archlight/GuidedTour";
 
 export function AppShell({ children, onRunScan, scanning }: { children: ReactNode; onRunScan?: () => void; scanning?: boolean }) {
   return (
@@ -14,6 +14,8 @@ export function AppShell({ children, onRunScan, scanning }: { children: ReactNod
         <main className="flex-1 min-w-0 p-5 flex flex-col gap-5">{children}</main>
       </div>
       <GuidedTour />
+      <NavHoverTooltips />
+
     </div>
   );
 }
