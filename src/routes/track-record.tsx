@@ -253,13 +253,6 @@ function Tile({ label, value, sub, color }: { label: string; value: string; sub?
 }
 function Th({ children }: { children: React.ReactNode }) { return <th className="text-left px-3 py-2">{children}</th>; }
 function Td({ children, className, style }: { children: React.ReactNode; className?: string; style?: React.CSSProperties }) { return <td className={`px-3 py-2 align-top ${className ?? ""}`} style={style}>{children}</td>; }
-function OutcomeBadge({ outcome }: { outcome: string | null }) {
-  const c = outcome === "happened" ? "var(--color-growth)"
-    : outcome === "did_not_happen" ? "var(--color-risk)"
-    : outcome === "unresolvable" ? "var(--color-muted-foreground)"
-    : "var(--color-signal)";
-  return <span className="text-[10px] font-mono px-1.5 py-0.5 rounded border uppercase tracking-widest" style={{ borderColor: c, color: c }}>{outcome ?? "—"}</span>;
-}
 function VerdictBadge({ outcome }: { outcome: string | null }) {
   const label = outcome === "happened" ? "Right" : outcome === "did_not_happen" ? "Missed" : (outcome ?? "—");
   const c = outcome === "happened" ? "var(--color-growth)"
