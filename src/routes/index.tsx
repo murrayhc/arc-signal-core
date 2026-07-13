@@ -297,7 +297,10 @@ function BentoOne() {
             ))}
           </div>
           <p className="mt-4 text-xs text-[color:var(--mkt-muted)]">
-            Consequence is walked through verified relationships, not free-text guesses.
+            Consequence is traced through verified relationships, so the connections hold up.
+          </p>
+          <p className="mt-3 text-xs text-[color:var(--mkt-heading)]">
+            You see how a distant event reaches your position: the charge against your rival's supplier, or the review opening in your sector. These are links you would never join by hand.
           </p>
         </BentoTile>
 
