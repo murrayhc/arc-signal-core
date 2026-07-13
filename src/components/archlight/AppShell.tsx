@@ -46,9 +46,12 @@ function TopNav({ onRunScan, scanning }: { onRunScan?: () => void; scanning?: bo
                style={{ background: "linear-gradient(135deg, var(--accent), var(--panel-2))" }}>
             <Radar className="h-4 w-4" style={{ color: "var(--signal)" }}/>
           </div>
-          <div className="leading-tight">
-            <div className="font-display text-[15px] tracking-wide text-glow-signal">ARCHLIGHT</div>
-            <div className="text-[9px] font-mono uppercase tracking-[0.22em] text-muted-foreground">Live Intelligence Engine</div>
+          <div className="leading-tight flex items-center gap-2">
+            <span aria-hidden className="inline-block h-1.5 w-1.5 rounded-full" style={{ background: "var(--color-spark)" }}/>
+            <div>
+              <div className="font-display text-[15px] tracking-wide text-glow-signal">ARCHLIGHT</div>
+              <div className="text-[9px] font-mono uppercase tracking-[0.22em] text-muted-foreground">Live Intelligence Engine</div>
+            </div>
           </div>
         </Link>
 
@@ -323,7 +326,7 @@ function SideNav() {
                           <Link
                             to={to}
                             className="flex items-center gap-2.5 px-2.5 h-8 rounded-md text-xs transition text-muted-foreground hover:text-foreground hover:bg-accent/40"
-                            activeProps={{ className: "flex items-center gap-2.5 px-2.5 h-8 rounded-md text-xs bg-accent/60 text-foreground border border-border/60" }}
+                            activeProps={{ className: "flex items-center gap-2.5 px-2.5 h-8 rounded-md text-xs bg-accent/60 text-foreground border border-border/60 border-l-[3px] border-l-[color:var(--color-spark)]" }}
                             activeOptions={{ exact: to === "/app" }}
                           >
                             <Icon className="h-3.5 w-3.5"/>{label}
@@ -348,7 +351,7 @@ function SideNav() {
                             to={to}
                             data-tour-to={to}
                             className="flex items-center gap-2.5 px-2.5 h-8 rounded-md text-xs transition text-muted-foreground hover:text-foreground hover:bg-accent/40"
-                            activeProps={{ className: "flex items-center gap-2.5 px-2.5 h-8 rounded-md text-xs bg-accent/60 text-foreground border border-border/60" }}
+                            activeProps={{ className: "flex items-center gap-2.5 px-2.5 h-8 rounded-md text-xs bg-accent/60 text-foreground border border-border/60 border-l-[3px] border-l-[color:var(--color-spark)]" }}
                             activeOptions={{ exact: to === "/app" }}
                           >
                             <Icon className="h-3.5 w-3.5"/><span className="flex-1 truncate">{label}</span>
