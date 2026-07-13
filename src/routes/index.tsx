@@ -112,7 +112,7 @@ function HeroTemplateCta({ children, to = "/auth", search }: { children: ReactNo
 }
 
 /* ------------------------------------------------------------------ */
-/*  Hero — dark shell + product-relevant visual                       */
+/*  Hero: dark shell + product-relevant visual                       */
 /* ------------------------------------------------------------------ */
 
 function Hero() {
@@ -198,7 +198,7 @@ function SourceStrip() {
 }
 
 /* ------------------------------------------------------------------ */
-/*  BentoOne — Scan / Trace / Map / Project / Prove                    */
+/*  BentoOne: Scan / Trace / Map / Project / Prove                    */
 /* ------------------------------------------------------------------ */
 
 function BentoTile({
@@ -238,7 +238,7 @@ function BentoOne() {
       />
 
       <div className="mt-12 grid grid-cols-1 md:grid-cols-6 gap-3">
-        {/* Scan — big dark */}
+        {/* Scan: big dark */}
         <BentoTile dark className="md:col-span-4 md:row-span-2 min-h-[320px] flex flex-col justify-between">
           <TileHead dark label="01 · Scan" title="Continuous read of the open record" icon={Radar} />
           <p className="mt-3 max-w-md text-white/70 text-sm">
@@ -457,7 +457,7 @@ function Proof() {
 }
 
 /* ------------------------------------------------------------------ */
-/*  BentoTwo — quality mechanics                                       */
+/*  BentoTwo: quality mechanics                                       */
 /* ------------------------------------------------------------------ */
 
 function BentoTwo() {
