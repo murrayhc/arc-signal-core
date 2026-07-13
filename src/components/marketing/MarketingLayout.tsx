@@ -105,7 +105,7 @@ export function MarketingHeader({ overlay = false }: { overlay?: boolean }) {
             onClick={() => setOpen((v) => !v)}
             className={`md:hidden h-9 w-9 grid place-items-center rounded-md border ${
               dark ? "border-white/15 text-white" : "border-[color:var(--mkt-line-strong)] text-[color:var(--mkt-fg)]"
-            } focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40`}
+            } focus:outline-none focus-visible:ring-2 ${dark ? "focus-visible:ring-white/40" : "focus-visible:ring-[color:var(--mkt-charcoal)]/40"}`}
           >
             {open ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
           </button>
