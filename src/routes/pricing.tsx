@@ -77,7 +77,7 @@ function PricingPage() {
             <h2 className="mkt-display mt-3 text-2xl md:text-3xl font-medium text-[color:var(--mkt-heading)] max-w-[22ch]">How the trial works.</h2>
             <ul className="mt-6 space-y-3 text-sm text-[color:var(--mkt-heading)]">
               {[
-                "You start on Free at £0 — no payment, no trial timer.",
+                "You start on Free at £0, with no payment and no trial timer.",
                 "When Pro pricing is published, you will be able to start a 7-day trial from Settings → Billing.",
                 "The post-trial plan behaviour will be published before Pro launches.",
                 "Full billing and cancellation details will be published before checkout is enabled.",
