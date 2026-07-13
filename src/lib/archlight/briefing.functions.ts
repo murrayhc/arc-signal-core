@@ -312,9 +312,10 @@ const ListInput = z.object({
   profileId: z.string().uuid().optional(),
 });
 export const listBriefings = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => ListInput.parse(d ?? {}))
-  .handler(async ({ data }) => {
-    const db = await admin();
+  .handler(async ({ data, context }) => {
+    const db = context.supabase;
     let q = db.from("briefings")
       .select("id, profile_id, briefing_date, summary, stats, delivered_at, created_at")
       .order("briefing_date", { ascending: false })
