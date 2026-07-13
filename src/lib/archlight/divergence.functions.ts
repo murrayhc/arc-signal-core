@@ -509,8 +509,11 @@ export const autoAnalyseTopConvergence = createServerFn({ method: "POST" })
       if ((res as { skipped: boolean }).skipped) skipped++;
       else analysed++;
     }
+    return { analysed, skipped };
+  });
 
 // ============ D4: read query for the Narrative Divergence page ============
+
 
 const listInput = z.object({ limit: z.number().int().min(1).max(100).optional() });
 
