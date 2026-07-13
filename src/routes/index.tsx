@@ -503,10 +503,10 @@ function BentoTwo() {
       <div className="mt-10 grid md:grid-cols-3 gap-3">
         <BentoTile className="md:row-span-2 min-h-[380px] flex flex-col justify-between">
           <div>
-            <TileHead label="Source diversity" title="Weighted by primary vs echo" icon={Radar} />
+            <TileHead label="Source diversity · Illustrative example" title="Weighted by primary vs echo" icon={Radar} />
             <p className="mt-3 text-sm text-[color:var(--mkt-muted)]">
               Primary filings carry more weight than downstream pickups. Group-owned repetition
-              is discounted or flagged.
+              is discounted or flagged. Weights below are sample values.
             </p>
           </div>
           <div className="mt-6 space-y-2 text-xs">
