@@ -2,7 +2,7 @@
 // a schedule to any configured delivery channels. Service-role only.
 
 import { createServerFn } from "@tanstack/react-start";
-import { requireOwner } from "@/lib/archlight/owner-auth.server";
+import { requireAdmin } from "@/lib/archlight/require-admin.server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import { callJson, guardFinancialAdvice } from "./ai-gateway.server";
@@ -333,6 +333,6 @@ export const listBriefings = createServerFn({ method: "GET" })
   });
 
 // Manual trigger for the UI ("Run today's briefing now").
-export const runDailyBriefingNow = createServerFn({ method: "POST" }).middleware([requireOwner]).handler(async () => {
+export const runDailyBriefingNow = createServerFn({ method: "POST" }).middleware([requireAdmin]).handler(async () => {
   return await runDailyBriefing();
 });

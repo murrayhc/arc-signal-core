@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { requireOwner } from "@/lib/archlight/owner-auth.server";
+import { requireAdmin } from "@/lib/archlight/require-admin.server";
 import { z } from "zod";
 import { callJson, callAI, guardFinancialAdvice } from "./ai-gateway.server";
 
@@ -78,7 +78,7 @@ interface ForensicRow {
 }
 
 // ============ READ (cached) ============
-export const getForensicReport = createServerFn({ method: "POST" }).middleware([requireOwner])
+export const getForensicReport = createServerFn({ method: "POST" }).middleware([requireAdmin])
   .inputValidator((d: unknown) => SubjectInput.parse(d))
   .handler(async ({ data }) => {
     const db = await admin();
@@ -99,7 +99,7 @@ export const getForensicReport = createServerFn({ method: "POST" }).middleware([
   });
 
 // ============ GENERATE ============
-export const runForensicAnalysis = createServerFn({ method: "POST" }).middleware([requireOwner])
+export const runForensicAnalysis = createServerFn({ method: "POST" }).middleware([requireAdmin])
   .inputValidator((d: unknown) => SubjectInput.parse(d))
   .handler(async ({ data }) => {
     const db = await admin();

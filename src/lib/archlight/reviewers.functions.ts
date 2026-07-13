@@ -5,7 +5,7 @@
 // accruing gate. Never auto-blocks; surface only.
 
 import { createServerFn } from "@tanstack/react-start";
-import { requireOwner } from "@/lib/archlight/owner-auth.server";
+import { requireAdmin } from "@/lib/archlight/require-admin.server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -284,6 +284,6 @@ export const computeReviewerScores = createServerFn({ method: "GET" }).handler(a
 });
 
 // Manual trigger.
-export const gradeReviewerVerdictsNow = createServerFn({ method: "POST" }).middleware([requireOwner]).handler(async () => {
+export const gradeReviewerVerdictsNow = createServerFn({ method: "POST" }).middleware([requireAdmin]).handler(async () => {
   return await gradeReviewerVerdicts();
 });

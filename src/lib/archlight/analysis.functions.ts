@@ -4,7 +4,7 @@
 // impacts, belief_stress). Never invents external facts.
 
 import { createServerFn } from "@tanstack/react-start";
-import { requireOwner } from "@/lib/archlight/owner-auth.server";
+import { requireAdmin } from "@/lib/archlight/require-admin.server";
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
@@ -199,7 +199,7 @@ function briefToPrompt(brief: Brief): string {
   );
 }
 
-export const analyseEvent = createServerFn({ method: "POST" }).middleware([requireOwner])
+export const analyseEvent = createServerFn({ method: "POST" }).middleware([requireAdmin])
   .inputValidator((d: unknown) => AnalyseInput.parse(d))
   .handler(async ({ data }) => {
     const db = await admin();
@@ -291,7 +291,7 @@ export const analyseEvent = createServerFn({ method: "POST" }).middleware([requi
     };
   });
 
-export const getEventAnalysis = createServerFn({ method: "POST" }).middleware([requireOwner])
+export const getEventAnalysis = createServerFn({ method: "POST" }).middleware([requireAdmin])
   .inputValidator((d: unknown) => AnalyseInput.parse(d))
   .handler(async ({ data }) => {
     const db = await admin();
@@ -418,7 +418,7 @@ function aggregatePanel(opinions: PanelOpinion[]): { mean: number; disagreement:
   return { mean: clamp01(mean), disagreement: clamp01(spread), consensus };
 }
 
-export const panelEvent = createServerFn({ method: "POST" }).middleware([requireOwner])
+export const panelEvent = createServerFn({ method: "POST" }).middleware([requireAdmin])
   .inputValidator((d: unknown) => AnalyseInput.parse(d))
   .handler(async ({ data }) => {
     const db = await admin();
@@ -505,7 +505,7 @@ export const panelEvent = createServerFn({ method: "POST" }).middleware([require
     };
   });
 
-export const getEventPanel = createServerFn({ method: "POST" }).middleware([requireOwner])
+export const getEventPanel = createServerFn({ method: "POST" }).middleware([requireAdmin])
   .inputValidator((d: unknown) => AnalyseInput.parse(d))
   .handler(async ({ data }) => {
     const db = await admin();

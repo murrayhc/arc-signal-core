@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { requireOwner } from "@/lib/archlight/owner-auth.server";
+import { requireAdmin } from "@/lib/archlight/require-admin.server";
 import { z } from "zod";
 import { DEFAULT_SCAN_SETTINGS, type ScanSettings } from "./settings.defaults";
 
@@ -46,7 +46,7 @@ const patchSchema = z.object({
   interrogation_cache_ms: z.number().int().min(60_000).max(90 * 24 * 60 * 60 * 1000),
 });
 
-export const updateScanSettings = createServerFn({ method: "POST" }).middleware([requireOwner])
+export const updateScanSettings = createServerFn({ method: "POST" }).middleware([requireAdmin])
   .inputValidator((data: ScanSettings) => patchSchema.parse(data))
   .handler(async ({ data }) => {
     const db = await admin();
@@ -56,7 +56,7 @@ export const updateScanSettings = createServerFn({ method: "POST" }).middleware(
     return { ok: true, settings: data };
   });
 
-export const resetScanSettings = createServerFn({ method: "POST" }).middleware([requireOwner]).handler(async () => {
+export const resetScanSettings = createServerFn({ method: "POST" }).middleware([requireAdmin]).handler(async () => {
   const db = await admin();
   await loadOrSeed();
   const { error } = await db.from("scan_settings").update(DEFAULT_SCAN_SETTINGS).eq("singleton", true);

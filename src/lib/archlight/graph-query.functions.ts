@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { requireOwner } from "@/lib/archlight/owner-auth.server";
+import { requireAdmin } from "@/lib/archlight/require-admin.server";
 import { z } from "zod";
 import { callJson, guardFinancialAdvice } from "./ai-gateway.server";
 
@@ -389,7 +389,7 @@ async function qControlsChain(db: Awaited<ReturnType<typeof admin>>, params: Par
 
 // ============ Exported serverFns ============
 
-export const graphQuery = createServerFn({ method: "POST" }).middleware([requireOwner])
+export const graphQuery = createServerFn({ method: "POST" }).middleware([requireAdmin])
   .inputValidator((d: unknown) => z.object({ intent: IntentEnum, params: ParamsSchema.default({}) }).parse(d))
   .handler(async ({ data }) => {
     const db = await admin();
@@ -404,7 +404,7 @@ export const graphQuery = createServerFn({ method: "POST" }).middleware([require
 const CANT_MAP_MESSAGE =
   "I can't answer that from the graph yet — try: 'who is exposed to distress', 'rank my exposures by stress', 'how is A connected to B', 'who controls X'.";
 
-export const askGraph = createServerFn({ method: "POST" }).middleware([requireOwner])
+export const askGraph = createServerFn({ method: "POST" }).middleware([requireAdmin])
   .inputValidator((d: unknown) => z.object({ question: z.string().min(3).max(400) }).parse(d))
   .handler(async ({ data }) => {
     // 1. Classify question → intent + params. LLM never produces facts, only routes.

@@ -8,7 +8,7 @@
 // Guardrails: real CH data only, bounded API usage, respects 429/403.
 
 import { createServerFn } from "@tanstack/react-start";
-import { requireOwner } from "@/lib/archlight/owner-auth.server";
+import { requireAdmin } from "@/lib/archlight/require-admin.server";
 import { z } from "zod";
 import {
   chPSC,
@@ -314,7 +314,7 @@ export async function buildRegistryEdges(opts: { maxCompanies?: number } = {}): 
 // --- Server function wrappers ---
 
 const BuildInput = z.object({ maxCompanies: z.number().int().positive().max(100).optional() });
-export const rebuildRegistryGraph = createServerFn({ method: "POST" }).middleware([requireOwner])
+export const rebuildRegistryGraph = createServerFn({ method: "POST" }).middleware([requireAdmin])
   .inputValidator((d: unknown) => BuildInput.parse(d ?? {}))
   .handler(async ({ data }) => buildRegistryEdges({ maxCompanies: data.maxCompanies ?? 20 }));
 

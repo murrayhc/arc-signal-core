@@ -6,7 +6,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { deriveIndependenceGroup } from "./text.server";
 import { callJson, guardFinancialAdvice, pickModel } from "./ai-gateway.server";
-import { requireOwner } from "./owner-auth.server";
+import { requireAdmin } from "./require-admin.server";
 
 async function admin() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -251,7 +251,7 @@ function stripIfUnsafe(text: string): string {
 }
 
 export const analyseNarrativeDivergence = createServerFn({ method: "POST" })
-  .middleware([requireOwner])
+  .middleware([requireAdmin])
   .inputValidator((input: unknown) => analyseInput.parse(input))
   .handler(async ({ data }): Promise<AnalyseDivergenceResult> => {
     const db = await admin();
@@ -476,7 +476,7 @@ export const analyseNarrativeDivergence = createServerFn({ method: "POST" })
 const autoInput = z.object({ limit: z.number().int().min(1).max(20).optional() });
 
 export const autoAnalyseTopConvergence = createServerFn({ method: "POST" })
-  .middleware([requireOwner])
+  .middleware([requireAdmin])
   .inputValidator((input: unknown) => autoInput.parse(input ?? {}))
   .handler(async ({ data }): Promise<{ analysed: number; skipped: number }> => {
     const limit = data.limit ?? 5;

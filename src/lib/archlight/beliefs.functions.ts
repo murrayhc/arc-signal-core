@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { requireOwner } from "@/lib/archlight/owner-auth.server";
+import { requireAdmin } from "@/lib/archlight/require-admin.server";
 import { z } from "zod";
 
 async function admin() {
@@ -46,7 +46,7 @@ type BeliefResult = {
   notes: string[];
 };
 
-export const updateBeliefs = createServerFn({ method: "POST" }).middleware([requireOwner])
+export const updateBeliefs = createServerFn({ method: "POST" }).middleware([requireAdmin])
   .inputValidator((d: unknown) => z.object({ scanRunId: z.string().uuid() }).parse(d))
   .handler(async ({ data }): Promise<BeliefResult> => {
     const db = await admin();

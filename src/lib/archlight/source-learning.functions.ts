@@ -4,7 +4,7 @@
 // changes automatically — the owner applies with a click.
 
 import { createServerFn } from "@tanstack/react-start";
-import { requireOwner } from "@/lib/archlight/owner-auth.server";
+import { requireAdmin } from "@/lib/archlight/require-admin.server";
 import { z } from "zod";
 import { guardFinancialAdvice } from "./ai-gateway.server";
 
@@ -115,7 +115,7 @@ async function computeAggregates(
   return out;
 }
 
-export const computeSourceAccuracy = createServerFn({ method: "POST" }).middleware([requireOwner]).handler(async () => {
+export const computeSourceAccuracy = createServerFn({ method: "POST" }).middleware([requireAdmin]).handler(async () => {
   const db = await admin();
   const aggs = await computeAggregates(db);
   if (aggs.size === 0) return { suggestions_upserted: 0, aggregates_computed: 0 };
@@ -210,7 +210,7 @@ export const listSourceSuggestions = createServerFn({ method: "GET" }).handler(a
   };
 });
 
-export const applySourceSuggestion = createServerFn({ method: "POST" }).middleware([requireOwner])
+export const applySourceSuggestion = createServerFn({ method: "POST" }).middleware([requireAdmin])
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data }: { data: { id: string } }) => {
     const db = await admin();
@@ -290,7 +290,7 @@ export const applySourceSuggestion = createServerFn({ method: "POST" }).middlewa
     return { ok: true, applied_score: suggested };
   });
 
-export const dismissSourceSuggestion = createServerFn({ method: "POST" }).middleware([requireOwner])
+export const dismissSourceSuggestion = createServerFn({ method: "POST" }).middleware([requireAdmin])
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data }: { data: { id: string } }) => {
     const db = await admin();
