@@ -85,6 +85,56 @@ function TopNav({ onRunScan, scanning }: { onRunScan?: () => void; scanning?: bo
   );
 }
 
+function UserMenu() {
+  const { user } = useSession();
+  const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [open]);
+
+  const email = user?.email ?? "";
+  const displayName = (user?.user_metadata as { display_name?: string } | null)?.display_name ?? "";
+  const initial = (displayName || email || "?").trim().charAt(0).toUpperCase();
+
+  async function signOut() {
+    await supabase.auth.signOut();
+    setOpen(false);
+    navigate({ to: "/auth" });
+  }
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        onClick={() => setOpen((v) => !v)}
+        aria-label="Account menu"
+        className="h-8 w-8 rounded-full border border-border/60 grid place-items-center text-[11px] font-mono bg-accent/40 hover:bg-accent/60 transition"
+      >
+        {initial}
+      </button>
+      {open && (
+        <div className="absolute right-0 mt-2 w-56 rounded-md border border-border/60 bg-background/95 backdrop-blur-xl shadow-lg z-40 p-2 text-xs">
+          <div className="px-2 py-1.5 text-muted-foreground truncate">{email}</div>
+          <div className="my-1 h-px bg-border/60" />
+          <button
+            onClick={signOut}
+            className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-accent/60 text-foreground text-left"
+          >
+            <LogOut className="h-3.5 w-3.5" /> Sign out
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ThemeToggle() {
   const [isDark, setIsDark] = useState(false);
   useEffect(() => {
