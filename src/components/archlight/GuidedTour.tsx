@@ -102,15 +102,6 @@ export function GuidedTour() {
   const s = STEPS[step];
   const isLast = step === STEPS.length - 1;
 
-  const tooltipStyle: React.CSSProperties = rect
-    ? {
-        position: "fixed",
-        top: Math.max(12, Math.min(window.innerHeight - 200, rect.top - 8)),
-        left: Math.min(window.innerWidth - 340, rect.right + 12),
-        width: 320,
-        zIndex: 100,
-      }
-    : { position: "fixed", top: 80, left: 240, width: 320, zIndex: 100 };
 
   const highlightStyle: React.CSSProperties | undefined = rect
     ? {
