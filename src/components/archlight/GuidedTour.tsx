@@ -25,6 +25,78 @@ const STEPS: Step[] = [
 const DONE_KEY = "archlight:tour-done";
 export const TOUR_EVENT = "archlight:start-tour";
 
+export function NavHoverTooltips() {
+  const [reduced, setReduced] = useState(false);
+  const [hover, setHover] = useState<{ step: Step; rect: DOMRect } | null>(null);
+  const hideT = useRef<number | null>(null);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    setReduced(mq.matches);
+  }, []);
+
+  useEffect(() => {
+    const findStep = (el: Element): Step | null => {
+      for (const s of STEPS) {
+        if (el.matches(s.selector) || el.closest(s.selector)) return s;
+      }
+      return null;
+    };
+    const clearHide = () => { if (hideT.current) { window.clearTimeout(hideT.current); hideT.current = null; } };
+    const scheduleHide = () => {
+      clearHide();
+      hideT.current = window.setTimeout(() => setHover(null), 80);
+    };
+    const onOver = (e: MouseEvent) => {
+      const target = e.target as Element | null;
+      if (!target) return;
+      const match = target.closest('[data-tour-to], [data-tour-id]');
+      if (!match) return;
+      const s = findStep(match);
+      if (!s) return;
+      clearHide();
+      setHover({ step: s, rect: (match as HTMLElement).getBoundingClientRect() });
+    };
+    const onOut = (e: MouseEvent) => {
+      const related = e.relatedTarget as Element | null;
+      if (related && related.closest && related.closest('[data-tour-to], [data-tour-id]')) return;
+      scheduleHide();
+    };
+    document.addEventListener('mouseover', onOver);
+    document.addEventListener('mouseout', onOut);
+    window.addEventListener('scroll', scheduleHide, true);
+    return () => {
+      document.removeEventListener('mouseover', onOver);
+      document.removeEventListener('mouseout', onOut);
+      window.removeEventListener('scroll', scheduleHide, true);
+      clearHide();
+    };
+  }, []);
+
+  if (!hover) return null;
+  const { step: s, rect } = hover;
+  const style: React.CSSProperties = {
+    position: 'fixed',
+    top: Math.max(12, Math.min(window.innerHeight - 180, rect.top - 4)),
+    left: Math.min(window.innerWidth - 320, rect.right + 10),
+    width: 300,
+    zIndex: 90,
+    transition: reduced ? 'none' : 'opacity 140ms ease-out',
+  };
+  const arrowStyle: React.CSSProperties = {
+    position: 'absolute', top: 14, left: -5, width: 10, height: 10,
+    background: 'var(--primary)', transform: 'rotate(45deg)', borderRadius: 2,
+  };
+  return (
+    <div style={style} className="rounded-lg p-3 shadow-lg bg-[var(--primary)] text-white pointer-events-none" role="tooltip">
+      <div style={arrowStyle} aria-hidden="true" />
+      <div className="font-display text-xs mb-1 text-white">{s.title}</div>
+      <p className="text-[11px] leading-relaxed text-white/85">{s.body}</p>
+    </div>
+  );
+}
+
+
 export function GuidedTour() {
   const [active, setActive] = useState(false);
   const [step, setStep] = useState(0);
