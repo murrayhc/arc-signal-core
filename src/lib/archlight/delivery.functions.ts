@@ -5,7 +5,7 @@
 // never returned to the client.
 
 import { createServerFn } from "@tanstack/react-start";
-import { requireOwner } from "@/lib/archlight/owner-auth.server";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 
 async function admin() {
