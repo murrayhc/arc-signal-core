@@ -228,6 +228,7 @@ function SideNav() {
                 <>
                   <button
                     onClick={toggleEngine}
+                    data-tour-id="engine"
                     className="w-full flex items-center justify-between px-2.5 h-8 rounded-md text-[10px] font-mono uppercase tracking-widest text-muted-foreground hover:text-foreground hover:bg-accent/40 transition"
                   >
                     <span>{group.label}</span>
