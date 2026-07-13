@@ -222,8 +222,20 @@ export async function deliverExposureHits(_opts: DeliverOpts): Promise<DeliverRe
     .from("delivery_channels")
     .select("*")
     .eq("active", true);
-  const channels = (chans ?? []) as ChannelRow[];
+  let channels = (chans ?? []) as ChannelRow[];
   if (channels.length === 0) return result;
+
+  // Pro-only delivery: filter out channels owned by free users.
+  const ownerIdsAll = Array.from(new Set(channels.map((c) => c.user_id)));
+  const proOwners = new Set<string>();
+  for (const uid of ownerIdsAll) {
+    if (await isProUser(uid)) proOwners.add(uid);
+  }
+  channels = channels.filter((c) => proOwners.has(c.user_id));
+  if (channels.length === 0) {
+    notes.push("all channels skipped (free tier)");
+    return result;
+  }
   result.channels = channels.length;
 
   // Cache active profile ids per owner (for channels targeting "all this user's profiles").
