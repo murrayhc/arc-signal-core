@@ -17,6 +17,7 @@ export type TaskClass =
   | "strategic_positioning"
   | "report_synthesis"
   | "json_repair"
+  | "narrative_framing"
   | "embedding";
 
 const ROUTES: Record<TaskClass, string> = {
