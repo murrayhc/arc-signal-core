@@ -523,10 +523,10 @@ function BentoTwo() {
 /* ------------------------------------------------------------------ */
 
 const COMPARISON: { row: string; ark: string; conv: string }[] = [
-  { row: "Discovery", ark: "Event-first — clusters signals into a single call", conv: "Feed-first — you scroll until you notice" },
+  { row: "Discovery", ark: "Event-first. Clusters signals into a single call.", conv: "Feed-first. You scroll until you notice." },
   { row: "Evidence", ark: "Every claim traces back to primary source", conv: "Headline links, provenance unclear" },
   { row: "Uncertainty", ark: "Explicit probability + deadline", conv: "Implied by tone" },
-  { row: "Repetition", ark: "Group-owned echoes are flagged, not counted", conv: "Repetition read as corroboration" },
+  { row: "Repetition", ark: "Group-owned echoes are flagged rather than counted as confirmation.", conv: "Repetition read as corroboration" },
   { row: "Outcomes", ark: "Frozen at projection, graded from facts", conv: "No public ledger" },
   { row: "Delivery", ark: "Dated scenarios and briefings", conv: "Alert firehose" },
 ];
