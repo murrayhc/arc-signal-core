@@ -5,6 +5,7 @@ import { z } from "zod";
 import { callAI, callJson, guardFinancialAdvice, pickModel } from "./ai-gateway.server";
 import { shingles, cosine, centroid, fetchFeed } from "./text.server";
 import { DEFAULT_SCAN_SETTINGS, type ScanSettings } from "./settings.defaults";
+import { isProUser } from "./billing.functions";
 
 const SCAN_RUNTIME_BUDGET_MS = 4 * 60 * 1000;
 const STALE_RUNNING_SCAN_MS = 6 * 60 * 1000;
@@ -1627,6 +1628,19 @@ export const interrogate = createServerFn({ method: "POST" }).middleware([requir
     const db = await admin();
     const q = data.query.trim();
     const userId = context.userId;
+
+    if (!(await isProUser(userId))) {
+      const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+      const { count } = await db
+        .from("investigation_queries")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", userId)
+        .gte("created_at", since);
+      if ((count ?? 0) >= 5) {
+        throw new Error("FREE_LIMIT: Your plan includes 5 research runs per month. Upgrade to Pro.");
+      }
+    }
+
 
     if (!data.forceRefresh) {
       const cached = await loadCachedInterrogation(db, q, userId);

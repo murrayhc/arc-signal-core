@@ -6,6 +6,7 @@
 
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { isProUser } from "./billing.functions";
 import { z } from "zod";
 
 async function admin() {
@@ -136,6 +137,9 @@ const AddInput = z.object({
 export const addDeliveryChannel = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => AddInput.parse(d))
   .handler(async ({ data, context }) => {
+    if (!(await isProUser(context.userId))) {
+      throw new Error("PRO_FEATURE: Delivery is a Pro feature. Upgrade to Pro to get alerts and briefings pushed to you.");
+    }
     const db = await admin();
     const { data: row, error } = await db.from("delivery_channels").insert({
       user_id: context.userId,
@@ -218,8 +222,20 @@ export async function deliverExposureHits(_opts: DeliverOpts): Promise<DeliverRe
     .from("delivery_channels")
     .select("*")
     .eq("active", true);
-  const channels = (chans ?? []) as ChannelRow[];
+  let channels = (chans ?? []) as ChannelRow[];
   if (channels.length === 0) return result;
+
+  // Pro-only delivery: filter out channels owned by free users.
+  const ownerIdsAll = Array.from(new Set(channels.map((c) => c.user_id)));
+  const proOwners = new Set<string>();
+  for (const uid of ownerIdsAll) {
+    if (await isProUser(uid)) proOwners.add(uid);
+  }
+  channels = channels.filter((c) => proOwners.has(c.user_id));
+  if (channels.length === 0) {
+    notes.push("all channels skipped (free tier)");
+    return result;
+  }
   result.channels = channels.length;
 
   // Cache active profile ids per owner (for channels targeting "all this user's profiles").
