@@ -593,7 +593,7 @@ function PricingPreview() {
           trailing="currently"
           bullets={[
             "Public-signal graph",
-            "Starter book — up to 10 watched items",
+            "Starter book, up to 10 watched items",
             "5 research interrogations / month",
             "Weekly in-app digest",
             "Frozen track record",
