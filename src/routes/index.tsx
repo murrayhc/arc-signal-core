@@ -11,8 +11,8 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "Project Arklight · See it forming before it becomes the news" },
-      { name: "description", content: "Arklight reads the open public record, traces every claim to its origin, maps who it reaches, and turns early signals into dated, testable scenarios." },
-      { property: "og:title", content: "Project Arklight — Public-signals early warning" },
+      { name: "description", content: "Arklight warns you about what is forming on the public record, for the things you follow, while there is still time to act. Every signal is traced to its source and graded on the outcome." },
+      { property: "og:title", content: "Project Arklight · Public-signals early warning" },
       { property: "og:description", content: "A precision public-intelligence instrument. Public sources only. Every call frozen and graded." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
