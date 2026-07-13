@@ -281,9 +281,9 @@ function BentoOne() {
   return (
     <section id="how" className="mx-auto max-w-7xl px-6 py-16 md:py-24 scroll-mt-24">
       <SectionHeader
-        eyebrow="How Arklight works"
+        eyebrow="How Arklight works · Illustrative interface"
         title={<>From raw public signal to a call you can grade later.</>}
-        sub="Five stages, run continuously. Every step keeps its receipts."
+        sub="Five stages, run continuously. Every step keeps its receipts. Values shown below are illustrative examples, not measured Arklight results."
       />
 
       <div className="mt-12 grid grid-cols-1 md:grid-cols-6 gap-3">
