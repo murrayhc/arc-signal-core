@@ -80,66 +80,12 @@ function GhostCtaLight({ children, href }: { children: ReactNode; href: string }
 /* ------------------------------------------------------------------ */
 
 function HeroVisual() {
-  // Radial "scanning" instrument with source→claim→event lineage
   return (
-    <div className="relative w-full h-[280px] sm:h-[360px] md:h-[440px]">
-      <div className="absolute inset-0 mkt-hero-grid" aria-hidden />
-      {/* dot map field */}
-      <div className="absolute inset-0 mkt-dotmap opacity-40" aria-hidden
-        style={{ maskImage: "radial-gradient(ellipse 60% 55% at 50% 50%, black 30%, transparent 80%)" }} />
-      {/* concentric radar */}
-      <div className="absolute inset-0 flex items-center justify-center" aria-hidden>
-        <div className="relative w-[520px] h-[520px] max-w-[95%] max-h-[95%]">
-          {[0.35, 0.55, 0.75, 0.95].map((s, i) => (
-            <div
-              key={i}
-              className="absolute inset-0 m-auto rounded-full border border-white/10"
-              style={{
-                width: `${s * 100}%`,
-                height: `${s * 100}%`,
-                left: 0, right: 0, top: 0, bottom: 0,
-              }}
-            />
-          ))}
-          {/* sweep arm */}
-          <div
-            className="absolute inset-0 m-auto w-full h-full rounded-full"
-            style={{
-              background:
-                "conic-gradient(from 0deg, rgba(255,204,0,0.35), rgba(255,204,0,0) 25%, rgba(255,204,0,0) 100%)",
-              maskImage: "radial-gradient(circle, transparent 20%, black 21%, black 92%, transparent 93%)",
-              animation: "mkt-sweep 12s linear infinite",
-            }}
-          />
-          {/* signal nodes */}
-          {[
-            { x: "22%", y: "38%", label: "Filing", delay: "0s" },
-            { x: "68%", y: "28%", label: "Tender", delay: "1.2s" },
-            { x: "78%", y: "62%", label: "Notice", delay: "2.4s" },
-            { x: "34%", y: "72%", label: "Wire", delay: "3.6s" },
-            { x: "50%", y: "50%", label: "Claim", delay: "0.6s", strong: true },
-          ].map((n) => (
-            <div key={n.label} className="absolute" style={{ left: n.x, top: n.y, transform: "translate(-50%,-50%)" }}>
-              <span
-                className="block rounded-full"
-                style={{
-                  width: n.strong ? 12 : 8,
-                  height: n.strong ? 12 : 8,
-                  background: n.strong ? "var(--mkt-accent)" : "#f5f4ef",
-                  boxShadow: n.strong ? "0 0 22px rgba(255,204,0,0.7)" : "0 0 12px rgba(245,244,239,0.35)",
-                  animation: `mkt-pulse-dot 3.6s ease-in-out ${n.delay} infinite`,
-                }}
-              />
-              <span className="mt-1 block mkt-mono text-[10px] uppercase tracking-widest text-white/60 whitespace-nowrap">
-                {n.label}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
+    <div className="relative w-full h-[280px] sm:h-[360px] md:h-[440px] overflow-hidden rounded-2xl border border-white/10 bg-black">
+      <HeroBackdrop />
 
       {/* Lineage card overlay */}
-      <div className="hidden md:block absolute left-4 bottom-4 max-w-[300px] rounded-xl border border-white/10 bg-black/50 backdrop-blur-md p-4">
+      <div className="hidden md:block absolute left-4 bottom-4 max-w-[300px] rounded-xl border border-white/10 bg-black/50 backdrop-blur-md p-4 z-10">
         <div className="mkt-mono text-[10px] uppercase tracking-widest text-white/50">Evidence lineage · illustrative example</div>
         <ol className="mt-3 space-y-2 text-xs text-white/80">
           <li className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-white/60" /> Companies House · charge filed</li>
@@ -148,7 +94,7 @@ function HeroVisual() {
         </ol>
       </div>
 
-      <div className="hidden md:block absolute right-4 bottom-4 max-w-[280px] rounded-xl border border-white/10 bg-black/50 backdrop-blur-md p-4">
+      <div className="hidden md:block absolute right-4 bottom-4 max-w-[280px] rounded-xl border border-white/10 bg-black/50 backdrop-blur-md p-4 z-10">
         <div className="mkt-mono text-[10px] uppercase tracking-widest text-white/50">Frozen call · illustrative example</div>
         <div className="mt-3 text-sm text-white/90">Supplier consolidation likely in <span className="text-[color:var(--mkt-accent)]">14–21 days</span></div>
         <div className="mt-1 mkt-mono text-[10px] text-white/50">Sample P = 0.68 · graded on outcome</div>
@@ -156,6 +102,7 @@ function HeroVisual() {
     </div>
   );
 }
+
 
 function Hero() {
   return (
