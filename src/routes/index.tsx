@@ -79,38 +79,15 @@ function GhostCtaLight({ children, href }: { children: ReactNode; href: string }
 /*  Hero — dark shell + product-relevant visual                       */
 /* ------------------------------------------------------------------ */
 
-function HeroVisual() {
-  return (
-    <div className="relative w-full h-[280px] sm:h-[360px] md:h-[440px] overflow-hidden rounded-2xl border border-white/10 bg-black">
-      <HeroBackdrop />
-
-      {/* Lineage card overlay */}
-      <div className="hidden md:block absolute left-4 bottom-4 max-w-[300px] rounded-xl border border-white/10 bg-black/50 backdrop-blur-md p-4 z-10">
-        <div className="mkt-mono text-[10px] uppercase tracking-widest text-white/50">Evidence lineage · illustrative example</div>
-        <ol className="mt-3 space-y-2 text-xs text-white/80">
-          <li className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-white/60" /> Companies House · charge filed</li>
-          <li className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-white/60" /> Contracts Finder · notice cancelled</li>
-          <li className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full" style={{ background: "var(--mkt-accent)" }} /> Cluster confidence · sample 0.72</li>
-        </ol>
-      </div>
-
-      <div className="hidden md:block absolute right-4 bottom-4 max-w-[280px] rounded-xl border border-white/10 bg-black/50 backdrop-blur-md p-4 z-10">
-        <div className="mkt-mono text-[10px] uppercase tracking-widest text-white/50">Frozen call · illustrative example</div>
-        <div className="mt-3 text-sm text-white/90">Supplier consolidation likely in <span className="text-[color:var(--mkt-accent)]">14–21 days</span></div>
-        <div className="mt-1 mkt-mono text-[10px] text-white/50">Sample P = 0.68 · graded on outcome</div>
-      </div>
-    </div>
-  );
-}
-
-
 function Hero() {
   return (
     <section className="px-2 md:px-3 pt-2 md:pt-3">
-      <div className="mkt-hero-shell relative overflow-hidden rounded-3xl">
-        {/* nav sits above via MarketingHeader overlay */}
-        <div className="relative px-6 md:px-12 pt-28 md:pt-36 pb-14 md:pb-20">
-          <div className="max-w-6xl mx-auto">
+      <div className="mkt-hero-shell relative overflow-hidden rounded-3xl min-h-[85vh] md:min-h-[92vh]">
+        {/* Full-hero animated backdrop (globe arc + stars + light shaft) */}
+        <HeroBackdrop />
+
+        <div className="relative z-10 flex h-full min-h-[85vh] md:min-h-[92vh] flex-col justify-between px-6 md:px-12 pt-28 md:pt-36 pb-14 md:pb-20">
+          <div className="max-w-6xl mx-auto w-full">
             <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 pl-1 pr-3 py-1 text-[11px] mkt-mono uppercase tracking-widest text-white/80">
               <span className="rounded-full bg-[color:var(--mkt-accent)] text-black px-2 py-0.5 text-[10px] font-semibold">Signal scan</span>
               Public-signals early warning
@@ -138,12 +115,27 @@ function Hero() {
             </div>
           </div>
 
-          <div className="mt-10 md:mt-14 max-w-6xl mx-auto">
-            <HeroVisual />
+          {/* Overlay lineage cards sitting on the globe arc */}
+          <div className="relative max-w-6xl mx-auto w-full mt-16 md:mt-24">
+            <div className="hidden md:flex justify-between gap-4 items-end">
+              <div className="max-w-[300px] rounded-xl border border-white/10 bg-black/50 backdrop-blur-md p-4">
+                <div className="mkt-mono text-[10px] uppercase tracking-widest text-white/50">Evidence lineage · illustrative example</div>
+                <ol className="mt-3 space-y-2 text-xs text-white/80">
+                  <li className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-white/60" /> Companies House · charge filed</li>
+                  <li className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-white/60" /> Contracts Finder · notice cancelled</li>
+                  <li className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full" style={{ background: "var(--mkt-accent)" }} /> Cluster confidence · sample 0.72</li>
+                </ol>
+              </div>
+              <div className="max-w-[280px] rounded-xl border border-white/10 bg-black/50 backdrop-blur-md p-4">
+                <div className="mkt-mono text-[10px] uppercase tracking-widest text-white/50">Frozen call · illustrative example</div>
+                <div className="mt-3 text-sm text-white/90">Supplier consolidation likely in <span className="text-[color:var(--mkt-accent)]">14–21 days</span></div>
+                <div className="mt-1 mkt-mono text-[10px] text-white/50">Sample P = 0.68 · graded on outcome</div>
+              </div>
+            </div>
           </div>
 
           {/* faint wordmark */}
-          <div aria-hidden className="pointer-events-none absolute inset-x-0 -bottom-6 md:-bottom-10 flex justify-center">
+          <div aria-hidden className="pointer-events-none absolute inset-x-0 -bottom-6 md:-bottom-10 flex justify-center z-0">
             <span
               className="mkt-display text-[22vw] leading-none font-semibold tracking-tight bg-clip-text text-transparent"
               style={{ backgroundImage: "linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0))" }}
@@ -156,6 +148,7 @@ function Hero() {
     </section>
   );
 }
+
 
 /* ------------------------------------------------------------------ */
 /*  Source category strip (replaces logo cloud)                        */
