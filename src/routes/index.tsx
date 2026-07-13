@@ -804,10 +804,23 @@ function FinalCta() {
 /*  Page                                                               */
 /* ------------------------------------------------------------------ */
 
+function WhyArklight() {
+  return (
+    <section className="mx-auto max-w-7xl px-6 pt-16 md:pt-24">
+      <SectionHeader
+        eyebrow="Why Arklight"
+        title="The decision is made before the story runs."
+        sub="By the time something is the news, the people who saw it forming have already moved. The signs sat on the public record for days, scattered across filings, notices and wires that nobody has time to read. Arklight is for people who are paid to be early: investors, analysts, strategy and risk teams, competitive intelligence. It reads that record for you and flags what is forming while there is still time to act."
+      />
+    </section>
+  );
+}
+
 function LandingPage() {
   return (
     <MarketingLayout>
       <Hero />
+      <WhyArklight />
       <SourceStrip />
       <BentoOne />
       <Scenarios />
