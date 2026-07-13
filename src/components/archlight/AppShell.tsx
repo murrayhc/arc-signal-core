@@ -257,7 +257,7 @@ function SideNav() {
   };
 
   const groups = [
-    { label: "HOME", items: [{ icon: Gauge, label: "Overview", to: "/" }] },
+    { label: "HOME", items: [{ icon: Gauge, label: "Overview", to: "/app" }] },
     {
       label: "MY BOOK",
       items: [
