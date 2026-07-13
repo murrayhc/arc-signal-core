@@ -139,9 +139,7 @@ function Hero() {
               </h1>
               <div className="lg:max-w-md">
                 <p className="text-sm font-medium text-balance text-neutral-300 sm:text-base lg:text-lg">
-                  Arklight reads the open public record, traces every claim to its
-                  origin, maps who it reaches, and turns early signals into dated,
-                  testable scenarios.
+                  The move is made before the headline runs. Arklight watches the public record for the things you follow and warns you while there is still time to act. Every signal is traced to its source and graded on the outcome.
                 </p>
                 <HeroTemplateCta to="/auth" search={{ mode: "signup" }}>
                   Start free
