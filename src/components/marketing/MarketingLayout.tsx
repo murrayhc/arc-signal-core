@@ -3,15 +3,13 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Menu, X, ArrowUpRight } from "lucide-react";
 import { useSession } from "@/lib/useSession";
 
-type NavItem =
-  | { label: string; hash: string }
-  | { label: string; to: "/pricing" | "/privacy" | "/terms" | "/cookies" | "/app" | "/auth" | "/" };
+type NavItem = { label: string; href: string; route?: boolean };
 
 const NAV: NavItem[] = [
-  { label: "How it works", hash: "/#how" },
-  { label: "Proof", hash: "/#proof" },
-  { label: "Compare", hash: "/#compare" },
-  { label: "Pricing", to: "/pricing" },
+  { label: "How it works", href: "/#how" },
+  { label: "Proof", href: "/#proof" },
+  { label: "Compare", href: "/#compare" },
+  { label: "Pricing", href: "/pricing", route: true },
 ];
 
 /** Nav overlays a dark hero on `/`, and uses light styling on inner pages. */
