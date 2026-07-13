@@ -220,7 +220,7 @@ export const getConvergenceEvents = createServerFn({ method: "GET" })
 
 const analyseInput = z.object({ eventId: z.string().uuid() });
 
-type Framing = {
+export type Framing = {
   domain: string;
   outlet_name: string | null;
   lean: string | null;
