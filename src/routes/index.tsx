@@ -100,12 +100,12 @@ function Dashboard() {
       {/* Deeper on your entities */}
       <section>
         <SectionLabel>Deeper on your entities</SectionLabel>
-        <div className="grid grid-cols-12 gap-5">
+        <div className="grid grid-cols-12 gap-5 items-start">
           <div className="col-span-12 xl:col-span-6">
             <RisingStressRail />
           </div>
           <div className="col-span-12 xl:col-span-6">
-            <ActiveOpportunities items={data.opportunities} highlightTitle={null} />
+            <ActiveOpportunities items={data.opportunities.slice(0, 4)} highlightTitle={null} />
           </div>
         </div>
       </section>
@@ -113,72 +113,20 @@ function Dashboard() {
       {/* Beyond your book — market-wide */}
       <section>
         <SectionLabel>Beyond your book — market-wide</SectionLabel>
-
-        {/* KPI strip */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-5">
-          <Kpi k="Sources online" v={`${data.counts.sources_online}/${data.counts.sources_total}`} accent="var(--color-signal)"/>
-          <Kpi k="Events tracked" v={String(data.counts.events_tracked)} />
-          <Kpi k="Open opportunities" v={String(data.counts.open_opportunities)} accent="var(--color-opportunity)"/>
-          <Kpi k="Active risks" v={String(data.counts.active_risks)} accent="var(--color-risk)"/>
-          <Kpi k="Model confidence" v={data.system.model_health.toFixed(2)} accent="var(--color-reason)"/>
-        </div>
-
-        {/* Hero brain + side lists */}
-        <div className="grid grid-cols-12 gap-5">
-          <div className="col-span-12 xl:col-span-3 order-2 xl:order-1 xl:h-[560px]">
-            {/* left rail is now empty; graph stays centred */}
-            <div className="hidden xl:block h-[560px]" />
+        <div className="glass-panel rounded-xl border border-dashed border-border/60 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-mono text-muted-foreground">
+            <span>Model confidence <span className="text-foreground">{data.system.model_health.toFixed(2)}</span></span>
+            <span>Source coverage <span className="text-foreground">{(data.system.source_coverage * 100).toFixed(0)}%</span></span>
+            <span>Events tracked <span className="text-foreground">{data.counts.events_tracked}</span></span>
+            <span>Open opportunities <span className="text-foreground">{data.counts.open_opportunities}</span></span>
           </div>
-          <div className="col-span-12 xl:col-span-6 order-1 xl:order-2">
-            <IntelligenceBrain
-              nodes={data.graph.nodes}
-              edges={data.graph.edges}
-              confidence={data.system.model_health}
-              selectedNodeId={selectedNode?.id ?? null}
-              onSelectNode={setSelectedNode}
-            />
-          </div>
-          <div className="col-span-12 xl:col-span-3 order-3 xl:h-[560px]">
-            <TopRisks items={data.risks} highlightTitle={selectedNode?.title ?? null}/>
-          </div>
+          <Link
+            to="/digest"
+            className="inline-flex items-center gap-1 text-xs font-medium text-[color:var(--color-signal)] hover:underline shrink-0"
+          >
+            Open full digest →
+          </Link>
         </div>
-
-        {/* Lower grid */}
-        <div className="grid grid-cols-12 gap-5 mt-5">
-          <div className="col-span-12 md:col-span-6 xl:col-span-3"><InternationalData/></div>
-          <div className="col-span-12 md:col-span-6 xl:col-span-3"><LocalMarketFocus counts={data.counts}/></div>
-          <div className="col-span-12 md:col-span-6 xl:col-span-3"><LiveScanningBars/></div>
-          <div className="col-span-12 md:col-span-6 xl:col-span-3"><TrendSignals/></div>
-        </div>
-
-        <div className="grid grid-cols-12 gap-5 mt-5">
-          <div className="col-span-12 xl:col-span-6"><SystemConfidence system={data.system} lastScan={data.system.last_scan}/></div>
-          <div className="col-span-12 xl:col-span-6">
-            <section className="glass-panel rounded-xl p-4 h-full">
-              <div className="flex items-center justify-between">
-                <h3 className="font-display text-sm tracking-wide">Strategic Positioning Examples</h3>
-                <span className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">not financial advice</span>
-              </div>
-              <ul className="mt-3 grid md:grid-cols-2 gap-3">
-                {data.positioning.map((x) => (
-                  <li key={x.id} className="rounded-lg border border-border/50 bg-background/30 p-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="font-display text-sm">{x.title}</div>
-                      <span className="text-[10px] font-mono px-1.5 py-0.5 rounded border border-border/60" style={{ color: "var(--color-reason)" }}>conf {Number(x.confidence).toFixed(2)}</span>
-                    </div>
-                    <div className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground mt-1">{x.user_type}</div>
-                    <p className="text-xs text-muted-foreground mt-2">{x.how_it_could_be_used}</p>
-                    <p className="text-[11px] text-muted-foreground/80 mt-1"><span className="text-foreground/80">Why it may matter:</span> {x.why_it_may_matter}</p>
-                    {x.constraints && <p className="text-[11px] text-muted-foreground/70 mt-1"><span className="text-foreground/80">Constraints:</span> {x.constraints}</p>}
-                  </li>
-                ))}
-              </ul>
-            </section>
-          </div>
-        </div>
-
-        {/* Ticker */}
-        <GlobalPulseTicker items={buildTicker(data)}/>
       </section>
 
       <footer className="pt-2 pb-4 flex items-center justify-between text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
