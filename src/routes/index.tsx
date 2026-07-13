@@ -5,6 +5,7 @@ import {
   Building2, FileText, Scale, BarChart3, Newspaper, Globe2, Plus,
 } from "lucide-react";
 import { MarketingLayout } from "@/components/marketing/MarketingLayout";
+import { HeroBackdrop } from "@/components/marketing/HeroBackdrop";
 
 export const Route = createFileRoute("/")({
   head: () => ({
