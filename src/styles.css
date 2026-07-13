@@ -284,6 +284,14 @@
   0%, 100% { opacity: 0.2; }
   50% { opacity: 1; }
 }
+.mkt-star {
+  animation-name: mkt-twinkle;
+  animation-duration: var(--mkt-star-duration);
+  animation-timing-function: ease-in-out;
+  animation-delay: var(--mkt-star-delay);
+  animation-iteration-count: infinite;
+}
 @media (prefers-reduced-motion: reduce) {
   .mkt [class*="mkt-anim"], .mkt [style*="animation"] { animation: none !important; }
+  .mkt .mkt-star { animation: none !important; }
 }
