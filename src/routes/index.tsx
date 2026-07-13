@@ -62,10 +62,121 @@ function Section({
 }
 
 /* ------------------------------------------------------------------ */
-/*  Hero instrument                                                    */
+/*  Hero — one immersive instrument field                              */
 /* ------------------------------------------------------------------ */
 
-function HeroInstrument() {
+function HeroBackdrop({ prefersReduced }: { prefersReduced: boolean }) {
+  // Grid + radar + lineage form the ambient instrument field. The chart itself
+  // is placed as a flex row inside the hero so it never overlaps the copy.
+  return (
+    <div className="absolute inset-0 pointer-events-none select-none z-0" aria-hidden="true">
+      <svg className="absolute inset-0 h-full w-full opacity-[0.35]">
+        <defs>
+          <pattern id="hero-grid" width="40" height="40" patternUnits="userSpaceOnUse">
+            <path d="M40 0H0V40" fill="none" stroke="currentColor" strokeWidth="0.5" className="text-border" />
+          </pattern>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#hero-grid)" />
+      </svg>
+
+      {/* Radar — anchored to hero top-right corner */}
+      <div className="hidden md:block absolute top-8 right-8 lg:right-16">
+        <div className="relative h-28 w-28 lg:h-32 lg:w-32 rounded-full border border-border">
+          <div className="absolute inset-2 rounded-full border border-border/70" />
+          <div className="absolute inset-6 rounded-full border border-border/60" />
+          <div className="absolute inset-10 rounded-full border border-border/50" />
+          {!prefersReduced && (
+            <div
+              className="absolute inset-0 rounded-full"
+              style={{
+                background:
+                  "conic-gradient(from 0deg, transparent 0deg, color-mix(in srgb, var(--foreground) 18%, transparent) 40deg, transparent 60deg)",
+                animation: "hero-spin 4s linear infinite",
+              }}
+            />
+          )}
+          <div className="absolute inset-0 grid place-items-center">
+            <div className="h-1.5 w-1.5 rounded-full bg-foreground" />
+          </div>
+        </div>
+        <div className="mt-2 text-center text-[9px] font-mono uppercase tracking-widest text-muted-foreground">
+          Live scan
+        </div>
+      </div>
+
+      <style>{`@keyframes hero-spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
+}
+
+function HeroTimeline({ prefersReduced }: { prefersReduced: boolean }) {
+  return (
+    <div className="w-full">
+      <div className="flex items-center justify-between text-[10px] font-mono uppercase tracking-widest text-muted-foreground mb-2">
+        <span>Illustrative view · Early signal vs. mainstream coverage</span>
+        <span className="hidden sm:inline">T-0 = story published</span>
+      </div>
+      <svg viewBox="0 0 800 180" preserveAspectRatio="none" className="w-full h-[160px] md:h-[280px]" aria-hidden="true">
+        <line x1="0" y1="150" x2="800" y2="150" stroke="currentColor" className="text-border" strokeWidth="1" />
+        <line x1="600" y1="10" x2="600" y2="150" stroke="currentColor" className="text-border" strokeDasharray="4 4" />
+        <text x="604" y="20" className="fill-muted-foreground" style={{ fontFamily: "JetBrains Mono, monospace", fontSize: 10 }}>T-0</text>
+        <path
+          d="M0,148 C60,146 90,140 130,130 C170,120 210,105 250,95 C300,82 350,80 400,72 C460,62 520,55 590,42 L600,40"
+          fill="none" stroke="currentColor" className="text-foreground" strokeWidth="2"
+        />
+        <path
+          d="M0,152 L520,150 C560,148 585,140 600,128 C640,100 680,72 760,40 L800,32"
+          fill="none" stroke="currentColor" className="text-muted-foreground" strokeWidth="1.5" strokeDasharray="6 4"
+        />
+        {[100, 220, 360, 470, 560].map((x, i) => (
+          <g key={x}>
+            <circle cx={x} cy={148 - i * 12} r="3" className="fill-foreground" />
+            {!prefersReduced && (
+              <circle cx={x} cy={148 - i * 12} r="3" className="fill-foreground/40">
+                <animate attributeName="r" values="3;10;3" dur="2.4s" begin={`${i * 0.4}s`} repeatCount="indefinite" />
+                <animate attributeName="opacity" values="0.6;0;0.6" dur="2.4s" begin={`${i * 0.4}s`} repeatCount="indefinite" />
+              </circle>
+            )}
+          </g>
+        ))}
+        <g style={{ fontFamily: "JetBrains Mono, monospace", fontSize: 10 }}>
+          <rect x="12" y="8" width="16" height="2" className="fill-foreground" />
+          <text x="34" y="12" className="fill-foreground">Early signal</text>
+          <rect x="150" y="8" width="16" height="2" className="fill-muted-foreground" />
+          <text x="172" y="12" className="fill-muted-foreground">Mainstream coverage</text>
+        </g>
+      </svg>
+    </div>
+  );
+}
+
+function HeroLineage() {
+  return (
+    <div className="hidden lg:block w-[280px] shrink-0 ml-auto">
+      <div className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground mb-2">
+        Evidence lineage
+      </div>
+      <ol className="space-y-1.5 text-[11px]">
+        {[
+          { k: "SRC", v: "Companies House filing" },
+          { k: "→", v: "Regional wire, 14:02" },
+          { k: "→", v: "National desk, 09:41 next day" },
+        ].map((r) => (
+          <li key={r.v} className="flex items-center gap-2 rounded-md border border-border bg-background/85 backdrop-blur-sm px-2 py-1.5">
+            <span className="text-[9px] font-mono text-muted-foreground w-6">{r.k}</span>
+            <span className="text-foreground">{r.v}</span>
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Landing page                                                       */
+/* ------------------------------------------------------------------ */
+
+function LandingPage() {
   const [prefersReduced, setPrefersReduced] = useState(false);
   useEffect(() => {
     const m = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -76,160 +187,63 @@ function HeroInstrument() {
   }, []);
 
   return (
-    <div className="relative w-full h-[420px] md:h-[520px] rounded-lg border border-border bg-card overflow-hidden">
-      {/* Grid backdrop */}
-      <svg className="absolute inset-0 w-full h-full opacity-[0.35]" aria-hidden="true">
-        <defs>
-          <pattern id="g" width="40" height="40" patternUnits="userSpaceOnUse">
-            <path d="M40 0H0V40" fill="none" stroke="currentColor" strokeWidth="0.5" className="text-border" />
-          </pattern>
-        </defs>
-        <rect width="100%" height="100%" fill="url(#g)" />
-      </svg>
-
-      {/* Timeline: early signal vs. mainstream coverage */}
-      <div className="absolute inset-x-0 bottom-0 h-1/2 px-6 md:px-10 pb-6">
-        <div className="flex items-center justify-between text-[10px] font-mono uppercase tracking-widest text-muted-foreground mb-2">
-          <span>Illustrative view · Early signal vs. mainstream coverage</span>
-          <span>T-0 = story published</span>
-        </div>
-        <svg viewBox="0 0 800 180" className="w-full h-[calc(100%-1.25rem)]" aria-hidden="true">
-          {/* baseline */}
-          <line x1="0" y1="150" x2="800" y2="150" stroke="currentColor" className="text-border" strokeWidth="1" />
-          {/* T-0 marker */}
-          <line x1="600" y1="10" x2="600" y2="150" stroke="currentColor" className="text-border" strokeDasharray="4 4" />
-          <text x="604" y="20" className="fill-muted-foreground" style={{ fontFamily: "JetBrains Mono, monospace", fontSize: 10 }}>T-0</text>
-          {/* Early-signal (foreground/ink) */}
-          <path
-            d="M0,148 C60,146 90,140 130,130 C170,120 210,105 250,95 C300,82 350,80 400,72 C460,62 520,55 590,42 L600,40"
-            fill="none"
-            stroke="currentColor"
-            className="text-foreground"
-            strokeWidth="2"
-          />
-          {/* Mainstream (muted) — rises only near T-0 */}
-          <path
-            d="M0,152 L520,150 C560,148 585,140 600,128 C640,100 680,72 760,40 L800,32"
-            fill="none"
-            stroke="currentColor"
-            className="text-muted-foreground"
-            strokeWidth="1.5"
-            strokeDasharray="6 4"
-          />
-          {/* Signal event pulses */}
-          {[100, 220, 360, 470, 560].map((x, i) => (
-            <g key={x}>
-              <circle cx={x} cy={148 - i * 12} r="3" className="fill-foreground" />
-              {!prefersReduced && (
-                <circle cx={x} cy={148 - i * 12} r="3" className="fill-foreground/40">
-                  <animate attributeName="r" values="3;10;3" dur="2.4s" begin={`${i * 0.4}s`} repeatCount="indefinite" />
-                  <animate attributeName="opacity" values="0.6;0;0.6" dur="2.4s" begin={`${i * 0.4}s`} repeatCount="indefinite" />
-                </circle>
-              )}
-            </g>
-          ))}
-          {/* Legend */}
-          <g style={{ fontFamily: "JetBrains Mono, monospace", fontSize: 10 }}>
-            <rect x="12" y="8" width="16" height="2" className="fill-foreground" />
-            <text x="34" y="12" className="fill-foreground">Early signal</text>
-            <rect x="150" y="8" width="16" height="2" className="fill-muted-foreground" />
-            <text x="172" y="12" className="fill-muted-foreground">Mainstream coverage</text>
-          </g>
-        </svg>
-      </div>
-
-      {/* Radar top-right */}
-      <div className="absolute top-6 right-6 hidden md:block">
-        <div className="relative h-32 w-32 rounded-full border border-border">
-          <div className="absolute inset-2 rounded-full border border-border/70" />
-          <div className="absolute inset-6 rounded-full border border-border/60" />
-          <div className="absolute inset-10 rounded-full border border-border/50" />
-          {!prefersReduced && (
-            <div
-              className="absolute inset-0 rounded-full"
-              style={{
-                background:
-                  "conic-gradient(from 0deg, transparent 0deg, color-mix(in srgb, var(--foreground) 18%, transparent) 40deg, transparent 60deg)",
-                animation: "spin 4s linear infinite",
-              }}
-            />
-          )}
-          <div className="absolute inset-0 grid place-items-center">
-            <div className="h-1.5 w-1.5 rounded-full bg-foreground" />
-          </div>
-          <div className="absolute -bottom-6 left-0 right-0 text-center text-[9px] font-mono uppercase tracking-widest text-muted-foreground">
-            Live scan
-          </div>
-        </div>
-      </div>
-
-      {/* Evidence lineage top-left */}
-      <div className="absolute top-6 left-6 max-w-[280px] hidden md:block">
-        <div className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground mb-2">
-          Evidence lineage
-        </div>
-        <ol className="space-y-1.5 text-[11px]">
-          {[
-            { k: "SRC", v: "Companies House filing" },
-            { k: "→", v: "Regional wire, 14:02" },
-            { k: "→", v: "National desk, 09:41 next day" },
-          ].map((r) => (
-            <li key={r.v} className="flex items-center gap-2 rounded-md border border-border bg-background/70 px-2 py-1.5">
-              <span className="text-[9px] font-mono text-muted-foreground w-6">{r.k}</span>
-              <span className="text-foreground">{r.v}</span>
-            </li>
-          ))}
-        </ol>
-      </div>
-
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-    </div>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/*  Landing page                                                       */
-/* ------------------------------------------------------------------ */
-
-function LandingPage() {
-  return (
     <MarketingLayout>
       {/* ===== HERO ===== */}
-      <section className="relative">
-        <div className="mx-auto max-w-7xl px-6 pt-14 md:pt-20 pb-10 md:pb-14">
+      <section
+        className="relative overflow-hidden border-b border-border flex flex-col"
+        style={{
+          minHeight: "620px",
+          height: "calc(100svh - 4rem - 64px)",
+          maxHeight: "920px",
+        }}
+      >
+        <HeroBackdrop prefersReduced={prefersReduced} />
+
+        {/* Copy sits on the quiet upper region of the field — no card */}
+        <div className="relative z-10 mx-auto max-w-7xl w-full px-6 pt-10 md:pt-16 shrink-0">
           <Eyebrow>Public-signals early warning</Eyebrow>
-          <h1 className="mt-4 font-display text-[42px] leading-[1.02] tracking-tight md:text-[76px] md:leading-[0.98] text-foreground max-w-[18ch]">
+          <h1 className="mt-4 font-display text-[36px] leading-[1.05] tracking-tight sm:text-5xl md:text-[68px] md:leading-[0.98] text-foreground max-w-[18ch]">
             See it forming before it becomes the news.
           </h1>
-          <p className="mt-6 max-w-2xl text-base md:text-lg text-muted-foreground">
+          <p className="mt-4 md:mt-6 max-w-xl text-[15px] md:text-lg text-muted-foreground">
             Arklight reads the open public record, traces every claim to its origin,
             maps who it reaches, and turns early signals into dated, testable scenarios.
           </p>
 
-          <div className="mt-8 flex flex-wrap items-center gap-3">
+          <div className="mt-6 md:mt-7 flex flex-wrap items-center gap-3">
             <a
               href="/auth?mode=signup"
-              className="h-11 inline-flex items-center gap-2 px-5 rounded-md text-sm font-medium bg-foreground text-background hover:opacity-90 transition"
+              className="h-11 inline-flex items-center gap-2 px-5 rounded-md text-sm font-medium bg-foreground text-background hover:opacity-90 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-foreground/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               Start free <ArrowRight className="h-4 w-4" />
             </a>
             <a
               href="#how"
-              className="h-11 inline-flex items-center gap-2 px-5 rounded-md text-sm font-medium border border-border text-foreground hover:bg-accent/60 transition"
+              className="h-11 inline-flex items-center gap-2 px-5 rounded-md text-sm font-medium border border-border bg-background/70 backdrop-blur-sm text-foreground hover:bg-accent/60 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-foreground/40"
             >
               See how it works
             </a>
           </div>
 
-          <div className="mt-5 text-[11px] font-mono uppercase tracking-widest text-muted-foreground">
+          <div className="mt-4 md:mt-5 text-[11px] font-mono uppercase tracking-widest text-muted-foreground">
             Public sources only · Every call frozen and graded · Not financial advice
           </div>
+        </div>
 
-          <div className="mt-12">
-            <HeroInstrument />
+        {/* Flex spacer keeps copy and instrument apart at any viewport height */}
+        <div className="flex-1 min-h-4" aria-hidden="true" />
+
+        {/* Instrument row: lineage (desktop right) + timeline strip along the bottom */}
+        <div className="relative z-10 mx-auto max-w-7xl w-full px-6 md:px-10 pb-6 shrink-0">
+          <div className="hidden lg:flex justify-end mb-4">
+            <HeroLineage />
           </div>
+          <HeroTimeline prefersReduced={prefersReduced} />
         </div>
       </section>
+
+
+
 
       {/* ===== SOURCE STRIP ===== */}
       <Section id="sources">
@@ -420,7 +434,7 @@ function LandingPage() {
           <PricingCard
             name="Free"
             price="£0"
-            trailing="forever"
+            trailing="currently"
             bullets={[
               "Public-signal graph",
               "Starter book — up to 10 watched items",
@@ -793,7 +807,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "Can I cancel anytime?",
-    a: "Yes. Free is free forever with in-app track record and weekly digest. Pro starts with a 7-day free trial and can be cancelled at any time — no lock-in.",
+    a: "Yes. The Free tier is currently £0, with in-app track record and weekly digest. Pro starts with a 7-day free trial and can be cancelled at any time — no lock-in.",
   },
 ];
 

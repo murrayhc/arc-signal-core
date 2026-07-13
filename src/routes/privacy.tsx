@@ -62,9 +62,9 @@ function PrivacyPage() {
 
       <H2>5. Sharing</H2>
       <P>
-        We do not sell personal data. We share data with processors strictly
-        necessary to run the service — hosting, database, authentication, email
-        delivery, payment processing — under written agreements.
+        We do not sell personal data. We share data with the service providers
+        needed to operate the product — for example hosting, database,
+        authentication, email delivery, and payment processing.
       </P>
 
       <H2>6. Retention</H2>
@@ -84,7 +84,7 @@ function PrivacyPage() {
 
       <H2>8. International transfers</H2>
       <P>
-        Some processors may operate outside the United Kingdom. Where relevant,
+        Some service providers may operate outside the United Kingdom. Where relevant,
         we rely on approved safeguards for international transfers.
       </P>
 

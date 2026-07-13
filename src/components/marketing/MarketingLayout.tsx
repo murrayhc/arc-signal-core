@@ -25,7 +25,7 @@ export function MarketingHeader() {
     <header className="sticky top-0 z-40 border-b border-border/60 bg-background/85 backdrop-blur-xl">
       <div className="mx-auto max-w-7xl px-6 h-16 flex items-center gap-6">
         <Link to="/" className="font-display text-[17px] tracking-tight text-foreground shrink-0">
-          Project Arklight
+          Arklight
         </Link>
         <nav className="hidden md:flex items-center gap-1 text-sm">
           {NAV.map((n) => (
@@ -70,14 +70,15 @@ export function MarketingHeader() {
           type="button"
           aria-label={open ? "Close menu" : "Open menu"}
           aria-expanded={open}
+          aria-controls="marketing-mobile-menu"
           onClick={() => setOpen((v) => !v)}
-          className="md:hidden h-9 w-9 grid place-items-center rounded-md border border-border text-foreground"
+          className="md:hidden h-9 w-9 grid place-items-center rounded-md border border-border text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-foreground/30"
         >
           {open ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
         </button>
       </div>
       {open && (
-        <div className="md:hidden border-t border-border bg-background">
+        <div id="marketing-mobile-menu" className="md:hidden border-t border-border bg-background">
           <div className="px-6 py-4 flex flex-col gap-1">
             {NAV.map((n) => (
               <a
@@ -178,7 +179,7 @@ export function MarketingLayout({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
       <MarketingHeader />
-      <main className="flex-1">{children}</main>
+      <main id="main-content" className="flex-1">{children}</main>
       <MarketingFooter />
     </div>
   );

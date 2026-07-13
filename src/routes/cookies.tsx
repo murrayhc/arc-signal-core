@@ -28,27 +28,27 @@ function CookiesPage() {
         technologies. It is a draft under legal review and may change.
       </P>
 
-      <H2>1. Strictly necessary</H2>
+      <H2>1. Currently in use — required for the product</H2>
       <P>
-        We use a small number of first-party cookies and local-storage entries
-        that are required for the site to work — for example to keep you signed
-        in, remember your theme preference, and protect against abuse. These
-        cannot be turned off.
+        Today Arklight uses only a small number of first-party cookies and
+        local-storage entries that are required for the product to work — for
+        example to keep you signed in, remember your theme preference, and
+        protect against abuse. These are not analytics.
       </P>
 
-      <H2>2. Analytics</H2>
+      <H2>2. Non-essential analytics — not currently active</H2>
       <P>
-        We may use privacy-respecting analytics to understand aggregate usage
-        (page views, feature usage). We do not sell analytics data. Where a
-        cookie banner is required by your jurisdiction, you can decline
-        non-essential analytics from the banner.
+        We do not currently run analytics or advertising cookies. If we
+        introduce non-essential analytics in the future, we will only enable
+        them after a consent control is in place on this site, and after
+        updating this page.
       </P>
 
       <H2>3. Third parties</H2>
       <P>
-        Some cookies may be set by processors we rely on — for authentication,
-        payments and email delivery — strictly to make those functions work.
-        We do not use advertising cookies.
+        Some cookies may be set by service providers we rely on — for
+        authentication, payments and email delivery — strictly to make those
+        functions work. We do not use advertising cookies.
       </P>
 
       <H2>4. Managing cookies</H2>
