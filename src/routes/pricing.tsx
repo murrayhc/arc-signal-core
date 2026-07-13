@@ -111,9 +111,9 @@ function PricingPage() {
           <FAQ
             items={[
               { q: "How much will Pro cost?", a: "The Pro price is not yet published. We will announce it before enabling checkout. Until then, no card is required, and creating an account does not commit you to any charge." },
-              { q: "Can I cancel at any time?", a: "Yes. The Free tier is currently £0. Pro is a monthly subscription with a 7-day free trial and can be cancelled at any time from Settings → Billing." },
-              { q: "Do you offer team pricing?", a: "Team pricing has not been announced. If you have a specific team need in the meantime, contact us and we will work with you." },
-              { q: "What happens to my data if I change plan?", a: "Your book, research history and frozen calls stay in your account. Plan changes are handled in account settings, and you will be shown the effect of a change before you confirm it." },
+              { q: "Can I cancel at any time?", a: "The Free tier is currently £0, so there is nothing to cancel today. Full billing and cancellation details for Pro — including the intended 7-day trial — will be published before checkout is enabled." },
+              { q: "Do you offer team pricing?", a: "Team pricing has not been announced. There is no team plan or team contact flow available at this stage." },
+              { q: "What happens to my data if I change plan?", a: "Plan-change behaviour and data-retention details will be shown in the product before any paid plan is launched. Nothing in your account is charged or altered until Pro pricing is published and you explicitly upgrade." },
             ]}
           />
         </div>
