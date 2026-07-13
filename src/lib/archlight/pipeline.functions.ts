@@ -1388,7 +1388,7 @@ function hasUsableSynthesis(payload: InterrogationPayload): boolean {
   return !failedPlaceholder && !fallbackOnly && (text.length > 80 || hasStructuredFindings);
 }
 
-async function loadCachedInterrogation(db: Awaited<ReturnType<typeof admin>>, q: string): Promise<InterrogationPayload | null> {
+async function loadCachedInterrogation(db: Awaited<ReturnType<typeof admin>>, q: string, userId: string): Promise<InterrogationPayload | null> {
   const normalised = normaliseInterrogationQuery(q);
   const ttl = await interrogationCacheMs();
   const threshold = new Date(Date.now() - ttl).toISOString();
@@ -1396,6 +1396,7 @@ async function loadCachedInterrogation(db: Awaited<ReturnType<typeof admin>>, q:
     .from("investigation_queries")
     .select("id, query_text, created_at, metadata")
     .eq("status", "completed")
+    .eq("user_id", userId)
     .gte("created_at", threshold)
     .order("created_at", { ascending: false })
     .limit(80);
