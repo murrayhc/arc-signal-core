@@ -80,9 +80,9 @@ function PricingPage() {
             <ul className="mt-6 space-y-3 text-sm text-[color:var(--mkt-heading)]">
               {[
                 "You start on Free at £0 — no payment, no trial timer.",
-                "When Pro pricing is published, you can start a 7-day trial from Settings → Billing.",
-                "If you don't upgrade, you stay on the current Free tier with everything you already have.",
-                "You can cancel at any time during or after the trial.",
+                "When Pro pricing is published, you will be able to start a 7-day trial from Settings → Billing.",
+                "The post-trial plan behaviour will be published before Pro launches.",
+                "Full billing and cancellation details will be published before checkout is enabled.",
               ].map((l) => (
                 <li key={l} className="flex gap-3">
                   <Check className="h-4 w-4 mt-0.5 shrink-0" style={{ color: "var(--mkt-ok)" }} />
