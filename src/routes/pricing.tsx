@@ -18,15 +18,15 @@ export const Route = createFileRoute("/pricing")({
 const PLANS = {
   free: [
     "Public-signal graph",
-    "Starter book — up to 10 watched items",
-    "Research interrogations — 5 / 30 days",
+    "Starter book, up to 10 watched items",
+    "Research interrogations, 5 per 30 days",
     "Weekly in-app digest",
     "Frozen track record",
   ],
   pro: [
     "Everything in Free",
     "Slack & email alerts and briefings",
-    "Unlimited book — no cap on watched items",
+    "Unlimited book, no cap on watched items",
     "Unlimited research interrogations",
     "Advanced analytics & Narrative Divergence",
     "Priority scan cadence",
@@ -43,9 +43,7 @@ function PricingPage() {
           Free while you decide. Pro when you're ready.
         </h1>
         <p className="mt-5 max-w-2xl text-[color:var(--mkt-muted)]">
-          The Free tier is currently £0 — explore the graph, run scoped research
-          and watch calls get graded. Pro adds delivery, unlimited research and
-          advanced analytics. No card required until you upgrade.
+          The Free tier is currently £0. Explore the graph, run scoped research and watch calls get graded. Pro adds delivery, unlimited research and advanced analytics. No card required until you upgrade.
         </p>
       </section>
 
@@ -79,7 +77,7 @@ function PricingPage() {
             <h2 className="mkt-display mt-3 text-2xl md:text-3xl font-medium text-[color:var(--mkt-heading)] max-w-[22ch]">How the trial works.</h2>
             <ul className="mt-6 space-y-3 text-sm text-[color:var(--mkt-heading)]">
               {[
-                "You start on Free at £0 — no payment, no trial timer.",
+                "You start on Free at £0, with no payment and no trial timer.",
                 "When Pro pricing is published, you will be able to start a 7-day trial from Settings → Billing.",
                 "The post-trial plan behaviour will be published before Pro launches.",
                 "Full billing and cancellation details will be published before checkout is enabled.",
@@ -111,7 +109,7 @@ function PricingPage() {
           <FAQ
             items={[
               { q: "How much will Pro cost?", a: "The Pro price is not yet published. We will announce it before enabling checkout. Until then, no card is required, and creating an account does not commit you to any charge." },
-              { q: "Can I cancel at any time?", a: "The Free tier is currently £0, so there is nothing to cancel today. Full billing and cancellation details for Pro — including the intended 7-day trial — will be published before checkout is enabled." },
+              { q: "Can I cancel at any time?", a: "The Free tier is currently £0, so there is nothing to cancel today. Full billing and cancellation details for Pro, including the intended 7-day trial, will be published before checkout is enabled." },
               { q: "Do you offer team pricing?", a: "Team pricing has not been announced. There is no team plan or team contact flow available at this stage." },
               { q: "What happens to my data if I change plan?", a: "Plan-change behaviour and data-retention details will be shown in the product before any paid plan is launched. Nothing in your account is charged or altered until Pro pricing is published and you explicitly upgrade." },
             ]}

@@ -11,8 +11,8 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "Project Arklight · See it forming before it becomes the news" },
-      { name: "description", content: "Arklight reads the open public record, traces every claim to its origin, maps who it reaches, and turns early signals into dated, testable scenarios." },
-      { property: "og:title", content: "Project Arklight — Public-signals early warning" },
+      { name: "description", content: "Arklight warns you about what is forming on the public record, for the things you follow, while there is still time to act. Every signal is traced to its source and graded on the outcome." },
+      { property: "og:title", content: "Project Arklight · Public-signals early warning" },
       { property: "og:description", content: "A precision public-intelligence instrument. Public sources only. Every call frozen and graded." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -139,9 +139,7 @@ function Hero() {
               </h1>
               <div className="lg:max-w-md">
                 <p className="text-sm font-medium text-balance text-neutral-300 sm:text-base lg:text-lg">
-                  Arklight reads the open public record, traces every claim to its
-                  origin, maps who it reaches, and turns early signals into dated,
-                  testable scenarios.
+                  The move is made before the headline runs. Arklight watches the public record for the things you follow and warns you while there is still time to act. Every signal is traced to its source and graded on the outcome.
                 </p>
                 <HeroTemplateCta to="/auth" search={{ mode: "signup" }}>
                   Start free
@@ -181,7 +179,7 @@ function SourceStrip() {
       <div className="text-center">
         <Eyebrow>Reads only from the public record</Eyebrow>
         <p className="mt-3 text-[color:var(--mkt-muted)] text-sm">
-          Categories of primary source Arklight ingests. Category names are descriptive — no endorsement is claimed.
+          Categories of primary source Arklight ingests. The names are descriptive, and no endorsement is claimed.
         </p>
       </div>
       <div className="mt-10 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
@@ -236,7 +234,7 @@ function BentoOne() {
       <SectionHeader
         eyebrow="How Arklight works · Illustrative interface"
         title={<>From raw public signal to a call you can grade later.</>}
-        sub="Five stages, run continuously. Every step keeps its receipts. Values shown below are illustrative examples, not measured Arklight results."
+        sub="Five stages, run continuously, and every step keeps its receipts. The values shown below are illustrative examples, not measured Arklight results."
       />
 
       <div className="mt-12 grid grid-cols-1 md:grid-cols-6 gap-3">
@@ -244,8 +242,10 @@ function BentoOne() {
         <BentoTile dark className="md:col-span-4 md:row-span-2 min-h-[320px] flex flex-col justify-between">
           <TileHead dark label="01 · Scan" title="Continuous read of the open record" icon={Radar} />
           <p className="mt-3 max-w-md text-white/70 text-sm">
-            Approved public sources — filings, tenders, regulatory notices, court
-            records, wires — are read on a schedule, deduplicated, and clustered.
+            Arklight reads approved public sources on a schedule, then deduplicates and clusters them. These include filings, tenders, regulatory notices, court records and wires.
+          </p>
+          <p className="mt-3 max-w-md text-white text-sm">
+            You stop monitoring a dozen feeds. The reading is done for you, so you get the events that matter instead of a firehose.
           </p>
           <div className="mt-6 grid grid-cols-6 gap-1">
             {Array.from({ length: 42 }).map((_, i) => (
@@ -281,7 +281,10 @@ function BentoOne() {
             </div>
           </div>
           <p className="mt-5 text-xs text-[color:var(--mkt-muted)]">
-            Group-owned repetition is treated as risk, not corroboration.
+            Group-owned repetition raises a flag instead of adding confidence.
+          </p>
+          <p className="mt-3 text-xs text-[color:var(--mkt-heading)]">
+            You know a signal is real before you act on it. What looks like twelve confirmations is often one release repeated, and Arklight shows you which.
           </p>
         </BentoTile>
 
@@ -294,7 +297,10 @@ function BentoOne() {
             ))}
           </div>
           <p className="mt-4 text-xs text-[color:var(--mkt-muted)]">
-            Consequence is walked through verified relationships, not free-text guesses.
+            Consequence is traced through verified relationships, so the connections hold up.
+          </p>
+          <p className="mt-3 text-xs text-[color:var(--mkt-heading)]">
+            You see how a distant event reaches your position: the charge against your rival's supplier, or the review opening in your sector. These are links you would never join by hand.
           </p>
         </BentoTile>
 
@@ -316,6 +322,12 @@ function BentoOne() {
               </div>
             ))}
           </div>
+          <p className="mt-4 text-xs text-white/70">
+            Related signals become dated scenarios, each with a probability, a deadline, and the evidence behind it.
+          </p>
+          <p className="mt-3 text-xs text-white">
+            A forward view you can weigh. You see what is likely and by when, while a headline only confirms what already happened.
+          </p>
         </BentoTile>
 
         {/* Prove */}
@@ -323,15 +335,17 @@ function BentoOne() {
           <div className="md:max-w-sm">
             <TileHead label="05 · Prove" title="Every call frozen and graded" icon={Receipt} />
             <p className="mt-3 text-sm text-[color:var(--mkt-muted)]">
-              Probability, deadline and evidence are frozen when a projection is made.
-              Outcomes are graded later from public facts — the track record is the ledger.
+              Probability, deadline and evidence are frozen when a projection is made. Outcomes are graded later from public facts, and the track record is that ledger.
+            </p>
+            <p className="mt-3 text-sm text-[color:var(--mkt-heading)]">
+              A reason to trust it. You can see its record of hits and misses, and its confidence is backed by that record.
             </p>
           </div>
           <div className="flex-1 grid grid-cols-3 gap-3">
             {[
               { k: "Frozen", v: "Yes", note: "Written to ledger on projection" },
               { k: "Graded", v: "Outcomes", note: "Measured from public facts" },
-              { k: "Confidence", v: "Explicit", note: "Uncertainty shown, not hidden" },
+              { k: "Confidence", v: "Explicit", note: "Uncertainty is shown plainly" },
             ].map((s) => (
               <div key={s.k} className="rounded-xl border border-[color:var(--mkt-line)] p-4">
                 <div className="mkt-mono text-[10px] uppercase tracking-widest text-[color:var(--mkt-muted)]">{s.k}</div>
@@ -354,7 +368,7 @@ const SCENARIOS = [
   {
     tag: "Regulatory tension",
     title: "A quiet consultation, then a rules change",
-    body: "Arklight ties a low-noise consultation opening to a related enforcement action from six weeks earlier — projecting a rule tightening window with a dated confidence band.",
+    body: "Arklight ties a low-noise consultation opening to a related enforcement action from six weeks earlier, then projects a rule-tightening window with a dated confidence band.",
   },
   {
     tag: "Supply-chain disruption",
@@ -375,7 +389,7 @@ function Scenarios() {
         <SectionHeader
           eyebrow="Illustrative scenarios"
           title="What an early Arklight signal looks like."
-          sub="Constructed examples — no customers named. Every real projection is dated, evidenced, and graded on outcome."
+          sub="Constructed examples, with no customers named. Every real projection is dated, evidenced, and graded on the outcome."
         />
         <div className="mkt-mono text-[10px] uppercase tracking-widest text-[color:var(--mkt-muted)]">
           Not investment advice
@@ -420,7 +434,7 @@ function Proof() {
     <section id="proof" className="scroll-mt-24 mx-auto max-w-7xl px-6 py-16 md:py-24">
       <div className="rounded-3xl border border-[color:var(--mkt-line)] bg-[color:var(--mkt-panel)] p-6 md:p-12">
         <SectionHeader
-          eyebrow="Proof, not promises"
+          eyebrow="Proof you can check."
           title="Frozen calls. Traceable evidence. Graded outcomes."
           sub="We do not publish aggregate hit-rates until they are measured on live user calls. What we do show, from day one, is the ledger machinery itself."
         />
@@ -428,7 +442,7 @@ function Proof() {
           {[
             { k: "Every call frozen", v: "Probability, deadline, evidence written to ledger at time of projection." },
             { k: "Evidence lineage", v: "Each claim traces back to primary source, timestamp, and cluster." },
-            { k: "Confidence grading", v: "Uncertainty is shown, not hidden — no false precision." },
+            { k: "Confidence grading", v: "Uncertainty is shown plainly, with no false precision." },
             { k: "Outcome review", v: "Outcomes measured from public facts. Hits, misses, still-open calls." },
           ].map((s) => (
             <div key={s.k} className="rounded-xl border border-[color:var(--mkt-line)] p-5">
@@ -482,7 +496,7 @@ function BentoTwo() {
 
         <BentoTile className="min-h-[180px]">
           <TileHead label="Narrative divergence" title="When claims disagree, we say so" icon={GitBranch} />
-          <p className="mt-3 text-xs text-[color:var(--mkt-muted)]">Disagreements between sources are surfaced, not smoothed into consensus.</p>
+          <p className="mt-3 text-xs text-[color:var(--mkt-muted)]">When sources disagree, Arklight shows you the disagreement instead of folding it into a consensus.</p>
         </BentoTile>
 
         <BentoTile dark className="min-h-[180px]">
@@ -491,7 +505,7 @@ function BentoTwo() {
         </BentoTile>
 
         <BentoTile dark className="min-h-[180px]">
-          <TileHead dark label="Scan cadence" title="Minutes, not weeks" icon={Radar} />
+          <TileHead dark label="Scan cadence" title="Updated in minutes." icon={Radar} />
           <p className="mt-3 text-xs text-white/60">Priority sources on Pro run at tighter cadence with faster delivery.</p>
         </BentoTile>
 
@@ -509,10 +523,10 @@ function BentoTwo() {
 /* ------------------------------------------------------------------ */
 
 const COMPARISON: { row: string; ark: string; conv: string }[] = [
-  { row: "Discovery", ark: "Event-first — clusters signals into a single call", conv: "Feed-first — you scroll until you notice" },
+  { row: "Discovery", ark: "Event-first. Clusters signals into a single call.", conv: "Feed-first. You scroll until you notice." },
   { row: "Evidence", ark: "Every claim traces back to primary source", conv: "Headline links, provenance unclear" },
   { row: "Uncertainty", ark: "Explicit probability + deadline", conv: "Implied by tone" },
-  { row: "Repetition", ark: "Group-owned echoes are flagged, not counted", conv: "Repetition read as corroboration" },
+  { row: "Repetition", ark: "Group-owned echoes are flagged rather than counted as confirmation.", conv: "Repetition read as corroboration" },
   { row: "Outcomes", ark: "Frozen at projection, graded from facts", conv: "No public ledger" },
   { row: "Delivery", ark: "Dated scenarios and briefings", conv: "Alert firehose" },
 ];
@@ -523,7 +537,7 @@ function Comparison() {
       <SectionHeader
         eyebrow="Arklight vs conventional monitoring"
         title="Built to be answered for."
-        sub="Only defensible distinctions — no straw men. Compare the mechanics."
+        sub="Only defensible distinctions, with no straw men. Compare the mechanics."
       />
       {/* desktop table */}
       <div className="mt-10 hidden md:block rounded-2xl border border-[color:var(--mkt-line)] bg-[color:var(--mkt-panel)] overflow-hidden">
@@ -579,7 +593,7 @@ function PricingPreview() {
           trailing="currently"
           bullets={[
             "Public-signal graph",
-            "Starter book — up to 10 watched items",
+            "Starter book, up to 10 watched items",
             "5 research interrogations / month",
             "Weekly in-app digest",
             "Frozen track record",
@@ -675,9 +689,7 @@ function About() {
         </div>
         <div className="space-y-5 text-[color:var(--mkt-heading)]">
           <p>
-            Arklight exists because the news is the last, not the first, sign that
-            something has changed. The primary record — filings, tenders, notices,
-            registries — moves earlier and is answerable to something.
+            Arklight exists because the news is where a change surfaces last, long after the primary record has already moved. That record is the filings, tenders, notices and registries, and it answers to something.
           </p>
           <p className="text-[color:var(--mkt-muted)]">
             The instrument is built to be argued with. Every claim is traceable.
@@ -696,7 +708,7 @@ function About() {
 
 const FAQ_ITEMS = [
   { q: "What sources does Arklight use?", a: "Only public sources: company registries, procurement notices, regulatory releases, official statistics, public news wires and public web signals. Nothing private, nothing leaked. Attribution is preserved on every claim." },
-  { q: "Does Arklight predict the future?", a: "No. Arklight surfaces dated, testable scenarios with explicit probabilities. Each projection is frozen and later graded against public outcomes. Uncertainty is shown, not hidden." },
+  { q: "Does Arklight predict the future?", a: "No. Arklight surfaces dated, testable scenarios with explicit probabilities. Each projection is frozen and later graded against public outcomes. Uncertainty is shown plainly." },
   { q: "How does confidence work?", a: "Confidence combines source weighting (primary vs echo), cluster strength, contradiction signals, and evidence freshness. It is expressed as a number, with a deadline, and reviewed on outcome." },
   { q: "Is this financial advice?", a: "No. Arklight is not a broker or adviser and does not recommend buys, sells, or target prices. All figures are GBP. Use it as one input into your own decisions." },
   { q: "What is stored?", a: "Your account, your watched items, and your research history. The public-signal record itself is derived from public sources. See the Privacy page for detail." },
@@ -792,10 +804,23 @@ function FinalCta() {
 /*  Page                                                               */
 /* ------------------------------------------------------------------ */
 
+function WhyArklight() {
+  return (
+    <section className="mx-auto max-w-7xl px-6 pt-16 md:pt-24">
+      <SectionHeader
+        eyebrow="Why Arklight"
+        title="The decision is made before the story runs."
+        sub="By the time something is the news, the people who saw it forming have already moved. The signs sat on the public record for days, scattered across filings, notices and wires that nobody has time to read. Arklight is for people who are paid to be early: investors, analysts, strategy and risk teams, competitive intelligence. It reads that record for you and flags what is forming while there is still time to act."
+      />
+    </section>
+  );
+}
+
 function LandingPage() {
   return (
     <MarketingLayout>
       <Hero />
+      <WhyArklight />
       <SourceStrip />
       <BentoOne />
       <Scenarios />
