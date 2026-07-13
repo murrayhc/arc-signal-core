@@ -30,6 +30,8 @@ export function GuidedTour() {
   const [step, setStep] = useState(0);
   const [rect, setRect] = useState<DOMRect | null>(null);
   const [reduced, setReduced] = useState(false);
+  const [entering, setEntering] = useState(true);
+  const prevStep = useRef(0);
 
   const start = useCallback(() => {
     setStep(0);
