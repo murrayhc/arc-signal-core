@@ -137,6 +137,9 @@ const AddInput = z.object({
 export const addDeliveryChannel = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => AddInput.parse(d))
   .handler(async ({ data, context }) => {
+    if (!(await isProUser(context.userId))) {
+      throw new Error("PRO_FEATURE: Delivery is a Pro feature. Upgrade to Pro to get alerts and briefings pushed to you.");
+    }
     const db = await admin();
     const { data: row, error } = await db.from("delivery_channels").insert({
       user_id: context.userId,
