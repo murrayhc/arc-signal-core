@@ -434,7 +434,7 @@ function Proof() {
     <section id="proof" className="scroll-mt-24 mx-auto max-w-7xl px-6 py-16 md:py-24">
       <div className="rounded-3xl border border-[color:var(--mkt-line)] bg-[color:var(--mkt-panel)] p-6 md:p-12">
         <SectionHeader
-          eyebrow="Proof, not promises"
+          eyebrow="Proof you can check."
           title="Frozen calls. Traceable evidence. Graded outcomes."
           sub="We do not publish aggregate hit-rates until they are measured on live user calls. What we do show, from day one, is the ledger machinery itself."
         />
@@ -442,7 +442,7 @@ function Proof() {
           {[
             { k: "Every call frozen", v: "Probability, deadline, evidence written to ledger at time of projection." },
             { k: "Evidence lineage", v: "Each claim traces back to primary source, timestamp, and cluster." },
-            { k: "Confidence grading", v: "Uncertainty is shown, not hidden — no false precision." },
+            { k: "Confidence grading", v: "Uncertainty is shown plainly, with no false precision." },
             { k: "Outcome review", v: "Outcomes measured from public facts. Hits, misses, still-open calls." },
           ].map((s) => (
             <div key={s.k} className="rounded-xl border border-[color:var(--mkt-line)] p-5">
