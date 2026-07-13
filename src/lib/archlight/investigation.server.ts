@@ -292,20 +292,10 @@ export async function runInvestigation(
       }
     }
 
-    await db.from("investigation_queries").insert({
-      event_candidate_id: eventId,
-      query_text: query,
-      query_class: "auto:prediction",
-      status: queryErr ? "completed_with_errors" : "completed",
-      result_count: articles.length,
-      evidence_ids: Array.from(new Set(evidenceIds)),
-      metadata: {
-        scan_run_id: opts.scanRunId ?? null,
-        ingested: ingestedForEvent,
-        max_per_event: maxPerEvent,
-        source: "gdelt",
-      },
-    });
+    // Scan-time investigation is a background pass; investigation_queries is
+    // now a per-user research-history table. Skip the breadcrumb insert here
+    // to keep the table strictly per-user.
+    void eventId; void query; void queryErr;
   }
 
   notes.push(
