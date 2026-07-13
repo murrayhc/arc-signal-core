@@ -1,12 +1,13 @@
 // Exposure model — profiles of what a user actually holds/cares about,
 // with every synthesized event scored against them ("why this matters to you").
 //
-// Public read via server fns; writes via service-role admin client. All
-// generated rationale text is passed through guardFinancialAdvice — on a
-// guard violation we fall back to a neutral, factual sentence.
+// User-facing server fns require an authenticated user and read/write through
+// the user-scoped Supabase client (RLS = own rows only). The pipeline scorer
+// runs in scans (no user session) and uses the service-role admin client, but
+// stamps user_id on every hit from the owning exposure_item.
 
 import { createServerFn } from "@tanstack/react-start";
-import { requireOwner } from "@/lib/archlight/owner-auth.server";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import { guardFinancialAdvice } from "./ai-gateway.server";
 
@@ -14,8 +15,6 @@ async function admin() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   return supabaseAdmin;
 }
-
-type Db = Awaited<ReturnType<typeof admin>>;
 
 const KIND_VALUES = [
   "company", "supplier", "customer", "competitor",
@@ -62,7 +61,7 @@ export async function scoreExposures(opts: ScoreExposuresOpts): Promise<ScoreExp
   const notes: string[] = [];
   const result: ScoreExposuresResult = { events_scored: 0, hits_created: 0, hits_updated: 0, notes };
 
-  // 1. Active profiles + items
+  // 1. Active profiles + items (include user_id so hits are stamped with the right owner)
   const { data: profiles } = await db.from("exposure_profiles").select("id").eq("active", true);
   const profileIds = (profiles ?? []).map((p) => p.id);
   if (profileIds.length === 0) {
@@ -71,10 +70,10 @@ export async function scoreExposures(opts: ScoreExposuresOpts): Promise<ScoreExp
   }
   const { data: items } = await db
     .from("exposure_items")
-    .select("id, profile_id, kind, name, entity_id, weight")
+    .select("id, profile_id, user_id, kind, name, entity_id, weight")
     .in("profile_id", profileIds);
   const allItems = (items ?? []) as Array<{
-    id: string; profile_id: string; kind: ExposureKind; name: string;
+    id: string; profile_id: string; user_id: string; kind: ExposureKind; name: string;
     entity_id: string | null; weight: number;
   }>;
   if (allItems.length === 0) {
@@ -103,10 +102,6 @@ export async function scoreExposures(opts: ScoreExposuresOpts): Promise<ScoreExp
   }
   result.events_scored = evList.length;
 
-  // 3. Precompute per-event context:
-  //    - company_impacts.company_name (lowercased)
-  //    - linked entity ids (primary + those from company_impacts.entity_id)
-  //    - one-hop entity relationships (either direction) from those linked ids
   const eventIds = evList.map((e) => e.id);
   const { data: impacts } = await db
     .from("company_impacts")
@@ -130,8 +125,6 @@ export async function scoreExposures(opts: ScoreExposuresOpts): Promise<ScoreExp
     eventEntityIds.set(e.id, s);
   }
 
-  // Load canonical_names for all linked entities (for name matching when the
-  // impact rows don't spell them out).
   const allLinkedEntityIds = Array.from(new Set(evList.flatMap((e) => Array.from(eventEntityIds.get(e.id) ?? []))));
   const entityNames = new Map<string, string>();
   if (allLinkedEntityIds.length) {
@@ -142,15 +135,13 @@ export async function scoreExposures(opts: ScoreExposuresOpts): Promise<ScoreExp
     for (const e of ents ?? []) entityNames.set(e.id, e.canonical_name);
   }
 
-  // One-hop relationships for candidate item.entity_id values → target entity ids.
   const itemEntityIds = Array.from(new Set(allItems.map((i) => i.entity_id).filter((v): v is string => !!v)));
-  const relMap = new Map<string, Array<{ other: string; weight: number }>>(); // item_entity_id -> hops
+  const relMap = new Map<string, Array<{ other: string; weight: number }>>();
   if (itemEntityIds.length) {
     const { data: rels } = await db
       .from("entity_relationships")
       .select("from_entity_id, to_entity_id, weight, verified")
       .or(itemEntityIds.map((id) => `from_entity_id.eq.${id},to_entity_id.eq.${id}`).join(","));
-    // Prefer verified (registry-fact) edges over inferred ones on the same pair.
     const bestByPair = new Map<string, { from_entity_id: string; to_entity_id: string; weight: number; verified: boolean }>();
     for (const r of rels ?? []) {
       const key = `${r.from_entity_id}|${r.to_entity_id}`;
@@ -173,10 +164,8 @@ export async function scoreExposures(opts: ScoreExposuresOpts): Promise<ScoreExp
         relMap.set(r.to_entity_id, arr);
       }
     }
-
   }
 
-  // 4. Score each item × event
   for (const ev of evList) {
     const evNames = new Set<string>();
     for (const im of impactsByEvent.get(ev.id) ?? []) evNames.add(norm(im.company));
@@ -201,7 +190,6 @@ export async function scoreExposures(opts: ScoreExposuresOpts): Promise<ScoreExp
       const itemNameLc = norm(item.name);
 
       if (["company", "supplier", "customer", "competitor"].includes(item.kind)) {
-        // Direct name match against company_impacts / linked entity names.
         const direct = itemNameLc && (evNames.has(itemNameLc)
           || Array.from(evNames).some((n) => n.includes(itemNameLc) || itemNameLc.includes(n)));
         if (direct) {
@@ -209,7 +197,6 @@ export async function scoreExposures(opts: ScoreExposuresOpts): Promise<ScoreExp
           matchKind = `direct_${item.kind}`;
           path = "direct name match on event impacts";
         } else if (item.entity_id) {
-          // One hop via entity_relationships to any event-linked entity.
           const hops = relMap.get(item.entity_id) ?? [];
           const hit = hops.find((h) => evEntitySet.has(h.other));
           if (hit) {
@@ -244,7 +231,6 @@ export async function scoreExposures(opts: ScoreExposuresOpts): Promise<ScoreExp
 
       const rationale = safeRationale(item.name, ev.title, path);
 
-      // Upsert — keep the HIGHER relevance; refresh rationale/match_kind only when it improves.
       const { data: existing } = await db
         .from("exposure_hits")
         .select("id, relevance")
@@ -254,6 +240,7 @@ export async function scoreExposures(opts: ScoreExposuresOpts): Promise<ScoreExp
 
       if (!existing) {
         const ins = await db.from("exposure_hits").insert({
+          user_id: item.user_id,
           profile_id: item.profile_id,
           exposure_item_id: item.id,
           event_candidate_id: ev.id,
@@ -277,18 +264,20 @@ export async function scoreExposures(opts: ScoreExposuresOpts): Promise<ScoreExp
   return result;
 }
 
-// ============ SERVER FNS FOR UI ============
+// ============ SERVER FNS FOR UI (per-user, RLS-scoped) ============
 
 const ProfileInput = z.object({
   name: z.string().min(1).max(200),
   description: z.string().max(2000).optional().nullable(),
   active: z.boolean().optional(),
 });
-export const createExposureProfile = createServerFn({ method: "POST" }).middleware([requireOwner])
+export const createExposureProfile = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => ProfileInput.parse(d))
-  .handler(async ({ data }) => {
-    const db = await admin();
+  .handler(async ({ data, context }) => {
+    const db = context.supabase;
+    const userId = context.userId;
     const { data: row, error } = await db.from("exposure_profiles").insert({
+      user_id: userId,
       name: data.name.trim(),
       description: data.description ?? null,
       active: data.active ?? true,
@@ -305,11 +294,12 @@ const ItemInput = z.object({
   value_gbp: z.number().nonnegative().nullable().optional(),
   notes: z.string().max(2000).nullable().optional(),
 });
-export const addExposureItem = createServerFn({ method: "POST" }).middleware([requireOwner])
+export const addExposureItem = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => ItemInput.parse(d))
-  .handler(async ({ data }) => {
-    const db = await admin();
-    // Best-effort entity resolution for name-based kinds.
+  .handler(async ({ data, context }) => {
+    const db = context.supabase;
+    const userId = context.userId;
+    // Best-effort entity resolution for name-based kinds (uses user client; entities is readable).
     let entityId: string | null = null;
     if (["company", "supplier", "customer", "competitor"].includes(data.kind)) {
       const nameLc = data.name.trim();
@@ -322,6 +312,7 @@ export const addExposureItem = createServerFn({ method: "POST" }).middleware([re
       entityId = ent?.id ?? null;
     }
     const { data: row, error } = await db.from("exposure_items").insert({
+      user_id: userId,
       profile_id: data.profile_id,
       kind: data.kind,
       name: data.name.trim(),
@@ -331,8 +322,8 @@ export const addExposureItem = createServerFn({ method: "POST" }).middleware([re
       notes: data.notes ?? null,
     }).select().single();
     if (error) throw new Error(error.message);
-    // Backfill: immediately score the newly added item against the most
-    // recent events so the user sees hits without waiting for the next scan.
+    // Backfill scoring across recent events. Runs service-role in the pipeline
+    // and stamps the correct user_id on hits from item.user_id.
     try {
       await scoreExposures({});
     } catch (e) {
@@ -341,10 +332,10 @@ export const addExposureItem = createServerFn({ method: "POST" }).middleware([re
     return row;
   });
 
-export const removeExposureItem = createServerFn({ method: "POST" }).middleware([requireOwner])
+export const removeExposureItem = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
-  .handler(async ({ data }) => {
-    const db = await admin();
+  .handler(async ({ data, context }) => {
+    const db = context.supabase;
     const { error } = await db.from("exposure_items").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
@@ -356,10 +347,10 @@ const UpdateProfileInput = z.object({
   active: z.boolean().optional(),
   description: z.string().max(2000).nullable().optional(),
 });
-export const updateExposureProfile = createServerFn({ method: "POST" }).middleware([requireOwner])
+export const updateExposureProfile = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => UpdateProfileInput.parse(d))
-  .handler(async ({ data }) => {
-    const db = await admin();
+  .handler(async ({ data, context }) => {
+    const db = context.supabase;
     const patch: { name?: string; active?: boolean; description?: string | null } = {};
     if (data.name !== undefined) patch.name = data.name.trim();
     if (data.active !== undefined) patch.active = data.active;
@@ -369,34 +360,35 @@ export const updateExposureProfile = createServerFn({ method: "POST" }).middlewa
     return { ok: true };
   });
 
-export const deleteExposureProfile = createServerFn({ method: "POST" }).middleware([requireOwner])
+export const deleteExposureProfile = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
-  .handler(async ({ data }) => {
-    const db = await admin();
+  .handler(async ({ data, context }) => {
+    const db = context.supabase;
     const { error } = await db.from("exposure_profiles").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
 
-export const listProfilesWithItems = createServerFn({ method: "GET" }).handler(async () => {
-  const db = await admin();
-  const [{ data: profiles }, { data: items }, { data: hits }] = await Promise.all([
-    db.from("exposure_profiles").select("*").order("created_at", { ascending: false }),
-    db.from("exposure_items").select("*"),
-    db.from("exposure_hits").select("exposure_item_id"),
-  ]);
-  const hitCounts = new Map<string, number>();
-  for (const h of hits ?? []) {
-    hitCounts.set(h.exposure_item_id, (hitCounts.get(h.exposure_item_id) ?? 0) + 1);
-  }
-  const grouped = (profiles ?? []).map((p) => ({
-    ...p,
-    items: (items ?? [])
-      .filter((it) => it.profile_id === p.id)
-      .map((it) => ({ ...it, hit_count: hitCounts.get(it.id) ?? 0 })),
-  }));
-  return { profiles: grouped };
-});
+export const listProfilesWithItems = createServerFn({ method: "GET" }).middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const db = context.supabase;
+    const [{ data: profiles }, { data: items }, { data: hits }] = await Promise.all([
+      db.from("exposure_profiles").select("*").order("created_at", { ascending: false }),
+      db.from("exposure_items").select("*"),
+      db.from("exposure_hits").select("exposure_item_id"),
+    ]);
+    const hitCounts = new Map<string, number>();
+    for (const h of hits ?? []) {
+      hitCounts.set(h.exposure_item_id, (hitCounts.get(h.exposure_item_id) ?? 0) + 1);
+    }
+    const grouped = (profiles ?? []).map((p) => ({
+      ...p,
+      items: (items ?? [])
+        .filter((it) => it.profile_id === p.id)
+        .map((it) => ({ ...it, hit_count: hitCounts.get(it.id) ?? 0 })),
+    }));
+    return { profiles: grouped };
+  });
 
 const ListHitsInput = z.object({
   profileId: z.string().uuid().optional(),
@@ -404,10 +396,10 @@ const ListHitsInput = z.object({
   activeOnly: z.boolean().optional(),
   limit: z.number().int().positive().max(200).optional(),
 });
-export const listExposureHits = createServerFn({ method: "GET" })
+export const listExposureHits = createServerFn({ method: "GET" }).middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => ListHitsInput.parse(d ?? {}))
-  .handler(async ({ data }) => {
-    const db = await admin();
+  .handler(async ({ data, context }) => {
+    const db = context.supabase;
     let profileIdFilter: string[] | null = null;
     if (data.activeOnly) {
       const { data: pr } = await db.from("exposure_profiles").select("id").eq("active", true);
@@ -442,10 +434,10 @@ export const listExposureHits = createServerFn({ method: "GET" })
     return { hits: hitsArr, events, items, profiles: profilesOut };
   });
 
-export const listEventExposureHits = createServerFn({ method: "GET" })
+export const listEventExposureHits = createServerFn({ method: "GET" }).middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ eventId: z.string().uuid() }).parse(d))
-  .handler(async ({ data }) => {
-    const db = await admin();
+  .handler(async ({ data, context }) => {
+    const db = context.supabase;
     const { data: hits, error } = await db
       .from("exposure_hits")
       .select("id, profile_id, exposure_item_id, event_candidate_id, relevance, direction, match_kind, rationale, seen, created_at")
@@ -463,12 +455,11 @@ export const listEventExposureHits = createServerFn({ method: "GET" })
     return { hits: hitsArr, items: it.data ?? [], profiles: pr.data ?? [] };
   });
 
-export const markHitSeen = createServerFn({ method: "POST" }).middleware([requireOwner])
+export const markHitSeen = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
-  .handler(async ({ data }) => {
-    const db = await admin();
+  .handler(async ({ data, context }) => {
+    const db = context.supabase;
     const { error } = await db.from("exposure_hits").update({ seen: true }).eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
-
