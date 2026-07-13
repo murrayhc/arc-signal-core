@@ -41,7 +41,7 @@ function TopNav({ onRunScan, scanning }: { onRunScan?: () => void; scanning?: bo
   return (
     <header className="sticky top-0 z-30 border-b border-border/60 bg-background/70 backdrop-blur-xl">
       <div className="flex items-center gap-6 px-5 h-14">
-        <Link to="/" className="flex items-center gap-3 shrink-0">
+        <Link to="/app" className="flex items-center gap-3 shrink-0">
           <div className="relative h-8 w-8 grid place-items-center rounded-md ring-signal"
                style={{ background: "linear-gradient(135deg, var(--accent), var(--panel-2))" }}>
             <Radar className="h-4 w-4" style={{ color: "var(--signal)" }}/>
