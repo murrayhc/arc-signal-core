@@ -3,6 +3,7 @@
 
 import { createServerFn } from "@tanstack/react-start";
 import { requireOwner } from "@/lib/archlight/owner-auth.server";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import { callJson, guardFinancialAdvice } from "./ai-gateway.server";
 
@@ -65,7 +66,7 @@ export async function generateBriefings(opts: GenerateOpts): Promise<GenerateRes
 
   const { data: profiles } = await db
     .from("exposure_profiles")
-    .select("id, name")
+    .select("id, name, user_id")
     .eq("active", true);
   const active = profiles ?? [];
   if (active.length === 0) {
@@ -160,6 +161,7 @@ export async function generateBriefings(opts: GenerateOpts): Promise<GenerateRes
       .from("briefings")
       .upsert({
         profile_id: p.id,
+        user_id: p.user_id,
         briefing_date: date,
         summary,
         stats: JSON.parse(JSON.stringify(stats)),
@@ -310,9 +312,10 @@ const ListInput = z.object({
   profileId: z.string().uuid().optional(),
 });
 export const listBriefings = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => ListInput.parse(d ?? {}))
-  .handler(async ({ data }) => {
-    const db = await admin();
+  .handler(async ({ data, context }) => {
+    const db = context.supabase;
     let q = db.from("briefings")
       .select("id, profile_id, briefing_date, summary, stats, delivered_at, created_at")
       .order("briefing_date", { ascending: false })

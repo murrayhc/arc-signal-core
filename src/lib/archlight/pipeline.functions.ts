@@ -1388,7 +1388,7 @@ function hasUsableSynthesis(payload: InterrogationPayload): boolean {
   return !failedPlaceholder && !fallbackOnly && (text.length > 80 || hasStructuredFindings);
 }
 
-async function loadCachedInterrogation(db: Awaited<ReturnType<typeof admin>>, q: string): Promise<InterrogationPayload | null> {
+async function loadCachedInterrogation(db: Awaited<ReturnType<typeof admin>>, q: string, userId: string): Promise<InterrogationPayload | null> {
   const normalised = normaliseInterrogationQuery(q);
   const ttl = await interrogationCacheMs();
   const threshold = new Date(Date.now() - ttl).toISOString();
@@ -1396,6 +1396,7 @@ async function loadCachedInterrogation(db: Awaited<ReturnType<typeof admin>>, q:
     .from("investigation_queries")
     .select("id, query_text, created_at, metadata")
     .eq("status", "completed")
+    .eq("user_id", userId)
     .gte("created_at", threshold)
     .order("created_at", { ascending: false })
     .limit(80);
@@ -1620,14 +1621,15 @@ function buildQueries(kind: string, canonical: string, adjacent: string[]): stri
   return Array.from(new Set(base)).slice(0, 8);
 }
 
-export const interrogate = createServerFn({ method: "POST" }).middleware([requireOwner])
+export const interrogate = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) => SearchInput.parse(data))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     const db = await admin();
     const q = data.query.trim();
+    const userId = context.userId;
 
     if (!data.forceRefresh) {
-      const cached = await loadCachedInterrogation(db, q);
+      const cached = await loadCachedInterrogation(db, q, userId);
       if (cached) return cached;
     }
 
@@ -1783,6 +1785,7 @@ export const interrogate = createServerFn({ method: "POST" }).middleware([requir
     };
 
     const { data: iqRow } = await db.from("investigation_queries").insert({
+      user_id: userId,
       query_text: q,
       query_class: `interrogation:${subject.kind}`,
       status: "completed",
@@ -2073,8 +2076,8 @@ export const getEvidenceArcDetail = createServerFn({ method: "POST" }).middlewar
   });
 
 // ============ INTERROGATIONS ============
-export const getInterrogations = createServerFn({ method: "GET" }).handler(async () => {
-  const db = await admin();
+export const getInterrogations = createServerFn({ method: "GET" }).middleware([requireSupabaseAuth]).handler(async ({ context }) => {
+  const db = context.supabase;
   const { data } = await db.from("investigation_queries").select("id, query_text, query_class, status, result_count, evidence_ids, brief_synth, metadata, created_at").order("created_at", { ascending: false }).limit(60);
   return { queries: data ?? [] };
 });

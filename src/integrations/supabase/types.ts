@@ -275,6 +275,7 @@ export type Database = {
           profile_id: string
           stats: Json
           summary: string
+          user_id: string
         }
         Insert: {
           briefing_date: string
@@ -284,6 +285,7 @@ export type Database = {
           profile_id: string
           stats?: Json
           summary: string
+          user_id: string
         }
         Update: {
           briefing_date?: string
@@ -293,6 +295,7 @@ export type Database = {
           profile_id?: string
           stats?: Json
           summary?: string
+          user_id?: string
         }
         Relationships: [
           {
@@ -1738,6 +1741,7 @@ export type Database = {
           result_count: number
           status: string
           updated_at: string
+          user_id: string
         }
         Insert: {
           brief_synth?: Json | null
@@ -1752,6 +1756,7 @@ export type Database = {
           result_count?: number
           status?: string
           updated_at?: string
+          user_id: string
         }
         Update: {
           brief_synth?: Json | null
@@ -1766,6 +1771,7 @@ export type Database = {
           result_count?: number
           status?: string
           updated_at?: string
+          user_id?: string
         }
         Relationships: [
           {
