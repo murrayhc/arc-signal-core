@@ -65,7 +65,7 @@ export async function generateBriefings(opts: GenerateOpts): Promise<GenerateRes
 
   const { data: profiles } = await db
     .from("exposure_profiles")
-    .select("id, name")
+    .select("id, name, user_id")
     .eq("active", true);
   const active = profiles ?? [];
   if (active.length === 0) {
