@@ -3,11 +3,13 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Menu, X, ArrowUpRight } from "lucide-react";
 import { useSession } from "@/lib/useSession";
 
-const NAV = [
+type NavItem = { label: string; href: string; route?: boolean };
+
+const NAV: NavItem[] = [
   { label: "How it works", href: "/#how" },
   { label: "Proof", href: "/#proof" },
   { label: "Compare", href: "/#compare" },
-  { label: "Pricing", href: "/pricing" },
+  { label: "Pricing", href: "/pricing", route: true },
 ];
 
 /** Nav overlays a dark hero on `/`, and uses light styling on inner pages. */
@@ -50,15 +52,14 @@ export function MarketingHeader({ overlay = false }: { overlay?: boolean }) {
             </span>
           </Link>
           <nav className="hidden md:flex items-center gap-1 text-sm">
-            {NAV.map((n) => (
-              <a
-                key={n.href}
-                href={n.href}
-                className={`px-3 py-1.5 rounded-md ${textBase} ${textHover} transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40`}
-              >
-                {n.label}
-              </a>
-            ))}
+            {NAV.map((n) => {
+              const cls = `px-3 py-1.5 rounded-md ${textBase} ${textHover} transition focus:outline-none focus-visible:ring-2 ${dark ? "focus-visible:ring-white/40" : "focus-visible:ring-[color:var(--mkt-charcoal)]/40"}`;
+              return n.route ? (
+                <Link key={n.href} to={n.href as any} className={cls}>{n.label}</Link>
+              ) : (
+                <a key={n.href} href={n.href} className={cls}>{n.label}</a>
+              );
+            })}
           </nav>
           <div className="flex-1" />
           <div className="hidden md:flex items-center gap-2">
@@ -104,7 +105,7 @@ export function MarketingHeader({ overlay = false }: { overlay?: boolean }) {
             onClick={() => setOpen((v) => !v)}
             className={`md:hidden h-9 w-9 grid place-items-center rounded-md border ${
               dark ? "border-white/15 text-white" : "border-[color:var(--mkt-line-strong)] text-[color:var(--mkt-fg)]"
-            } focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40`}
+            } focus:outline-none focus-visible:ring-2 ${dark ? "focus-visible:ring-white/40" : "focus-visible:ring-[color:var(--mkt-charcoal)]/40"}`}
           >
             {open ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
           </button>
@@ -117,16 +118,14 @@ export function MarketingHeader({ overlay = false }: { overlay?: boolean }) {
             }`}
           >
             <div className="px-3 py-3 flex flex-col gap-1">
-              {NAV.map((n) => (
-                <a
-                  key={n.href}
-                  href={n.href}
-                  onClick={() => setOpen(false)}
-                  className={`px-3 py-2 rounded-md text-sm ${dark ? "text-white/85 hover:bg-white/10" : "text-[color:var(--mkt-heading)] hover:bg-black/5"}`}
-                >
-                  {n.label}
-                </a>
-              ))}
+              {NAV.map((n) => {
+                const cls = `px-3 py-2 rounded-md text-sm ${dark ? "text-white/85 hover:bg-white/10" : "text-[color:var(--mkt-heading)] hover:bg-black/5"}`;
+                return n.route ? (
+                  <Link key={n.href} to={n.href as any} onClick={() => setOpen(false)} className={cls}>{n.label}</Link>
+                ) : (
+                  <a key={n.href} href={n.href} onClick={() => setOpen(false)} className={cls}>{n.label}</a>
+                );
+              })}
               <div className={`h-px my-2 ${dark ? "bg-white/10" : "bg-[color:var(--mkt-line)]"}`} />
               {user ? (
                 <Link to="/app" onClick={() => setOpen(false)} className="h-10 inline-flex items-center justify-center rounded-md text-sm font-medium bg-[color:var(--mkt-accent)] text-black">
@@ -175,23 +174,23 @@ export function MarketingFooter() {
             { label: "How it works", href: "/#how" },
             { label: "Proof", href: "/#proof" },
             { label: "Compare", href: "/#compare" },
-            { label: "Pricing", href: "/pricing" },
+            { label: "Pricing", to: "/pricing" },
           ]}
         />
         <FooterCol
           title="Account"
           links={[
-            { label: "Create account", href: "/auth?mode=signup" },
-            { label: "Sign in", href: "/auth?mode=signin" },
-            { label: "Open Arklight", href: "/app" },
+            { label: "Create account", to: "/auth", search: { mode: "signup" } },
+            { label: "Sign in", to: "/auth", search: { mode: "signin" } },
+            { label: "Open Arklight", to: "/app" },
           ]}
         />
         <FooterCol
           title="Legal"
           links={[
-            { label: "Terms", href: "/terms" },
-            { label: "Privacy", href: "/privacy" },
-            { label: "Cookies", href: "/cookies" },
+            { label: "Terms", to: "/terms" },
+            { label: "Privacy", to: "/privacy" },
+            { label: "Cookies", to: "/cookies" },
           ]}
         />
       </div>
@@ -205,16 +204,23 @@ export function MarketingFooter() {
   );
 }
 
-function FooterCol({ title, links }: { title: string; links: { label: string; href: string }[] }) {
+type FooterLink =
+  | { label: string; href: string }
+  | { label: string; to: string; search?: Record<string, string> };
+
+function FooterCol({ title, links }: { title: string; links: FooterLink[] }) {
+  const cls = "text-[color:var(--mkt-heading)] hover:text-[color:var(--mkt-fg)] hover:underline underline-offset-4";
   return (
     <div>
       <div className="text-[10px] mkt-mono uppercase tracking-widest text-[color:var(--mkt-muted)]">{title}</div>
       <ul className="mt-3 space-y-2">
         {links.map((l) => (
-          <li key={l.href}>
-            <a href={l.href} className="text-[color:var(--mkt-heading)] hover:text-[color:var(--mkt-fg)] hover:underline underline-offset-4">
-              {l.label}
-            </a>
+          <li key={l.label}>
+            {"to" in l ? (
+              <Link to={l.to as any} search={l.search as any} className={cls}>{l.label}</Link>
+            ) : (
+              <a href={l.href} className={cls}>{l.label}</a>
+            )}
           </li>
         ))}
       </ul>

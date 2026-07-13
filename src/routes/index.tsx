@@ -139,18 +139,18 @@ function HeroVisual() {
 
       {/* Lineage card overlay */}
       <div className="hidden md:block absolute left-4 bottom-4 max-w-[300px] rounded-xl border border-white/10 bg-black/50 backdrop-blur-md p-4">
-        <div className="mkt-mono text-[10px] uppercase tracking-widest text-white/50">Evidence lineage</div>
+        <div className="mkt-mono text-[10px] uppercase tracking-widest text-white/50">Evidence lineage · illustrative example</div>
         <ol className="mt-3 space-y-2 text-xs text-white/80">
           <li className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-white/60" /> Companies House · charge filed</li>
           <li className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-white/60" /> Contracts Finder · notice cancelled</li>
-          <li className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full" style={{ background: "var(--mkt-accent)" }} /> Cluster confidence · 0.72</li>
+          <li className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full" style={{ background: "var(--mkt-accent)" }} /> Cluster confidence · sample 0.72</li>
         </ol>
       </div>
 
       <div className="hidden md:block absolute right-4 bottom-4 max-w-[280px] rounded-xl border border-white/10 bg-black/50 backdrop-blur-md p-4">
-        <div className="mkt-mono text-[10px] uppercase tracking-widest text-white/50">Frozen call</div>
+        <div className="mkt-mono text-[10px] uppercase tracking-widest text-white/50">Frozen call · illustrative example</div>
         <div className="mt-3 text-sm text-white/90">Supplier consolidation likely in <span className="text-[color:var(--mkt-accent)]">14–21 days</span></div>
-        <div className="mt-1 mkt-mono text-[10px] text-white/50">P = 0.68 · graded on outcome</div>
+        <div className="mt-1 mkt-mono text-[10px] text-white/50">Sample P = 0.68 · graded on outcome</div>
       </div>
     </div>
   );
@@ -164,7 +164,7 @@ function Hero() {
         <div className="relative px-6 md:px-12 pt-28 md:pt-36 pb-14 md:pb-20">
           <div className="max-w-6xl mx-auto">
             <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 pl-1 pr-3 py-1 text-[11px] mkt-mono uppercase tracking-widest text-white/80">
-              <span className="rounded-full bg-[color:var(--mkt-accent)] text-black px-2 py-0.5 text-[10px] font-semibold">Live</span>
+              <span className="rounded-full bg-[color:var(--mkt-accent)] text-black px-2 py-0.5 text-[10px] font-semibold">Signal scan</span>
               Public-signals early warning
             </div>
             <div className="mt-6 grid lg:grid-cols-[1.15fr_0.85fr] gap-8 lg:gap-14 items-start">
@@ -281,9 +281,9 @@ function BentoOne() {
   return (
     <section id="how" className="mx-auto max-w-7xl px-6 py-16 md:py-24 scroll-mt-24">
       <SectionHeader
-        eyebrow="How Arklight works"
+        eyebrow="How Arklight works · Illustrative interface"
         title={<>From raw public signal to a call you can grade later.</>}
-        sub="Five stages, run continuously. Every step keeps its receipts."
+        sub="Five stages, run continuously. Every step keeps its receipts. Values shown below are illustrative examples, not measured Arklight results."
       />
 
       <div className="mt-12 grid grid-cols-1 md:grid-cols-6 gap-3">
@@ -347,7 +347,7 @@ function BentoOne() {
 
         {/* Project */}
         <BentoTile dark className="md:col-span-3 min-h-[240px]">
-          <TileHead dark label="04 · Project" title="Dated, testable scenarios" icon={Target} />
+          <TileHead dark label="04 · Project · Illustrative example" title="Dated, testable scenarios" icon={Target} />
           <div className="mt-4 space-y-2">
             {[
               { h: "7d", p: 0.42, t: "Notice re-issued with tighter scope" },
@@ -503,10 +503,10 @@ function BentoTwo() {
       <div className="mt-10 grid md:grid-cols-3 gap-3">
         <BentoTile className="md:row-span-2 min-h-[380px] flex flex-col justify-between">
           <div>
-            <TileHead label="Source diversity" title="Weighted by primary vs echo" icon={Radar} />
+            <TileHead label="Source diversity · Illustrative example" title="Weighted by primary vs echo" icon={Radar} />
             <p className="mt-3 text-sm text-[color:var(--mkt-muted)]">
               Primary filings carry more weight than downstream pickups. Group-owned repetition
-              is discounted or flagged.
+              is discounted or flagged. Weights below are sample values.
             </p>
           </div>
           <div className="mt-6 space-y-2 text-xs">
