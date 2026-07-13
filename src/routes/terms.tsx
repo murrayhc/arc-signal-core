@@ -7,13 +7,13 @@ export function LegalShell({
 }: { eyebrow: string; title: string; updated: string; children: ReactNode }) {
   return (
     <MarketingLayout>
-      <article className="mx-auto max-w-3xl px-6 py-16 md:py-24">
-        <div className="text-[10px] font-mono uppercase tracking-[0.28em] text-muted-foreground">{eyebrow}</div>
-        <h1 className="mt-4 font-display text-4xl md:text-5xl tracking-tight">{title}</h1>
-        <div className="mt-4 inline-flex items-center gap-2 rounded border border-border bg-card px-3 py-1.5 text-[11px] font-mono uppercase tracking-widest text-muted-foreground">
+      <article className="mx-auto max-w-3xl px-6 py-20 md:py-28">
+        <div className="mkt-mono text-[11px] uppercase tracking-[0.28em] text-[color:var(--mkt-muted)]">{eyebrow}</div>
+        <h1 className="mkt-display mt-4 text-4xl md:text-5xl font-medium text-[color:var(--mkt-heading)]">{title}</h1>
+        <div className="mt-4 inline-flex items-center gap-2 rounded border border-[color:var(--mkt-line)] bg-[color:var(--mkt-panel)] px-3 py-1.5 text-[11px] mkt-mono uppercase tracking-widest text-[color:var(--mkt-muted)]">
           Draft for legal review · Updated {updated}
         </div>
-        <div className="prose prose-neutral dark:prose-invert mt-10 max-w-none text-[15px] leading-relaxed">
+        <div className="mt-10 max-w-none text-[15px] leading-relaxed text-[color:var(--mkt-heading)] [&_h2]:mkt-display [&_h2]:text-xl [&_h2]:mt-10 [&_h2]:text-[color:var(--mkt-heading)] [&_p]:mt-3 [&_p]:text-[color:var(--mkt-muted)] [&_ul]:mt-3 [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:text-[color:var(--mkt-muted)] [&_a]:underline">
           {children}
         </div>
       </article>

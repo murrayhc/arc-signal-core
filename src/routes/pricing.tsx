@@ -1,104 +1,102 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { MarketingLayout } from "@/components/marketing/MarketingLayout";
-import { FAQ } from "./index";
-import { Check, Minus } from "lucide-react";
+import { FAQ, PricingCard } from "./index";
+import { Check } from "lucide-react";
 
 export const Route = createFileRoute("/pricing")({
   head: () => ({
     meta: [
       { title: "Pricing · Project Arklight" },
-      {
-        name: "description",
-        content:
-          "Start free. Upgrade to Pro when the receipts speak for themselves. 7-day free trial. Pro price to be announced.",
-      },
+      { name: "description", content: "Free is currently £0. Pro price to be announced, with a 7-day trial. Public signals only. Not financial advice." },
       { property: "og:title", content: "Pricing · Project Arklight" },
-      {
-        property: "og:description",
-        content: "Free forever, or Pro with 7-day trial. Public signals only. Not financial advice.",
-      },
+      { property: "og:description", content: "Free is £0 today. Pro price to be announced. Public signals only." },
     ],
   }),
   component: PricingPage,
 });
 
+const PLANS = {
+  free: [
+    "Public-signal graph",
+    "Starter book — up to 10 watched items",
+    "Research interrogations — 5 / 30 days",
+    "Weekly in-app digest",
+    "Frozen track record",
+  ],
+  pro: [
+    "Everything in Free",
+    "Slack & email alerts and briefings",
+    "Unlimited book — no cap on watched items",
+    "Unlimited research interrogations",
+    "Advanced analytics & Narrative Divergence",
+    "Priority scan cadence",
+    "Track record CSV exports",
+    "Named support contact",
+  ],
+};
+
 function PricingPage() {
   return (
     <MarketingLayout>
-      <section className="mx-auto max-w-7xl px-6 pt-16 pb-8 md:pt-24">
-        <div className="text-[10px] font-mono uppercase tracking-[0.28em] text-muted-foreground">Pricing</div>
-        <h1 className="mt-4 font-display text-4xl md:text-6xl tracking-tight max-w-[20ch]">
+      <section className="mx-auto max-w-7xl px-6 pt-20 md:pt-28 pb-6">
+        <div className="mkt-mono text-[11px] uppercase tracking-[0.28em] text-[color:var(--mkt-muted)]">Pricing</div>
+        <h1 className="mkt-display mt-4 text-4xl md:text-6xl font-medium text-[color:var(--mkt-heading)] text-balance max-w-[22ch]">
           Free while you decide. Pro when you're ready.
         </h1>
-        <p className="mt-5 max-w-2xl text-muted-foreground">
-          The Free tier is currently £0 — explore the graph, run scoped research, and
-          watch calls get graded. Pro adds delivery, unlimited research, and advanced
-          analytics. No card is required until you upgrade.
+        <p className="mt-5 max-w-2xl text-[color:var(--mkt-muted)]">
+          The Free tier is currently £0 — explore the graph, run scoped research
+          and watch calls get graded. Pro adds delivery, unlimited research and
+          advanced analytics. No card required until you upgrade.
         </p>
       </section>
 
       <section className="mx-auto max-w-7xl px-6 pb-16">
-        <div className="grid md:grid-cols-2 gap-4">
-          <Plan
+        <div className="grid md:grid-cols-2 gap-3">
+          <PricingCard
             name="Free"
             price="£0"
             trailing="currently"
-            rows={[
-              ["Public-signal graph", true],
-              ["Starter book — up to 10 watched items", true],
-              ["Research interrogations — 5 / month", true],
-              ["Weekly digest (in-app)", true],
-              ["Frozen track record", true],
-              ["Slack & email delivery", false],
-              ["Unlimited book & research", false],
-              ["Advanced analytics & Narrative Divergence", false],
-            ]}
+            bullets={PLANS.free}
             cta={{ label: "Start free", href: "/auth?mode=signup", primary: true }}
           />
-          <Plan
+          <PricingCard
             highlight
             name="Pro"
             price="Price to be announced"
             trailing="7-day free trial · cancel anytime"
-            rows={[
-              ["Everything in Free", true],
-              ["Slack & email alerts and briefings", true],
-              ["Unlimited book — no cap on watched items", true],
-              ["Unlimited research interrogations", true],
-              ["Advanced analytics & Narrative Divergence", true],
-              ["Priority scan cadence", true],
-              ["Track record exports (CSV)", true],
-              ["Named support contact", true],
-            ]}
+            bullets={PLANS.pro}
             cta={{ label: "Create an account", href: "/auth?mode=signup", primary: false }}
-            footnote="Pricing will be published before any charge is possible. Creating an account today does not commit you to Pro."
           />
         </div>
+        <p className="mt-4 text-xs text-[color:var(--mkt-muted)] max-w-2xl">
+          Pricing will be published before any charge is possible. Creating an account today does not commit you to Pro.
+        </p>
       </section>
 
-      <section className="mx-auto max-w-7xl px-6 py-16 border-t border-border">
+      <section className="mx-auto max-w-7xl px-6 py-16 border-t border-[color:var(--mkt-line)]">
         <div className="grid md:grid-cols-2 gap-14">
           <div>
-            <div className="text-[10px] font-mono uppercase tracking-[0.28em] text-muted-foreground">
-              7-day free trial
-            </div>
-            <h2 className="mt-3 font-display text-2xl md:text-3xl tracking-tight max-w-[20ch]">
-              How the trial works.
-            </h2>
-            <ul className="mt-5 space-y-3 text-sm text-foreground">
-              <li>· You start on Free at £0 — no payment, no trial timer.</li>
-              <li>· When Pro pricing is published, you can start a 7-day trial from Settings → Billing.</li>
-              <li>· If you don't upgrade, you stay on the current Free tier with everything you already have.</li>
-              <li>· You can cancel at any time during or after the trial.</li>
+            <div className="mkt-mono text-[11px] uppercase tracking-[0.28em] text-[color:var(--mkt-muted)]">7-day free trial</div>
+            <h2 className="mkt-display mt-3 text-2xl md:text-3xl font-medium text-[color:var(--mkt-heading)] max-w-[22ch]">How the trial works.</h2>
+            <ul className="mt-6 space-y-3 text-sm text-[color:var(--mkt-heading)]">
+              {[
+                "You start on Free at £0 — no payment, no trial timer.",
+                "When Pro pricing is published, you can start a 7-day trial from Settings → Billing.",
+                "If you don't upgrade, you stay on the current Free tier with everything you already have.",
+                "You can cancel at any time during or after the trial.",
+              ].map((l) => (
+                <li key={l} className="flex gap-3">
+                  <Check className="h-4 w-4 mt-0.5 shrink-0" style={{ color: "var(--mkt-ok)" }} />
+                  <span>{l}</span>
+                </li>
+              ))}
             </ul>
           </div>
           <div>
-            <div className="text-[10px] font-mono uppercase tracking-[0.28em] text-muted-foreground">Honesty</div>
-            <h2 className="mt-3 font-display text-2xl md:text-3xl tracking-tight max-w-[24ch]">
-              What we won't claim.
-            </h2>
-            <ul className="mt-5 space-y-3 text-sm text-muted-foreground">
-              <li>· No hit rates or Brier scores until they are measured on live user calls.</li>
+            <div className="mkt-mono text-[11px] uppercase tracking-[0.28em] text-[color:var(--mkt-muted)]">Honesty</div>
+            <h2 className="mkt-display mt-3 text-2xl md:text-3xl font-medium text-[color:var(--mkt-heading)] max-w-[26ch]">What we won't claim.</h2>
+            <ul className="mt-6 space-y-3 text-sm text-[color:var(--mkt-muted)]">
+              <li>· No aggregate hit-rates until measured on live user calls.</li>
               <li>· No customer counts, testimonials, ratings or logo bars.</li>
               <li>· No compliance or audit badges we haven't earned.</li>
               <li>· No target prices, buy or sell language. GBP only.</li>
@@ -107,9 +105,9 @@ function PricingPage() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-6 py-16 border-t border-border">
-        <div className="text-[10px] font-mono uppercase tracking-[0.28em] text-muted-foreground">FAQ</div>
-        <h2 className="mt-3 font-display text-2xl md:text-3xl tracking-tight">Pricing questions.</h2>
+      <section className="mx-auto max-w-7xl px-6 py-16 border-t border-[color:var(--mkt-line)]">
+        <div className="mkt-mono text-[11px] uppercase tracking-[0.28em] text-[color:var(--mkt-muted)]">FAQ</div>
+        <h2 className="mkt-display mt-3 text-2xl md:text-3xl font-medium text-[color:var(--mkt-heading)]">Pricing questions.</h2>
         <div className="mt-8 max-w-3xl">
           <FAQ
             items={[
@@ -122,61 +120,11 @@ function PricingPage() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-6 py-16 border-t border-border">
-        <div className="rounded-md border border-border bg-card p-6 md:p-8 text-sm text-muted-foreground">
+      <section className="mx-auto max-w-7xl px-6 py-14 border-t border-[color:var(--mkt-line)]">
+        <div className="rounded-2xl border border-[color:var(--mkt-line)] bg-[color:var(--mkt-panel)] p-6 md:p-8 text-sm text-[color:var(--mkt-muted)]">
           Public signals only · Not financial advice · No buy · No sell · No target price · GBP
         </div>
       </section>
     </MarketingLayout>
-  );
-}
-
-function Plan({
-  name, price, trailing, rows, cta, highlight, footnote,
-}: {
-  name: string;
-  price: string;
-  trailing?: string;
-  rows: [string, boolean][];
-  cta: { label: string; href: string; primary: boolean };
-  highlight?: boolean;
-  footnote?: string;
-}) {
-  return (
-    <div className={`rounded-md border ${highlight ? "border-foreground" : "border-border"} bg-card p-6 md:p-8`}>
-      <div className="flex items-baseline justify-between">
-        <div className="font-display text-xl tracking-tight text-foreground">{name}</div>
-        {highlight && (
-          <span className="text-[10px] font-mono uppercase tracking-widest text-foreground">Recommended</span>
-        )}
-      </div>
-      <div className="mt-4 flex items-baseline gap-2 flex-wrap">
-        <div className="font-display text-3xl md:text-4xl tracking-tight text-foreground">{price}</div>
-        {trailing && <div className="text-xs text-muted-foreground">{trailing}</div>}
-      </div>
-      <ul className="mt-6 space-y-2 text-sm">
-        {rows.map(([label, included]) => (
-          <li key={label} className="flex items-start gap-3">
-            {included ? (
-              <Check className="h-4 w-4 mt-0.5 text-foreground shrink-0" />
-            ) : (
-              <Minus className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
-            )}
-            <span className={included ? "text-foreground" : "text-muted-foreground line-through/none"}>{label}</span>
-          </li>
-        ))}
-      </ul>
-      <a
-        href={cta.href}
-        className={`mt-7 h-10 inline-flex items-center justify-center px-4 rounded-md text-sm font-medium w-full transition ${
-          cta.primary
-            ? "bg-foreground text-background hover:opacity-90"
-            : "border border-border text-foreground hover:bg-accent/60"
-        }`}
-      >
-        {cta.label}
-      </a>
-      {footnote && <div className="mt-3 text-[11px] text-muted-foreground">{footnote}</div>}
-    </div>
   );
 }
