@@ -31,7 +31,6 @@ const PLANS = {
     "Advanced analytics & Narrative Divergence",
     "Priority scan cadence",
     "Track record CSV exports",
-    "Named support contact",
   ],
 };
 
