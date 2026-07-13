@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as WatchlistRouteImport } from './routes/watchlist'
 import { Route as TrackRecordRouteImport } from './routes/track-record'
+import { Route as TermsRouteImport } from './routes/terms'
 import { Route as SourcesRouteImport } from './routes/sources'
 import { Route as ScansRouteImport } from './routes/scans'
 import { Route as ReviewRouteImport } from './routes/review'
@@ -52,6 +53,11 @@ const WatchlistRoute = WatchlistRouteImport.update({
 const TrackRecordRoute = TrackRecordRouteImport.update({
   id: '/track-record',
   path: '/track-record',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SourcesRoute = SourcesRouteImport.update({
@@ -234,6 +240,7 @@ export interface FileRoutesByFullPath {
   '/review': typeof ReviewRoute
   '/scans': typeof ScansRoute
   '/sources': typeof SourcesRouteWithChildren
+  '/terms': typeof TermsRoute
   '/track-record': typeof TrackRecordRoute
   '/watchlist': typeof WatchlistRoute
   '/admin/routing': typeof AdminRoutingRoute
@@ -269,6 +276,7 @@ export interface FileRoutesByTo {
   '/review': typeof ReviewRoute
   '/scans': typeof ScansRoute
   '/sources': typeof SourcesRouteWithChildren
+  '/terms': typeof TermsRoute
   '/track-record': typeof TrackRecordRoute
   '/watchlist': typeof WatchlistRoute
   '/admin/routing': typeof AdminRoutingRoute
@@ -306,6 +314,7 @@ export interface FileRoutesById {
   '/review': typeof ReviewRoute
   '/scans': typeof ScansRoute
   '/sources': typeof SourcesRouteWithChildren
+  '/terms': typeof TermsRoute
   '/track-record': typeof TrackRecordRoute
   '/watchlist': typeof WatchlistRoute
   '/admin/routing': typeof AdminRoutingRoute
@@ -344,6 +353,7 @@ export interface FileRouteTypes {
     | '/review'
     | '/scans'
     | '/sources'
+    | '/terms'
     | '/track-record'
     | '/watchlist'
     | '/admin/routing'
@@ -379,6 +389,7 @@ export interface FileRouteTypes {
     | '/review'
     | '/scans'
     | '/sources'
+    | '/terms'
     | '/track-record'
     | '/watchlist'
     | '/admin/routing'
@@ -415,6 +426,7 @@ export interface FileRouteTypes {
     | '/review'
     | '/scans'
     | '/sources'
+    | '/terms'
     | '/track-record'
     | '/watchlist'
     | '/admin/routing'
@@ -452,6 +464,7 @@ export interface RootRouteChildren {
   ReviewRoute: typeof ReviewRoute
   ScansRoute: typeof ScansRoute
   SourcesRoute: typeof SourcesRouteWithChildren
+  TermsRoute: typeof TermsRoute
   TrackRecordRoute: typeof TrackRecordRoute
   WatchlistRoute: typeof WatchlistRoute
   AdminRoutingRoute: typeof AdminRoutingRoute
@@ -479,6 +492,13 @@ declare module '@tanstack/react-router' {
       path: '/track-record'
       fullPath: '/track-record'
       preLoaderRoute: typeof TrackRecordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/sources': {
@@ -774,6 +794,7 @@ const rootRouteChildren: RootRouteChildren = {
   ReviewRoute: ReviewRoute,
   ScansRoute: ScansRoute,
   SourcesRoute: SourcesRouteWithChildren,
+  TermsRoute: TermsRoute,
   TrackRecordRoute: TrackRecordRoute,
   WatchlistRoute: WatchlistRoute,
   AdminRoutingRoute: AdminRoutingRoute,
