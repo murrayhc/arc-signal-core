@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 
 const stars = [
   { cx: 1, cy: 12, r: 1 },
@@ -177,7 +177,7 @@ function Stars() {
           style={{
             "--mkt-star-duration": `${2 + seeded(i) * 3}s`,
             "--mkt-star-delay": `${1.2 + seeded(i + 100) * 2.5}s`,
-          } as React.CSSProperties}
+          } as CSSProperties}
         />
       ))}
     </svg>
