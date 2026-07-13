@@ -1,8 +1,9 @@
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Bell, Building2, ChevronDown, Command, Compass, Crosshair, Database, Download, Eye, FlaskConical, Flame, Gauge, GitBranch, Layers, Moon, Play, Radar, Search, Settings, Shield, Sparkles, Sun, Target } from "lucide-react";
+import { Bell, Building2, ChevronDown, Command, Compass, Crosshair, Database, Download, Eye, FlaskConical, Flame, Gauge, GitBranch, HelpCircle, Layers, Moon, Play, Radar, Search, Settings, Shield, Sparkles, Sun, Target } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { getDashboard } from "@/lib/archlight/pipeline.functions";
+import { GuidedTour, startGuidedTour } from "@/components/archlight/GuidedTour";
 
 export function AppShell({ children, onRunScan, scanning }: { children: ReactNode; onRunScan?: () => void; scanning?: boolean }) {
   return (
@@ -12,6 +13,7 @@ export function AppShell({ children, onRunScan, scanning }: { children: ReactNod
         <SideNav />
         <main className="flex-1 min-w-0 p-5 flex flex-col gap-5">{children}</main>
       </div>
+      <GuidedTour />
     </div>
   );
 }
@@ -43,6 +45,14 @@ function TopNav({ onRunScan, scanning }: { onRunScan?: () => void; scanning?: bo
             <Download className="h-3.5 w-3.5"/>Export CSV
           </a>
           <div className="mx-1 h-6 w-px bg-border"/>
+          <button
+            onClick={() => startGuidedTour()}
+            aria-label="Start guided tour"
+            title="Guide"
+            className="h-8 w-8 rounded-md border border-border/60 grid place-items-center text-muted-foreground hover:text-foreground hover:bg-accent/40 transition"
+          >
+            <HelpCircle className="h-4 w-4"/>
+          </button>
           <AlertsBell />
           <ThemeToggle />
           <div className="flex items-center gap-1.5 px-2 py-1 rounded-md border border-border/60 text-[10px] font-mono">
@@ -218,6 +228,7 @@ function SideNav() {
                 <>
                   <button
                     onClick={toggleEngine}
+                    data-tour-id="engine"
                     className="w-full flex items-center justify-between px-2.5 h-8 rounded-md text-[10px] font-mono uppercase tracking-widest text-muted-foreground hover:text-foreground hover:bg-accent/40 transition"
                   >
                     <span>{group.label}</span>
@@ -255,6 +266,7 @@ function SideNav() {
                       <li key={to}>
                         <Link
                           to={to}
+                          data-tour-to={to}
                           className="flex items-center gap-2.5 px-2.5 h-8 rounded-md text-xs transition text-muted-foreground hover:text-foreground hover:bg-accent/40"
                           activeProps={{ className: "flex items-center gap-2.5 px-2.5 h-8 rounded-md text-xs bg-accent/60 text-foreground border border-border/60" }}
                           activeOptions={{ exact: to === "/" }}
