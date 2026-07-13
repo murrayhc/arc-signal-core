@@ -128,26 +128,65 @@ export function GuidedTour() {
       }
     : undefined;
 
+  const tooltipStyle: React.CSSProperties = rect
+    ? {
+        position: "fixed",
+        top: Math.max(12, Math.min(window.innerHeight - 200, rect.top - 8)),
+        left: Math.min(window.innerWidth - 340, rect.right + 12),
+        width: 320,
+        zIndex: 100,
+        transition: reduced ? "none" : "top 220ms ease-out, left 220ms ease-out, opacity 180ms ease-out, transform 180ms ease-out",
+        opacity: entering ? 0 : 1,
+        transform: entering ? "translateY(6px) scale(0.98)" : "translateY(0) scale(1)",
+      }
+    : {
+        position: "fixed",
+        top: 80,
+        left: 240,
+        width: 320,
+        zIndex: 100,
+        transition: reduced ? "none" : "opacity 180ms ease-out, transform 180ms ease-out",
+        opacity: entering ? 0 : 1,
+        transform: entering ? "translateY(6px) scale(0.98)" : "translateY(0) scale(1)",
+      };
+
+  const arrowStyle: React.CSSProperties = {
+    position: "absolute",
+    top: 18,
+    left: -6,
+    width: 12,
+    height: 12,
+    background: "var(--primary)",
+    transform: "rotate(45deg)",
+    borderRadius: 2,
+  };
+
   return (
     <>
       {highlightStyle && <div style={highlightStyle} aria-hidden="true" />}
-      <div style={tooltipStyle} className="glass-panel rounded-lg p-4 border border-[color:var(--color-signal)]/50 shadow-lg" role="dialog" aria-label={`Tour step ${step + 1}: ${s.title}`}>
+      <div
+        style={tooltipStyle}
+        className="rounded-lg p-4 shadow-lg bg-[var(--primary)] text-white"
+        role="dialog"
+        aria-label={`Tour step ${step + 1}: ${s.title}`}
+      >
+        <div style={arrowStyle} aria-hidden="true" />
         <div className="flex items-center justify-between mb-2">
-          <span className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">{step + 1} / {STEPS.length}</span>
-          <span className="text-[10px] font-mono uppercase tracking-widest text-[color:var(--color-signal)]">Guide</span>
+          <span className="text-[10px] font-mono uppercase tracking-widest text-white/80">{step + 1} / {STEPS.length}</span>
+          <span className="text-[10px] font-mono uppercase tracking-widest text-white/90">Guide</span>
         </div>
-        <div className="font-display text-sm mb-1">{s.title}</div>
-        <p className="text-xs text-muted-foreground leading-relaxed mb-3">{s.body}</p>
+        <div className="font-display text-sm mb-1 text-white">{s.title}</div>
+        <p className="text-xs leading-relaxed mb-3 text-white/85">{s.body}</p>
         <div className="flex items-center justify-between gap-2">
           <button
             onClick={end}
-            className="h-8 px-3 rounded-md text-xs border border-border/60 text-muted-foreground hover:text-foreground hover:bg-accent/40 transition"
+            className="h-8 px-3 rounded-md text-xs border border-white/40 text-white hover:bg-white/10 transition"
           >
             Skip
           </button>
           <button
-            onClick={() => (isLast ? end() : setStep((n) => n + 1))}
-            className="h-8 px-3 rounded-md text-xs border border-[color:var(--color-signal)]/60 text-[color:var(--color-signal)] hover:bg-[color:var(--color-signal)]/10 transition"
+            onClick={() => (isLast ? end() : goToStep(step + 1))}
+            className="h-8 px-3 rounded-md text-xs bg-white text-[var(--primary)] hover:bg-white/90 transition shadow-sm"
           >
             {isLast ? "Done" : "Next"}
           </button>
