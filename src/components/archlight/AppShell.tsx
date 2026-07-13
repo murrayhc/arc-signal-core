@@ -189,7 +189,7 @@ function TopLink({ to, label }: { to: string; label: string }) {
       to={to}
       className="px-3 py-1.5 rounded-md transition-colors text-muted-foreground hover:text-foreground hover:bg-accent/40"
       activeProps={{ className: "px-3 py-1.5 rounded-md bg-accent/60 text-foreground" }}
-      activeOptions={{ exact: to === "/" }}
+      activeOptions={{ exact: to === "/app" }}
     >
       {label}
     </Link>
@@ -324,7 +324,7 @@ function SideNav() {
                             to={to}
                             className="flex items-center gap-2.5 px-2.5 h-8 rounded-md text-xs transition text-muted-foreground hover:text-foreground hover:bg-accent/40"
                             activeProps={{ className: "flex items-center gap-2.5 px-2.5 h-8 rounded-md text-xs bg-accent/60 text-foreground border border-border/60" }}
-                            activeOptions={{ exact: to === "/" }}
+                            activeOptions={{ exact: to === "/app" }}
                           >
                             <Icon className="h-3.5 w-3.5"/>{label}
                           </Link>
@@ -349,7 +349,7 @@ function SideNav() {
                             data-tour-to={to}
                             className="flex items-center gap-2.5 px-2.5 h-8 rounded-md text-xs transition text-muted-foreground hover:text-foreground hover:bg-accent/40"
                             activeProps={{ className: "flex items-center gap-2.5 px-2.5 h-8 rounded-md text-xs bg-accent/60 text-foreground border border-border/60" }}
-                            activeOptions={{ exact: to === "/" }}
+                            activeOptions={{ exact: to === "/app" }}
                           >
                             <Icon className="h-3.5 w-3.5"/><span className="flex-1 truncate">{label}</span>
                             {badge && (
