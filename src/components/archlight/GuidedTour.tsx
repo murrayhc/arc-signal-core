@@ -35,6 +35,7 @@ export function GuidedTour() {
 
   const start = useCallback(() => {
     setStep(0);
+    setEntering(true);
     setActive(true);
   }, []);
 
@@ -42,6 +43,13 @@ export function GuidedTour() {
     setActive(false);
     try { localStorage.setItem(DONE_KEY, "1"); } catch {}
   }, []);
+
+  const goToStep = useCallback((next: number) => {
+    if (next === step) return;
+    prevStep.current = step;
+    setStep(next);
+    setEntering(true);
+  }, [step]);
 
   // Auto-start on first visit (desktop only)
   useEffect(() => {
