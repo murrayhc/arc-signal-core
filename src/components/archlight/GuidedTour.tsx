@@ -252,21 +252,21 @@ export function GuidedTour() {
       {highlightStyle && <div style={highlightStyle} aria-hidden="true" />}
       <div
         style={tooltipStyle}
-        className="rounded-lg p-4 shadow-lg bg-[var(--primary)] text-white"
+        className="rounded-lg p-4 shadow-lg bg-[var(--primary)] text-primary-foreground"
         role="dialog"
         aria-label={`Tour step ${step + 1}: ${s.title}`}
       >
         <div style={arrowStyle} aria-hidden="true" />
         <div className="flex items-center justify-between mb-2">
-          <span className="text-[10px] font-mono uppercase tracking-widest text-white/80">{step + 1} / {STEPS.length}</span>
-          <span className="text-[10px] font-mono uppercase tracking-widest text-white/90">Guide</span>
+          <span className="text-[10px] font-mono uppercase tracking-widest text-primary-foreground/80">{step + 1} / {STEPS.length}</span>
+          <span className="text-[10px] font-mono uppercase tracking-widest text-primary-foreground/90">Guide</span>
         </div>
-        <div className="font-display text-sm mb-1 text-white">{s.title}</div>
-        <p className="text-xs leading-relaxed mb-3 text-white/85">{s.body}</p>
+        <div className="font-display text-sm mb-1 text-primary-foreground">{s.title}</div>
+        <p className="text-xs leading-relaxed mb-3 text-primary-foreground/85">{s.body}</p>
         <div className="flex items-center justify-between gap-2">
           <button
             onClick={end}
-            className="h-8 px-3 rounded-md text-xs border border-white/40 text-white hover:bg-white/10 transition"
+            className="h-8 px-3 rounded-md text-xs border border-primary-foreground/40 text-primary-foreground hover:bg-primary-foreground/10 transition"
           >
             Skip
           </button>
