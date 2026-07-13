@@ -31,8 +31,9 @@ function PricingPage() {
           Free while you decide. Pro when you're ready.
         </h1>
         <p className="mt-5 max-w-2xl text-muted-foreground">
-          Arklight is free forever for individuals to explore the graph and grade forecasts.
-          Pro adds delivery, unlimited research, and advanced analytics. No card required until you upgrade.
+          The Free tier is currently £0 — explore the graph, run scoped research, and
+          watch calls get graded. Pro adds delivery, unlimited research, and advanced
+          analytics. No card is required until you upgrade.
         </p>
       </section>
 
@@ -41,7 +42,7 @@ function PricingPage() {
           <Plan
             name="Free"
             price="£0"
-            trailing="forever"
+            trailing="currently"
             rows={[
               ["Public-signal graph", true],
               ["Starter book — up to 10 watched items", true],
@@ -85,9 +86,9 @@ function PricingPage() {
               How the trial works.
             </h2>
             <ul className="mt-5 space-y-3 text-sm text-foreground">
-              <li>· You start on Free — no payment, no trial timer.</li>
+              <li>· You start on Free at £0 — no payment, no trial timer.</li>
               <li>· When Pro pricing is published, you can start a 7-day trial from Settings → Billing.</li>
-              <li>· If you don't upgrade, you stay on Free with everything you already have.</li>
+              <li>· If you don't upgrade, you stay on the current Free tier with everything you already have.</li>
               <li>· You can cancel at any time during or after the trial.</li>
             </ul>
           </div>
@@ -113,9 +114,9 @@ function PricingPage() {
           <FAQ
             items={[
               { q: "How much will Pro cost?", a: "The Pro price is not yet published. We will announce it before enabling checkout. Until then, no card is required, and creating an account does not commit you to any charge." },
-              { q: "Can I cancel at any time?", a: "Yes. Free is free forever. Pro is a monthly subscription with a 7-day free trial and can be cancelled at any time from Settings → Billing." },
-              { q: "Do you offer team pricing?", a: "Team pricing will be introduced alongside Pro. If you have a specific team need in the meantime, contact us and we will work with you." },
-              { q: "What happens to my data if I downgrade?", a: "Your book, research history and frozen calls remain in your account. Free-tier caps apply again — anything beyond the caps becomes read-only rather than deleted." },
+              { q: "Can I cancel at any time?", a: "Yes. The Free tier is currently £0. Pro is a monthly subscription with a 7-day free trial and can be cancelled at any time from Settings → Billing." },
+              { q: "Do you offer team pricing?", a: "Team pricing has not been announced. If you have a specific team need in the meantime, contact us and we will work with you." },
+              { q: "What happens to my data if I change plan?", a: "Your book, research history and frozen calls stay in your account. Plan changes are handled in account settings, and you will be shown the effect of a change before you confirm it." },
             ]}
           />
         </div>
