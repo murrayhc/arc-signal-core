@@ -2362,6 +2362,45 @@ export type Database = {
         }
         Relationships: []
       }
+      source_lean: {
+        Row: {
+          created_at: string
+          domain: string
+          id: string
+          lean: string
+          lean_label: string
+          lean_source: string
+          notes: string | null
+          outlet_name: string
+          reviewed: boolean
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          domain: string
+          id?: string
+          lean: string
+          lean_label: string
+          lean_source?: string
+          notes?: string | null
+          outlet_name: string
+          reviewed?: boolean
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          domain?: string
+          id?: string
+          lean?: string
+          lean_label?: string
+          lean_source?: string
+          notes?: string | null
+          outlet_name?: string
+          reviewed?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
       source_reliability_history: {
         Row: {
           accuracy_score: number
