@@ -179,7 +179,7 @@ function SourceStrip() {
       <div className="text-center">
         <Eyebrow>Reads only from the public record</Eyebrow>
         <p className="mt-3 text-[color:var(--mkt-muted)] text-sm">
-          Categories of primary source Arklight ingests. Category names are descriptive — no endorsement is claimed.
+          Categories of primary source Arklight ingests. The names are descriptive, and no endorsement is claimed.
         </p>
       </div>
       <div className="mt-10 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
