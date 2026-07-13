@@ -45,6 +45,14 @@ function TopNav({ onRunScan, scanning }: { onRunScan?: () => void; scanning?: bo
             <Download className="h-3.5 w-3.5"/>Export CSV
           </a>
           <div className="mx-1 h-6 w-px bg-border"/>
+          <button
+            onClick={() => startGuidedTour()}
+            aria-label="Start guided tour"
+            title="Guide"
+            className="h-8 w-8 rounded-md border border-border/60 grid place-items-center text-muted-foreground hover:text-foreground hover:bg-accent/40 transition"
+          >
+            <HelpCircle className="h-4 w-4"/>
+          </button>
           <AlertsBell />
           <ThemeToggle />
           <div className="flex items-center gap-1.5 px-2 py-1 rounded-md border border-border/60 text-[10px] font-mono">
