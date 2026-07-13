@@ -496,7 +496,7 @@ function BentoTwo() {
 
         <BentoTile className="min-h-[180px]">
           <TileHead label="Narrative divergence" title="When claims disagree, we say so" icon={GitBranch} />
-          <p className="mt-3 text-xs text-[color:var(--mkt-muted)]">Disagreements between sources are surfaced, not smoothed into consensus.</p>
+          <p className="mt-3 text-xs text-[color:var(--mkt-muted)]">When sources disagree, Arklight shows you the disagreement instead of folding it into a consensus.</p>
         </BentoTile>
 
         <BentoTile dark className="min-h-[180px]">
@@ -505,7 +505,7 @@ function BentoTwo() {
         </BentoTile>
 
         <BentoTile dark className="min-h-[180px]">
-          <TileHead dark label="Scan cadence" title="Minutes, not weeks" icon={Radar} />
+          <TileHead dark label="Scan cadence" title="Updated in minutes." icon={Radar} />
           <p className="mt-3 text-xs text-white/60">Priority sources on Pro run at tighter cadence with faster delivery.</p>
         </BentoTile>
 
