@@ -272,7 +272,7 @@ export function GuidedTour() {
           </button>
           <button
             onClick={() => (isLast ? end() : goToStep(step + 1))}
-            className="h-8 px-3 rounded-md text-xs bg-white text-[var(--primary)] hover:bg-white/90 transition shadow-sm"
+            className="h-8 px-3 rounded-md text-xs bg-primary-foreground text-primary hover:bg-primary-foreground/90 transition shadow-sm"
           >
             {isLast ? "Done" : "Next"}
           </button>
