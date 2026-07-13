@@ -2076,8 +2076,8 @@ export const getEvidenceArcDetail = createServerFn({ method: "POST" }).middlewar
   });
 
 // ============ INTERROGATIONS ============
-export const getInterrogations = createServerFn({ method: "GET" }).handler(async () => {
-  const db = await admin();
+export const getInterrogations = createServerFn({ method: "GET" }).middleware([requireSupabaseAuth]).handler(async ({ context }) => {
+  const db = context.supabase;
   const { data } = await db.from("investigation_queries").select("id, query_text, query_class, status, result_count, evidence_ids, brief_synth, metadata, created_at").order("created_at", { ascending: false }).limit(60);
   return { queries: data ?? [] };
 });
