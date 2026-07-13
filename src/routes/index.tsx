@@ -101,11 +101,11 @@ function Dashboard() {
       <section>
         <SectionLabel>Deeper on your entities</SectionLabel>
         <div className="grid grid-cols-12 gap-5 items-start">
-          <div className="col-span-12 xl:col-span-6">
+          <div className="col-span-12 xl:col-span-6 max-h-[360px] overflow-y-auto slim-scroll rounded-xl">
             <RisingStressRail />
           </div>
-          <div className="col-span-12 xl:col-span-6">
-            <ActiveOpportunities items={data.opportunities.slice(0, 4)} highlightTitle={null} />
+          <div className="col-span-12 xl:col-span-6 max-h-[360px] overflow-y-auto slim-scroll rounded-xl">
+            <ActiveOpportunities items={data.opportunities} highlightTitle={null} />
           </div>
         </div>
       </section>
