@@ -241,6 +241,8 @@ export type AnalyseDivergenceResult =
       distinct_lean_zones: number;
       baseline: string;
       framings: Framing[];
+      divergence_score: number | null;
+      divergence_label: string | null;
     };
 
 function stripIfUnsafe(text: string): string {
