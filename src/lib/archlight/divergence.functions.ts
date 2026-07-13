@@ -447,6 +447,16 @@ export const analyseNarrativeDivergence = createServerFn({ method: "POST" })
     const n_with_lean = outletInputs.filter((o) => o.lean).length;
     const distinct_lean_zones = new Set(outletInputs.map((o) => o.lean).filter((x): x is string => !!x)).size;
 
+    const rawScore = Number(ai.data.divergence_score);
+    const divergence_score: number | null = Number.isFinite(rawScore)
+      ? Math.max(0, Math.min(100, Math.round(rawScore)))
+      : null;
+    const divergence_label: string | null = divergence_score === null
+      ? null
+      : divergence_score <= 33 ? "Aligned"
+      : divergence_score <= 66 ? "Mixed"
+      : "Sharply divergent";
+
     await db.from("narrative_divergence").upsert({
       event_candidate_id: eventId,
       baseline,
@@ -454,11 +464,13 @@ export const analyseNarrativeDivergence = createServerFn({ method: "POST" })
       n_outlets,
       n_with_lean,
       distinct_lean_zones,
+      divergence_score,
+      divergence_label,
       model: pickModel("narrative_framing"),
       computed_at: new Date().toISOString(),
     }, { onConflict: "event_candidate_id" });
 
-    return { skipped: false, eventId, n_outlets, n_with_lean, distinct_lean_zones, baseline, framings };
+    return { skipped: false, eventId, n_outlets, n_with_lean, distinct_lean_zones, baseline, framings, divergence_score, divergence_label };
   });
 
 const autoInput = z.object({ limit: z.number().int().min(1).max(20).optional() });
