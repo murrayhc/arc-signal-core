@@ -81,30 +81,29 @@ function GhostCtaLight({ children, href }: { children: ReactNode; href: string }
 
 function Hero() {
   return (
-    <section className="px-2 md:px-3 pt-2 md:pt-3">
-      <div className="mkt-hero-shell relative overflow-hidden rounded-3xl min-h-[85vh] md:min-h-[92vh]">
-        {/* Full-hero animated backdrop (globe arc + stars + light shaft) */}
+    <section className="h-[720px] w-full p-2 md:h-screen">
+      <div className="mkt-hero-shell relative m-0 h-full w-full overflow-hidden rounded-3xl bg-black">
         <HeroBackdrop />
 
-        <div className="relative z-10 flex h-full min-h-[85vh] md:min-h-[92vh] flex-col justify-between px-6 md:px-12 pt-28 md:pt-36 pb-14 md:pb-20">
-          <div className="max-w-6xl mx-auto w-full">
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 pl-1 pr-3 py-1 text-[11px] mkt-mono uppercase tracking-widest text-white/80">
+        <div className="relative z-10 mx-auto flex h-full w-full max-w-[1440px] flex-col justify-between px-6 sm:px-8 lg:px-10">
+          <div className="pt-32 md:pt-[10.5rem] lg:pt-[18.75rem]">
+            <div className="flex w-fit rounded-full bg-neutral-900 p-1 shadow-lg shadow-black">
+              <div className="flex items-center gap-1 sm:gap-2 text-white">
               <span className="rounded-full bg-[color:var(--mkt-accent)] text-black px-2 py-0.5 text-[10px] font-semibold">Signal scan</span>
-              Public-signals early warning
-            </div>
-            <div className="mt-6 grid lg:grid-cols-[1.15fr_0.85fr] gap-8 lg:gap-14 items-start">
-              <div>
-                <h1 className="mkt-display text-white text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-medium leading-[1.02] tracking-tight text-balance">
-                  See it forming <span className="text-white/70">before it becomes</span> the news.
-                </h1>
+                <span className="rounded-full pr-2 text-[10px] sm:text-xs text-white/80">Public-signals early warning</span>
               </div>
-              <div className="lg:pt-2">
-                <p className="text-white/70 text-base md:text-lg max-w-md">
+            </div>
+            <div className="mt-6 flex flex-col items-start gap-6 md:mt-10 lg:flex-row lg:gap-10">
+              <h1 className="mkt-display text-white text-3xl font-semibold leading-[1.02] text-balance sm:text-4xl md:text-5xl lg:text-7xl lg:max-w-[780px]">
+                  See it forming <span className="text-white/70">before it becomes</span> the news.
+              </h1>
+              <div className="lg:max-w-md lg:pt-1">
+                <p className="text-sm font-medium text-balance text-neutral-300 sm:text-base lg:text-lg">
                   Arklight reads the open public record, traces every claim to its
                   origin, maps who it reaches, and turns early signals into dated,
                   testable scenarios.
                 </p>
-                <div className="mt-7 flex flex-wrap items-center gap-3">
+                <div className="mt-6 md:mt-8 flex flex-wrap items-center gap-3">
                   <PrimaryCta to="/auth" search={{ mode: "signup" }}>Start free</PrimaryCta>
                   <GhostCtaLight href="#how">See how it works</GhostCtaLight>
                 </div>
@@ -115,33 +114,10 @@ function Hero() {
             </div>
           </div>
 
-          {/* Overlay lineage cards sitting on the globe arc */}
-          <div className="relative max-w-6xl mx-auto w-full mt-16 md:mt-24">
-            <div className="hidden md:flex justify-between gap-4 items-end">
-              <div className="max-w-[300px] rounded-xl border border-white/10 bg-black/50 backdrop-blur-md p-4">
-                <div className="mkt-mono text-[10px] uppercase tracking-widest text-white/50">Evidence lineage · illustrative example</div>
-                <ol className="mt-3 space-y-2 text-xs text-white/80">
-                  <li className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-white/60" /> Companies House · charge filed</li>
-                  <li className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-white/60" /> Contracts Finder · notice cancelled</li>
-                  <li className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full" style={{ background: "var(--mkt-accent)" }} /> Cluster confidence · sample 0.72</li>
-                </ol>
-              </div>
-              <div className="max-w-[280px] rounded-xl border border-white/10 bg-black/50 backdrop-blur-md p-4">
-                <div className="mkt-mono text-[10px] uppercase tracking-widest text-white/50">Frozen call · illustrative example</div>
-                <div className="mt-3 text-sm text-white/90">Supplier consolidation likely in <span className="text-[color:var(--mkt-accent)]">14–21 days</span></div>
-                <div className="mt-1 mkt-mono text-[10px] text-white/50">Sample P = 0.68 · graded on outcome</div>
-              </div>
-            </div>
-          </div>
-
-          {/* faint wordmark */}
-          <div aria-hidden className="pointer-events-none absolute inset-x-0 -bottom-6 md:-bottom-10 flex justify-center z-0">
-            <span
-              className="mkt-display text-[22vw] leading-none font-semibold tracking-tight bg-clip-text text-transparent"
-              style={{ backgroundImage: "linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0))" }}
-            >
+          <div className="relative h-[4.5rem] sm:h-48 md:h-72" aria-hidden>
+            <p className="mkt-display absolute -top-10 left-1/2 -translate-x-1/2 bg-gradient-to-r from-white/10 to-white/0 bg-clip-text text-center text-[100px] font-semibold leading-none text-transparent sm:text-[6rem] md:-top-6 md:mt-10 md:text-[160px] lg:-top-[4.5rem] lg:text-[300px]">
               Arklight
-            </span>
+            </p>
           </div>
         </div>
       </div>
