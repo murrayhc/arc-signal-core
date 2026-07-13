@@ -368,7 +368,7 @@ const SCENARIOS = [
   {
     tag: "Regulatory tension",
     title: "A quiet consultation, then a rules change",
-    body: "Arklight ties a low-noise consultation opening to a related enforcement action from six weeks earlier — projecting a rule tightening window with a dated confidence band.",
+    body: "Arklight ties a low-noise consultation opening to a related enforcement action from six weeks earlier, then projects a rule-tightening window with a dated confidence band.",
   },
   {
     tag: "Supply-chain disruption",
