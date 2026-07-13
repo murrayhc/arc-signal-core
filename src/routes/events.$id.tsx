@@ -15,9 +15,9 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/events/$id")({
   head: () => ({
     meta: [
-      { title: "Archlight · Event interrogation report" },
+      { title: "Project Arklight · Event interrogation report" },
       { name: "description", content: "Traceable event report: evidence IDs, claim confidence, source lineage, contradictions, impacts, opportunity logic and hedged positioning." },
-      { property: "og:title", content: "Archlight · Event interrogation report" },
+      { property: "og:title", content: "Project Arklight · Event interrogation report" },
       { property: "og:description", content: "From source to claim to consequence — with lineage, confidence and contradiction notes." },
     ],
   }),
@@ -514,7 +514,7 @@ function EventDetailPage() {
             )}
 
             <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
-              Archlight surfaces public signals · no buy · no sell · no target price ·{" "}
+              Arklight surfaces public signals · no buy · no sell · no target price ·{" "}
               <Link to="/interrogate" className="underline">interrogate related</Link>
             </div>
           </>

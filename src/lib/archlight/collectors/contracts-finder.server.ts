@@ -4,7 +4,7 @@
 // what it already has (or []) and never throws.
 
 const USER_AGENT =
-  "Mozilla/5.0 (compatible; ArchlightBot/1.0; +https://arc-signal-core.lovable.app)";
+  "Mozilla/5.0 (compatible; ArklightBot/1.0; +https://arc-signal-core.lovable.app)";
 
 const BASE = "https://www.contractsfinder.service.gov.uk/Published/Notices/OCDS/Search";
 

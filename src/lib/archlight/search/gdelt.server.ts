@@ -55,7 +55,7 @@ export async function gdeltSearch(
   try {
     const res = await fetch(url, {
       signal: controller.signal,
-      headers: { "User-Agent": "ArchlightBot/0.1 (+public-signals)" },
+      headers: { "User-Agent": "ArklightBot/0.1 (+public-signals)" },
     });
     if (!res.ok) return [];
     const text = await res.text();

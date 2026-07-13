@@ -49,7 +49,7 @@ function TopNav({ onRunScan, scanning }: { onRunScan?: () => void; scanning?: bo
           <div className="leading-tight flex items-center gap-2">
             <span aria-hidden className="inline-block h-1.5 w-1.5 rounded-full" style={{ background: "var(--color-spark)" }}/>
             <div>
-              <div className="font-display text-[15px] tracking-wide text-glow-signal">ARCHLIGHT</div>
+              <div className="font-display text-[15px] text-glow-signal">Project Arklight</div>
               <div className="text-[9px] font-mono uppercase tracking-[0.22em] text-muted-foreground">Live Intelligence Engine</div>
             </div>
           </div>

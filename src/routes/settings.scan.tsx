@@ -13,8 +13,8 @@ import { DEFAULT_SCAN_SETTINGS, countKnobsOffDefault, type ScanSettings } from "
 export const Route = createFileRoute("/settings/scan")({
   head: () => ({
     meta: [
-      { title: "Scan Settings · Archlight" },
-      { name: "description", content: "Tune Archlight scan behaviour — source count, clustering, quality floors and cache duration." },
+      { title: "Scan Settings · Project Arklight" },
+      { name: "description", content: "Tune Arklight scan behaviour — source count, clustering, quality floors and cache duration." },
       { name: "robots", content: "noindex" },
     ],
   }),

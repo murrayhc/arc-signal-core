@@ -16,10 +16,10 @@ type DeepReport = InterrogationResult["report"];
 export const Route = createFileRoute("/interrogate")({
   head: () => ({
     meta: [
-      { title: "Archlight · Interrogate a subject in depth" },
+      { title: "Project Arklight · Interrogate a subject in depth" },
       { name: "description", content: "Deep public-signal interrogation: live news, financial context, leadership moves, impacted entities, second-order effects, and multi-horizon scenarios grounded in cited sources." },
-      { property: "og:title", content: "Archlight · Interrogate" },
-      { property: "og:description", content: "Ask Archlight about any company, country, commodity, sector, or theme." },
+      { property: "og:title", content: "Project Arklight · Interrogate" },
+      { property: "og:description", content: "Ask Arklight about any company, country, commodity, sector, or theme." },
     ],
   }),
   validateSearch: (s: Record<string, unknown>): SearchParams => ({
@@ -58,7 +58,7 @@ function InterrogatePage() {
           <div className="text-[10px] font-mono uppercase tracking-[0.25em] text-muted-foreground">Explore · Research</div>
           <h1 className="font-display text-2xl md:text-3xl mt-1">Research a subject</h1>
           <p className="text-sm text-muted-foreground mt-1 max-w-3xl">
-            Ask about any company, country, commodity, sector, ticker, person or theme. Archlight pulls live public sources, traces them, and writes a cited brief — it won't invent facts it can't source.
+            Ask about any company, country, commodity, sector, ticker, person or theme. Arklight pulls live public sources, traces them, and writes a cited brief — it won't invent facts it can't source.
           </p>
           <div className="mt-3 inline-flex items-center p-1 rounded-full border border-border/50 bg-muted/40">
             <Link to="/interrogate" className="px-3 py-1.5 text-xs rounded-full bg-primary text-primary-foreground shadow-sm">Research</Link>
@@ -299,7 +299,7 @@ function DeepReportView({ result, query, onRefresh }: { result: InterrogationRes
           )}
           {chartQ.data && !chartQ.data.primary && (
             <div className="glass-panel rounded-xl p-8 text-sm text-muted-foreground text-center">
-              No listed ticker resolved for this subject. Market chart is only available when the subject maps to a publicly listed entity in the Archlight universe.
+              No listed ticker resolved for this subject. Market chart is only available when the subject maps to a publicly listed entity in the Arklight universe.
             </div>
           )}
           {r.financial_and_market && (
@@ -330,7 +330,7 @@ function DeepReportView({ result, query, onRefresh }: { result: InterrogationRes
             <EmptyPanel text="No key developments synthesised."/>
           )}
           {result.events.length > 0 && (
-            <Panel icon={<Radar className="h-4 w-4"/>} title={`Local Archlight events (${result.events.length})`}>
+            <Panel icon={<Radar className="h-4 w-4"/>} title={`Local Arklight events (${result.events.length})`}>
               <ul className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 {result.events.map((e) => (
                   <li key={coerce(e.id)} className="rounded border border-border/50 bg-background/30 p-2.5 min-w-0">

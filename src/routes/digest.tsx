@@ -8,9 +8,9 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/digest")({
   head: () => ({
     meta: [
-      { title: "Archlight · Weekly precognition digest" },
+      { title: "Project Arklight · Weekly precognition digest" },
       { name: "description", content: "Seven-day precognition digest: ranked risks, ranked opportunities, forward scenarios across four horizons, and why-it-matters for decision-makers." },
-      { property: "og:title", content: "Archlight · Precognition digest" },
+      { property: "og:title", content: "Project Arklight · Precognition digest" },
       { property: "og:description", content: "Ranked risks, opportunities and forward scenarios for the past seven days — hedged, evidence-grounded, no financial advice." },
     ],
   }),
@@ -43,7 +43,7 @@ function DigestPage() {
           <div>
             <div className="text-[10px] font-mono uppercase tracking-[0.25em] text-muted-foreground">Explore · Digest</div>
             <h1 className="font-display text-2xl md:text-3xl mt-1">This week's signal</h1>
-            <p className="text-sm text-muted-foreground mt-1 max-w-2xl">A 7-day rollup across everything Archlight watches — the biggest risks, openings and scenarios. Market-wide, not just your book.</p>
+            <p className="text-sm text-muted-foreground mt-1 max-w-2xl">A 7-day rollup across everything Arklight watches — the biggest risks, openings and scenarios. Market-wide, not just your book.</p>
           </div>
           <button onClick={() => gen.mutate()} disabled={gen.isPending} className="h-9 px-4 rounded-md text-xs border border-[color:var(--color-signal)]/60 text-[color:var(--color-signal)] hover:bg-[color:var(--color-signal)]/10 disabled:opacity-50">
             {gen.isPending ? <span className="flex items-center gap-1.5"><Loader2 className="h-3.5 w-3.5 animate-spin"/>Generating…</span> : "Regenerate"}
@@ -165,7 +165,7 @@ function DigestPage() {
         )}
 
         <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
-          Archlight surfaces public signals · no buy · no sell · no target price
+          Arklight surfaces public signals · no buy · no sell · no target price
         </div>
       </div>
     </AppShell>

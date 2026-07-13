@@ -13,8 +13,8 @@ import {
 export const Route = createFileRoute("/settings/billing")({
   head: () => ({
     meta: [
-      { title: "Archlight · Billing" },
-      { name: "description", content: "Manage your Archlight plan — upgrade to Pro or manage your subscription." },
+      { title: "Project Arklight · Billing" },
+      { name: "description", content: "Manage your Arklight plan — upgrade to Pro or manage your subscription." },
     ],
   }),
   component: BillingPage,
@@ -106,7 +106,7 @@ function BillingPage() {
           <section className="rounded-lg border border-border/60 bg-background/40 p-5 flex flex-col gap-3">
             <div className="flex items-center gap-2">
               <Sparkles className="h-4 w-4" style={{ color: "var(--color-signal)" }} />
-              <h2 className="font-display text-lg">Archlight Pro</h2>
+              <h2 className="font-display text-lg">Arklight Pro</h2>
             </div>
             <div className="text-sm text-muted-foreground">
               Status: <span className="text-foreground font-mono">{sub?.status}</span>

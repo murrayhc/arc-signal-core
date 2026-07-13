@@ -1,4 +1,4 @@
-// Backtest harness — prove Archlight's lead-time against known outcomes.
+// Backtest harness — prove Arklight's lead-time against known outcomes.
 // Ground truth: The Gazette corporate-insolvency notices already ingested as
 // documents. Distress signals: Companies House filing history / charges /
 // officers before the outcome date.
@@ -129,7 +129,7 @@ async function fetchWithTimeout(url: string, ms: number): Promise<Response> {
     return await fetch(url, {
       signal: ctrl.signal,
       headers: {
-        "User-Agent": "ArchlightBacktest/1.0 (+https://arc-signal-core.lovable.app)",
+        "User-Agent": "ArklightBacktest/1.0 (+https://arc-signal-core.lovable.app)",
         Accept: "application/atom+xml, application/xml;q=0.9, */*;q=0.8",
       },
     });

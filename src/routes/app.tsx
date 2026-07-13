@@ -14,10 +14,10 @@ import { Activity, ArrowDown, ArrowUp, Bell, Crosshair, Minus, Receipt, Settings
 export const Route = createFileRoute("/app")({
   head: () => ({
     meta: [
-      { title: "Archlight · Your book" },
-      { name: "description", content: "Archlight watches public information, maps consequence, and surfaces strategic openings before they become obvious." },
-      { property: "og:title", content: "Archlight · Your book" },
-      { property: "og:description", content: "Archlight watches public information, maps consequence, and surfaces strategic openings before they become obvious." },
+      { title: "Project Arklight · Your book" },
+      { name: "description", content: "Arklight watches public information, maps consequence, and surfaces strategic openings before they become obvious." },
+      { property: "og:title", content: "Project Arklight · Your book" },
+      { property: "og:description", content: "Arklight watches public information, maps consequence, and surfaces strategic openings before they become obvious." },
     ],
   }),
   loader: ({ context }) => {
@@ -83,7 +83,7 @@ function Dashboard() {
           <DoNextCard
             icon={<Receipt className="h-4 w-4" style={{ color: "var(--color-signal)" }} />}
             title="Check the receipts"
-            line="See how calibrated Archlight's calls have been."
+            line="See how calibrated Arklight's calls have been."
             to="/track-record"
             action="Open track record →"
           />
@@ -130,7 +130,7 @@ function Dashboard() {
       </section>
 
       <footer className="pt-2 pb-4 flex items-center justify-between text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
-        <span>Archlight · Live Intelligence Engine</span>
+        <span>Arklight · Live Intelligence Engine</span>
         <span>Public signals only · No buy · No sell · No target price</span>
       </footer>
     </AppShell>
@@ -245,7 +245,7 @@ function YourExposuresRail() {
           {hits.length === 0 ? (
             <div className="text-center py-6">
               <p className="text-sm text-muted-foreground">
-                No exposure profiles yet — tell Archlight what you hold and it will watch it for you.
+                No exposure profiles yet — tell Arklight what you hold and it will watch it for you.
               </p>
               <Link
                 to="/exposures"

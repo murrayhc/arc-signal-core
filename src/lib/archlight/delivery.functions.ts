@@ -176,8 +176,8 @@ export const sendTestMessage = createServerFn({ method: "POST" }).middleware([re
     if (error || !row) throw new Error(error?.message ?? "Channel not found");
     const ch = row as ChannelRow;
     const body = ch.kind === "slack"
-      ? { text: "Archlight delivery test — this channel is wired up and receiving exposure hits." }
-      : { type: "delivery_test", message: "Archlight delivery test", at: new Date().toISOString() };
+      ? { text: "Arklight delivery test — this channel is wired up and receiving exposure hits." }
+      : { type: "delivery_test", message: "Arklight delivery test", at: new Date().toISOString() };
     try {
       const safeUrl = assertPublicHttpUrl(ch.url);
       const res = await fetch(safeUrl, {

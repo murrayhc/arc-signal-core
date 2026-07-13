@@ -279,7 +279,7 @@ export function IntelligenceBrain({
           </span>
           <div className="min-w-0">
             <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Central surface</div>
-            <div className="font-display text-base text-glow-signal truncate">Archlight Intelligence Brain</div>
+            <div className="font-display text-base text-glow-signal truncate">Arklight Intelligence Brain</div>
           </div>
         </div>
         <div className="hidden lg:flex items-center gap-4 text-[11px] font-mono shrink-0">

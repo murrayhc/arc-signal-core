@@ -13,7 +13,7 @@ export const Route = createFileRoute("/auth")({
   validateSearch: authSearchSchema,
   head: () => ({
     meta: [
-      { title: "Sign in · Arklight" },
+      { title: "Sign in · Project Arklight" },
       { name: "description", content: "Sign in or create a Project Arklight account." },
     ],
   }),

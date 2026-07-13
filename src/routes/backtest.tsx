@@ -45,9 +45,9 @@ const calibrationQuery = queryOptions({
 export const Route = createFileRoute("/backtest")({
   head: () => ({
     meta: [
-      { title: "Archlight · Backtest against known failures" },
+      { title: "Project Arklight · Backtest against known failures" },
       { name: "description", content: "Prove the lead time: match Companies House distress signals against The Gazette insolvency notices and count how many days earlier the warning showed up." },
-      { property: "og:title", content: "Archlight · Backtest against known failures" },
+      { property: "og:title", content: "Project Arklight · Backtest against known failures" },
       { property: "og:description", content: "Signals vs. outcomes. Real filings only. No spin." },
     ],
   }),
@@ -319,7 +319,7 @@ function BacktestPage() {
         )}
 
         <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
-          Archlight surfaces public signals · no buy · no sell · no target price
+          Arklight surfaces public signals · no buy · no sell · no target price
         </div>
       </div>
     </AppShell>

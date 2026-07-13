@@ -7,10 +7,10 @@ import { Loader2, Search } from "lucide-react";
 export const Route = createFileRoute("/interrogations")({
   head: () => ({
     meta: [
-      { title: "Archlight · Past interrogations" },
-      { name: "description", content: "Every interrogation run against Archlight, with the synthesised present-context brief and the evidence IDs it was grounded in." },
-      { property: "og:title", content: "Archlight · Interrogations" },
-      { property: "og:description", content: "History of intelligence queries against Archlight." },
+      { title: "Project Arklight · Past interrogations" },
+      { name: "description", content: "Every interrogation run against Arklight, with the synthesised present-context brief and the evidence IDs it was grounded in." },
+      { property: "og:title", content: "Project Arklight · Interrogations" },
+      { property: "og:description", content: "History of intelligence queries against Arklight." },
     ],
   }),
   component: InterrogationsPage,

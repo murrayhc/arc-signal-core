@@ -7,9 +7,9 @@ import { GitBranch, Loader2 } from "lucide-react";
 export const Route = createFileRoute("/arcs")({
   head: () => ({
     meta: [
-      { title: "Archlight · Evidence arcs" },
+      { title: "Project Arklight · Evidence arcs" },
       { name: "description", content: "Persisted source → claim → event → impact story lines with true-potential, momentum, contradiction and source-diversity scores." },
-      { property: "og:title", content: "Archlight · Evidence arcs" },
+      { property: "og:title", content: "Project Arklight · Evidence arcs" },
       { property: "og:description", content: "Traceable story lines across public signals." },
     ],
   }),

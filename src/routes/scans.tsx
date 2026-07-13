@@ -14,9 +14,9 @@ const scanHistoryQuery = queryOptions({
 export const Route = createFileRoute("/scans")({
   head: () => ({
     meta: [
-      { title: "Archlight · Scan runs and model audit log" },
-      { name: "description", content: "Every scan run and every LLM task Archlight has executed, with latency, cost, validation status, and errors." },
-      { property: "og:title", content: "Archlight · Scans" },
+      { title: "Project Arklight · Scan runs and model audit log" },
+      { name: "description", content: "Every scan run and every LLM task Arklight has executed, with latency, cost, validation status, and errors." },
+      { property: "og:title", content: "Project Arklight · Scans" },
       { property: "og:description", content: "Full auditability: scan runs, model calls, latency, cost, and validation outcomes." },
     ],
   }),

@@ -7,9 +7,9 @@ import { Loader2, Sparkles } from "lucide-react";
 export const Route = createFileRoute("/opportunities/")({
   head: () => ({
     meta: [
-      { title: "Archlight · Opportunities from public signals" },
-      { name: "description", content: "Traceable opportunity cards Archlight has synthesised from public event candidates: buyer pain, likely buyers, suggested offer, urgency and commercial value." },
-      { property: "og:title", content: "Archlight · Opportunities" },
+      { title: "Project Arklight · Opportunities from public signals" },
+      { name: "description", content: "Traceable opportunity cards Arklight has synthesised from public event candidates: buyer pain, likely buyers, suggested offer, urgency and commercial value." },
+      { property: "og:title", content: "Project Arklight · Opportunities" },
       { property: "og:description", content: "Hedged commercial angles grounded in public signals." },
     ],
   }),
