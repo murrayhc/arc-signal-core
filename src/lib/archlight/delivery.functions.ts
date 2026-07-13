@@ -70,6 +70,7 @@ const HttpUrl = z.string().url().transform((u, ctx) => {
 
 type ChannelRow = {
   id: string;
+  user_id: string;
   kind: "slack" | "webhook";
   url: string;
   label: string | null;
