@@ -682,6 +682,7 @@ export type Database = {
           profile_id: string | null
           updated_at: string
           url: string
+          user_id: string
         }
         Insert: {
           active?: boolean
@@ -693,6 +694,7 @@ export type Database = {
           profile_id?: string | null
           updated_at?: string
           url: string
+          user_id: string
         }
         Update: {
           active?: boolean
@@ -704,6 +706,7 @@ export type Database = {
           profile_id?: string | null
           updated_at?: string
           url?: string
+          user_id?: string
         }
         Relationships: [
           {
