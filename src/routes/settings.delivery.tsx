@@ -15,7 +15,7 @@ import { listProfilesWithItems } from "@/lib/archlight/exposure.functions";
 export const Route = createFileRoute("/settings/delivery")({
   head: () => ({
     meta: [
-      { title: "Arklight · Delivery channels" },
+      { title: "Project Arklight · Delivery channels" },
       { name: "description", content: "Push exposure hits to Slack or a generic webhook — real-time delivery for what matters to you." },
     ],
   }),

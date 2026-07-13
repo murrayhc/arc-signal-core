@@ -16,9 +16,9 @@ type DeepReport = InterrogationResult["report"];
 export const Route = createFileRoute("/interrogate")({
   head: () => ({
     meta: [
-      { title: "Arklight · Interrogate a subject in depth" },
+      { title: "Project Arklight · Interrogate a subject in depth" },
       { name: "description", content: "Deep public-signal interrogation: live news, financial context, leadership moves, impacted entities, second-order effects, and multi-horizon scenarios grounded in cited sources." },
-      { property: "og:title", content: "Arklight · Interrogate" },
+      { property: "og:title", content: "Project Arklight · Interrogate" },
       { property: "og:description", content: "Ask Arklight about any company, country, commodity, sector, or theme." },
     ],
   }),

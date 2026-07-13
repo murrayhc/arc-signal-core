@@ -20,9 +20,9 @@ const suggestionsQuery = queryOptions({
 export const Route = createFileRoute("/sources")({
   head: () => ({
     meta: [
-      { title: "Arklight · Source registry" },
+      { title: "Project Arklight · Source registry" },
       { name: "description", content: "Every source Arklight watches, its reliability, cadence, health, and last outcome. Public-information sources only." },
-      { property: "og:title", content: "Arklight · Source registry" },
+      { property: "og:title", content: "Project Arklight · Source registry" },
       { property: "og:description", content: "Reliability, cadence, and health for every source in the intelligence pipeline." },
     ],
   }),

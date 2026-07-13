@@ -7,9 +7,9 @@ import { Building2, Loader2 } from "lucide-react";
 export const Route = createFileRoute("/companies")({
   head: () => ({
     meta: [
-      { title: "Arklight · Companies mentioned in public signals" },
+      { title: "Project Arklight · Companies mentioned in public signals" },
       { name: "description", content: "Every company Arklight has traced through public event candidates — beneficiaries, harmed parties, and mixed exposures — with average risk, opportunity and confidence scores." },
-      { property: "og:title", content: "Arklight · Companies" },
+      { property: "og:title", content: "Project Arklight · Companies" },
       { property: "og:description", content: "Traceable company exposure across public signals." },
     ],
   }),

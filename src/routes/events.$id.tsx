@@ -15,9 +15,9 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/events/$id")({
   head: () => ({
     meta: [
-      { title: "Arklight · Event interrogation report" },
+      { title: "Project Arklight · Event interrogation report" },
       { name: "description", content: "Traceable event report: evidence IDs, claim confidence, source lineage, contradictions, impacts, opportunity logic and hedged positioning." },
-      { property: "og:title", content: "Arklight · Event interrogation report" },
+      { property: "og:title", content: "Project Arklight · Event interrogation report" },
       { property: "og:description", content: "From source to claim to consequence — with lineage, confidence and contradiction notes." },
     ],
   }),

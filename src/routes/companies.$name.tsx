@@ -12,9 +12,9 @@ import { AddToBookButton } from "@/components/archlight/AddToBookButton";
 export const Route = createFileRoute("/companies/$name")({
   head: ({ params }) => ({
     meta: [
-      { title: `Arklight · ${decodeURIComponent(params.name)}` },
+      { title: `Project Arklight · ${decodeURIComponent(params.name)}` },
       { name: "description", content: `Precognition profile for ${decodeURIComponent(params.name)}: net risk vs opportunity, event exposure, propagation network, forward scenarios across four horizons.` },
-      { property: "og:title", content: `Arklight · ${decodeURIComponent(params.name)}` },
+      { property: "og:title", content: `Project Arklight · ${decodeURIComponent(params.name)}` },
       { property: "og:description", content: "Public-signal exposure, peer network, and forward scenarios." },
     ],
   }),

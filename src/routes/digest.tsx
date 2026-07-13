@@ -8,9 +8,9 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/digest")({
   head: () => ({
     meta: [
-      { title: "Arklight · Weekly precognition digest" },
+      { title: "Project Arklight · Weekly precognition digest" },
       { name: "description", content: "Seven-day precognition digest: ranked risks, ranked opportunities, forward scenarios across four horizons, and why-it-matters for decision-makers." },
-      { property: "og:title", content: "Arklight · Precognition digest" },
+      { property: "og:title", content: "Project Arklight · Precognition digest" },
       { property: "og:description", content: "Ranked risks, opportunities and forward scenarios for the past seven days — hedged, evidence-grounded, no financial advice." },
     ],
   }),

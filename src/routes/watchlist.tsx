@@ -9,9 +9,9 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/watchlist")({
   head: () => ({
     meta: [
-      { title: "Arklight · Watchlists & alerts" },
+      { title: "Project Arklight · Watchlists & alerts" },
       { name: "description", content: "Save named intelligence filters over sectors, regions, keywords and score thresholds. Every scan checks new events against every watchlist and fires an alert on a match." },
-      { property: "og:title", content: "Arklight · Watchlists" },
+      { property: "og:title", content: "Project Arklight · Watchlists" },
       { property: "og:description", content: "Save intelligence filters and receive alerts when public signals match." },
     ],
   }),

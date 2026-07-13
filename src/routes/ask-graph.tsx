@@ -8,9 +8,9 @@ import { ArrowDown, ArrowUp, Loader2, MessageSquare, Minus, Search, Sparkles } f
 export const Route = createFileRoute("/ask-graph")({
   head: () => ({
     meta: [
-      { title: "Arklight · Ask the graph" },
+      { title: "Project Arklight · Ask the graph" },
       { name: "description", content: "Ask plain-English questions of Arklight's world model. Answers come from deterministic, cited graph queries — the AI only maps the question to a fixed query intent." },
-      { property: "og:title", content: "Arklight · Ask the graph" },
+      { property: "og:title", content: "Project Arklight · Ask the graph" },
       { property: "og:description", content: "Deterministic, cited graph answers to natural-language questions." },
     ],
   }),

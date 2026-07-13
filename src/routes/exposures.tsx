@@ -16,7 +16,7 @@ import {
 export const Route = createFileRoute("/exposures")({
   head: () => ({
     meta: [
-      { title: "Arklight · Exposures" },
+      { title: "Project Arklight · Exposures" },
       { name: "description", content: "Tell Arklight what you hold — companies, sectors, regions, commodities, keywords — and every synthesised event is scored against your exposure." },
     ],
   }),

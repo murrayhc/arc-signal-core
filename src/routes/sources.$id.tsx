@@ -7,9 +7,9 @@ import { ArrowLeft, Database, ExternalLink, Loader2 } from "lucide-react";
 export const Route = createFileRoute("/sources/$id")({
   head: () => ({
     meta: [
-      { title: "Arklight · Source detail" },
+      { title: "Project Arklight · Source detail" },
       { name: "description", content: "Reliability, health, recent documents and lineage contribution for a single Arklight source." },
-      { property: "og:title", content: "Arklight · Source detail" },
+      { property: "og:title", content: "Project Arklight · Source detail" },
       { property: "og:description", content: "Provenance and health for a single public-signal source." },
     ],
   }),

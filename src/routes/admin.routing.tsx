@@ -13,9 +13,9 @@ const routingQuery = queryOptions({
 export const Route = createFileRoute("/admin/routing")({
   head: () => ({
     meta: [
-      { title: "Arklight · Model routing and principles" },
+      { title: "Project Arklight · Model routing and principles" },
       { name: "description", content: "How Arklight routes intelligence tasks to models: cheap fast models for tagging, strong reasoning for impact and scenarios, guardrails on every output." },
-      { property: "og:title", content: "Arklight · Model routing" },
+      { property: "og:title", content: "Project Arklight · Model routing" },
       { property: "og:description", content: "Cost-aware, task-aware model routing with schema validation and financial-advice guardrails." },
     ],
   }),

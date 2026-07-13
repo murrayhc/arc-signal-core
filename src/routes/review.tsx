@@ -22,9 +22,9 @@ const scoresQuery = queryOptions({
 export const Route = createFileRoute("/review")({
   head: () => ({
     meta: [
-      { title: "Arklight · Human review queue" },
+      { title: "Project Arklight · Human review queue" },
       { name: "description", content: "Every item the engine flagged for human review: contradictions, weak-single-source claims, guardrail edge cases, and low-confidence syntheses." },
-      { property: "og:title", content: "Arklight · Review queue" },
+      { property: "og:title", content: "Project Arklight · Review queue" },
       { property: "og:description", content: "Nothing high-stakes ships without review. Contradictions and low-confidence items surface here." },
     ],
   }),

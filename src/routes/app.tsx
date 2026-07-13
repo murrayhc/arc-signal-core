@@ -14,9 +14,9 @@ import { Activity, ArrowDown, ArrowUp, Bell, Crosshair, Minus, Receipt, Settings
 export const Route = createFileRoute("/app")({
   head: () => ({
     meta: [
-      { title: "Arklight · Your book" },
+      { title: "Project Arklight · Your book" },
       { name: "description", content: "Arklight watches public information, maps consequence, and surfaces strategic openings before they become obvious." },
-      { property: "og:title", content: "Arklight · Your book" },
+      { property: "og:title", content: "Project Arklight · Your book" },
       { property: "og:description", content: "Arklight watches public information, maps consequence, and surfaces strategic openings before they become obvious." },
     ],
   }),

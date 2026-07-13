@@ -24,9 +24,9 @@ const snapshotsQuery = queryOptions({
 export const Route = createFileRoute("/track-record")({
   head: () => ({
     meta: [
-      { title: "Arklight · Verified track record" },
+      { title: "Project Arklight · Verified track record" },
       { name: "description", content: "Hard-data ledger of resolved predictions: base rate, Brier accuracy vs coin-flip, calibration by decile, mean lead time, and every recent verdict with rationale." },
-      { property: "og:title", content: "Arklight · Verified track record" },
+      { property: "og:title", content: "Project Arklight · Verified track record" },
       { property: "og:description", content: "No spin, no LLM. Just what the ledger says." },
     ],
   }),

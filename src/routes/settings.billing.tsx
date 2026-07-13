@@ -13,7 +13,7 @@ import {
 export const Route = createFileRoute("/settings/billing")({
   head: () => ({
     meta: [
-      { title: "Arklight · Billing" },
+      { title: "Project Arklight · Billing" },
       { name: "description", content: "Manage your Arklight plan — upgrade to Pro or manage your subscription." },
     ],
   }),

@@ -8,9 +8,9 @@ import { ForensicReport } from "@/components/archlight/ForensicReport";
 export const Route = createFileRoute("/opportunities/$id")({
   head: () => ({
     meta: [
-      { title: "Arklight · Opportunity detail" },
+      { title: "Project Arklight · Opportunity detail" },
       { name: "description", content: "Full opportunity card with buyer pain, likely buyers, suggested offer, evidence and hedged positioning." },
-      { property: "og:title", content: "Arklight · Opportunity detail" },
+      { property: "og:title", content: "Project Arklight · Opportunity detail" },
       { property: "og:description", content: "Traceable opportunity card grounded in public signals." },
     ],
   }),
