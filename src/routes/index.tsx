@@ -75,47 +75,83 @@ function GhostCtaLight({ children, href }: { children: ReactNode; href: string }
   );
 }
 
+function HeroTemplateCta({ children, to = "/auth", search }: { children: ReactNode; to?: string; search?: Record<string, string> }) {
+  return (
+    <Link
+      to={to as any}
+      search={search as any}
+      className="group relative flex w-fit cursor-pointer items-center gap-2 rounded-lg border border-white/20 bg-black py-2 pr-4 pl-11 text-sm tracking-tight focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+    >
+      <span
+        data-slot="button-box"
+        className="absolute inset-y-0 left-1 z-40 my-auto flex size-8 flex-col items-center justify-center gap-px rounded-[5px] bg-[color:var(--mkt-accent)] transition-all duration-400 ease-out group-hover:left-[calc(100%-2.3rem)] group-hover:rotate-180 group-hover:transform"
+        aria-hidden
+      >
+        <span className="flex flex-col gap-px">
+          {[0, 1, 2, 3, 4].map((row) => (
+            <span key={row} className="flex gap-px">
+              {[0, 1, 2, 3, 4].map((col) => {
+                const highlight = row === 2 || (row === 0 && col === 2) || (row === 1 && col === 3) || (row === 3 && col === 3) || (row === 4 && col === 2);
+                return (
+                  <span
+                    key={col}
+                    className={`inline-block size-0.75 shrink-0 rounded-full ${highlight ? "bg-white" : "bg-white/25"}`}
+                  />
+                );
+              })}
+            </span>
+          ))}
+        </span>
+      </span>
+      <span className="absolute -inset-px rounded-lg bg-white/20 transition-[clip-path] duration-400 ease-out [clip-path:inset(0_100%_0_0)] group-hover:[clip-path:inset(0_0%_0_0)]" />
+      <span className="relative inline-block text-white transition-transform duration-400 group-hover:-translate-x-8">
+        {children}
+      </span>
+    </Link>
+  );
+}
+
 /* ------------------------------------------------------------------ */
 /*  Hero — dark shell + product-relevant visual                       */
 /* ------------------------------------------------------------------ */
 
 function Hero() {
   return (
-    <section className="h-[720px] w-full p-2 md:h-screen">
-      <div className="mkt-hero-shell relative m-0 h-full w-full overflow-hidden rounded-3xl bg-black">
+    <section className="h-[60vh] w-full p-2 md:h-screen">
+      <div className="relative m-0 h-full w-full overflow-hidden rounded-3xl bg-black text-white">
         <HeroBackdrop />
 
-        <div className="relative z-10 mx-auto flex h-full w-full max-w-[1440px] flex-col justify-between px-6 sm:px-8 lg:px-10">
+        <div className="relative z-10 mx-auto flex h-full w-full max-w-[1440px] flex-col justify-between px-4 sm:px-6 lg:px-8">
           <div className="pt-32 md:pt-[10.5rem] lg:pt-[18.75rem]">
             <div className="flex w-fit rounded-full bg-neutral-900 p-1 shadow-lg shadow-black">
-              <div className="flex items-center gap-1 sm:gap-2 text-white">
-              <span className="rounded-full bg-[color:var(--mkt-accent)] text-black px-2 py-0.5 text-[10px] font-semibold">Signal scan</span>
-                <span className="rounded-full pr-2 text-[10px] sm:text-xs text-white/80">Public-signals early warning</span>
+              <div className="flex items-center gap-1 sm:gap-2">
+                <div className="rounded-full bg-neutral-950 px-2 py-1 text-[10px] sm:text-xs">
+                  Arklight
+                </div>
+                <div className="rounded-full pr-2 text-[10px] text-white sm:text-xs">
+                  Public-signals early warning
+                </div>
               </div>
             </div>
             <div className="mt-6 flex flex-col items-start gap-6 md:mt-10 lg:flex-row lg:gap-10">
-              <h1 className="mkt-display text-white text-3xl font-semibold leading-[1.02] text-balance sm:text-4xl md:text-5xl lg:text-7xl lg:max-w-[780px]">
-                  See it forming <span className="text-white/70">before it becomes</span> the news.
+              <h1 className="mkt-display text-3xl font-semibold text-balance text-white sm:text-4xl md:text-5xl lg:text-7xl">
+                See it forming before it becomes the news.
               </h1>
-              <div className="lg:max-w-md lg:pt-1">
+              <div className="lg:max-w-md">
                 <p className="text-sm font-medium text-balance text-neutral-300 sm:text-base lg:text-lg">
                   Arklight reads the open public record, traces every claim to its
                   origin, maps who it reaches, and turns early signals into dated,
                   testable scenarios.
                 </p>
-                <div className="mt-6 md:mt-8 flex flex-wrap items-center gap-3">
-                  <PrimaryCta to="/auth" search={{ mode: "signup" }}>Start free</PrimaryCta>
-                  <GhostCtaLight href="#how">See how it works</GhostCtaLight>
-                </div>
-                <div className="mt-4 mkt-mono text-[10px] uppercase tracking-widest text-white/40">
-                  Public sources only · Not financial advice · GBP
-                </div>
+                <HeroTemplateCta to="/auth" search={{ mode: "signup" }}>
+                  Start free
+                </HeroTemplateCta>
               </div>
             </div>
           </div>
 
           <div className="relative h-[4.5rem] sm:h-48 md:h-72" aria-hidden>
-            <p className="mkt-display absolute -top-10 left-1/2 -translate-x-1/2 bg-gradient-to-r from-white/10 to-white/0 bg-clip-text text-center text-[100px] font-semibold leading-none text-transparent sm:text-[6rem] md:-top-6 md:mt-10 md:text-[160px] lg:-top-[4.5rem] lg:text-[300px]">
+            <p className="mkt-display absolute -top-10 left-1/2 -translate-x-1/2 bg-gradient-to-r from-white/10 to-[#343434]/0 bg-clip-text text-center text-[100px] font-semibold leading-none text-transparent sm:text-[6rem] md:-top-6 md:mt-10 md:text-[160px] lg:-top-[4.5rem] lg:text-[300px]">
               Arklight
             </p>
           </div>
