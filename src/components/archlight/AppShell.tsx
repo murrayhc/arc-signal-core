@@ -12,7 +12,7 @@ export function AppShell({ children, onRunScan, scanning }: { children: ReactNod
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!loading && !user) navigate({ to: "/auth" });
+    if (!loading && !user) navigate({ to: "/auth", search: { mode: "signin" } });
   }, [loading, user, navigate]);
 
   if (loading || !user) {
