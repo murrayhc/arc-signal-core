@@ -73,7 +73,7 @@ export function MarketingHeader({ overlay = false }: { overlay?: boolean }) {
     const textHover = "hover:text-[color:var(--mkt-fg)]";
 
     return (
-      <header className="sticky top-0 z-40 border-b border-[color:var(--mkt-line)] bg-[color:var(--mkt-bg)]/90 backdrop-blur-xl">
+      <header className="sticky top-0 z-40 border-b border-[color:var(--mkt-line)] bg-[color:var(--mkt-bg)]">
         <div className="mx-auto max-w-7xl px-6">
           <div className="flex h-14 lg:h-16 items-center gap-6">
             <Link
