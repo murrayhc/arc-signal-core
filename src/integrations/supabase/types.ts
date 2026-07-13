@@ -1397,6 +1397,7 @@ export type Database = {
           rationale: string | null
           relevance: number
           seen: boolean
+          user_id: string
         }
         Insert: {
           created_at?: string
@@ -1410,6 +1411,7 @@ export type Database = {
           rationale?: string | null
           relevance: number
           seen?: boolean
+          user_id: string
         }
         Update: {
           created_at?: string
@@ -1423,6 +1425,7 @@ export type Database = {
           rationale?: string | null
           relevance?: number
           seen?: boolean
+          user_id?: string
         }
         Relationships: [
           {
@@ -1458,6 +1461,7 @@ export type Database = {
           notes: string | null
           profile_id: string
           updated_at: string
+          user_id: string
           value_gbp: number | null
           weight: number
         }
@@ -1470,6 +1474,7 @@ export type Database = {
           notes?: string | null
           profile_id: string
           updated_at?: string
+          user_id: string
           value_gbp?: number | null
           weight?: number
         }
@@ -1482,6 +1487,7 @@ export type Database = {
           notes?: string | null
           profile_id?: string
           updated_at?: string
+          user_id?: string
           value_gbp?: number | null
           weight?: number
         }
@@ -1510,6 +1516,7 @@ export type Database = {
           id: string
           name: string
           updated_at: string
+          user_id: string
         }
         Insert: {
           active?: boolean
@@ -1518,6 +1525,7 @@ export type Database = {
           id?: string
           name: string
           updated_at?: string
+          user_id: string
         }
         Update: {
           active?: boolean
@@ -1526,6 +1534,7 @@ export type Database = {
           id?: string
           name?: string
           updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
