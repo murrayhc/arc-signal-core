@@ -842,6 +842,7 @@ export async function runScanImpl() {
           if (w.sectors?.length) parts.push(`sector ${sector}`);
           if (w.regions?.length) parts.push(`region ${region}`);
           await db.from("alerts").upsert({
+            user_id: w.user_id,
             watchlist_id: w.id,
             event_candidate_id: eventRow.id,
             reason: `Matched watchlist "${w.name}" · ${parts.join(" · ") || "score thresholds"}`,
@@ -850,6 +851,7 @@ export async function runScanImpl() {
           }, { onConflict: "watchlist_id,event_candidate_id" });
         }
       }
+
       await saveProgress(`Synthesised event from cluster ${key}.`);
     } catch (err) {
       notes.push(`Synthesis cluster ${key} failed: ${err instanceof Error ? err.message : String(err)}`);
