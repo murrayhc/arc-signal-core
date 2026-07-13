@@ -441,7 +441,7 @@ function Scenarios() {
                     key={i}
                     className="flex-1 rounded-t"
                     style={{
-                      height: `${18 + (Math.sin(i * 0.7 + s.title.length) + 1) * 30}%`,
+                      height: `${(18 + (Math.sin(i * 0.7 + s.title.length) + 1) * 30).toFixed(2)}%`,
                       background: i > 15 ? "var(--mkt-accent)" : "rgba(30,29,25,0.15)",
                     }}
                   />
