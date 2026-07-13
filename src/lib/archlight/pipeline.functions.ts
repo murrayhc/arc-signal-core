@@ -1785,6 +1785,7 @@ export const interrogate = createServerFn({ method: "POST" }).middleware([requir
     };
 
     const { data: iqRow } = await db.from("investigation_queries").insert({
+      user_id: userId,
       query_text: q,
       query_class: `interrogation:${subject.kind}`,
       status: "completed",
