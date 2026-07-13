@@ -160,6 +160,7 @@ export async function generateBriefings(opts: GenerateOpts): Promise<GenerateRes
       .from("briefings")
       .upsert({
         profile_id: p.id,
+        user_id: p.user_id,
         briefing_date: date,
         summary,
         stats: JSON.parse(JSON.stringify(stats)),
