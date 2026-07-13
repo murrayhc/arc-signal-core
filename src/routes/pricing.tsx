@@ -18,15 +18,15 @@ export const Route = createFileRoute("/pricing")({
 const PLANS = {
   free: [
     "Public-signal graph",
-    "Starter book — up to 10 watched items",
-    "Research interrogations — 5 / 30 days",
+    "Starter book, up to 10 watched items",
+    "Research interrogations, 5 per 30 days",
     "Weekly in-app digest",
     "Frozen track record",
   ],
   pro: [
     "Everything in Free",
     "Slack & email alerts and briefings",
-    "Unlimited book — no cap on watched items",
+    "Unlimited book, no cap on watched items",
     "Unlimited research interrogations",
     "Advanced analytics & Narrative Divergence",
     "Priority scan cadence",
