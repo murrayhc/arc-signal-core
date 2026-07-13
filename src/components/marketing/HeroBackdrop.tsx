@@ -175,8 +175,8 @@ function Stars() {
           fill="white"
           className="mkt-star"
           style={{
-            "--mkt-star-duration": `${2 + seeded(i) * 3}s`,
-            "--mkt-star-delay": `${1.2 + seeded(i + 100) * 2.5}s`,
+            "--mkt-star-duration": `${(2 + seeded(i) * 3).toFixed(3)}s`,
+            "--mkt-star-delay": `${(1.2 + seeded(i + 100) * 2.5).toFixed(3)}s`,
           } as CSSProperties}
         />
       ))}
