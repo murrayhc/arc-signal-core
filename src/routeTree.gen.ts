@@ -27,6 +27,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AskGraphRouteImport } from './routes/ask-graph'
 import { Route as ArcsRouteImport } from './routes/arcs'
 import { Route as AppRouteImport } from './routes/app'
+import { Route as IndexRouteImport } from './routes/index'
 import { Route as OpportunitiesIndexRouteImport } from './routes/opportunities.index'
 import { Route as SourcesIdRouteImport } from './routes/sources.$id'
 import { Route as SettingsScanRouteImport } from './routes/settings.scan'
@@ -132,6 +133,11 @@ const AppRoute = AppRouteImport.update({
   path: '/app',
   getParentRoute: () => rootRouteImport,
 } as any)
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OpportunitiesIndexRoute = OpportunitiesIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -204,6 +210,7 @@ const ApiPublicExportsEventsRoute = ApiPublicExportsEventsRouteImport.update({
 } as any)
 
 export interface FileRoutesByFullPath {
+  '/': typeof IndexRoute
   '/app': typeof AppRoute
   '/arcs': typeof ArcsRouteWithChildren
   '/ask-graph': typeof AskGraphRoute
@@ -238,6 +245,7 @@ export interface FileRoutesByFullPath {
   '/api/public/stripe/webhook': typeof ApiPublicStripeWebhookRoute
 }
 export interface FileRoutesByTo {
+  '/': typeof IndexRoute
   '/app': typeof AppRoute
   '/arcs': typeof ArcsRouteWithChildren
   '/ask-graph': typeof AskGraphRoute
@@ -272,6 +280,7 @@ export interface FileRoutesByTo {
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
+  '/': typeof IndexRoute
   '/app': typeof AppRoute
   '/arcs': typeof ArcsRouteWithChildren
   '/ask-graph': typeof AskGraphRoute
@@ -308,6 +317,7 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
+    | '/'
     | '/app'
     | '/arcs'
     | '/ask-graph'
@@ -342,6 +352,7 @@ export interface FileRouteTypes {
     | '/api/public/stripe/webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/'
     | '/app'
     | '/arcs'
     | '/ask-graph'
@@ -375,6 +386,7 @@ export interface FileRouteTypes {
     | '/api/public/stripe/webhook'
   id:
     | '__root__'
+    | '/'
     | '/app'
     | '/arcs'
     | '/ask-graph'
@@ -410,6 +422,7 @@ export interface FileRouteTypes {
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
+  IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRoute
   ArcsRoute: typeof ArcsRouteWithChildren
   AskGraphRoute: typeof AskGraphRoute
@@ -567,6 +580,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/opportunities/': {
       id: '/opportunities/'
       path: '/'
@@ -716,6 +736,7 @@ const SourcesRouteWithChildren =
   SourcesRoute._addFileChildren(SourcesRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
+  IndexRoute: IndexRoute,
   AppRoute: AppRoute,
   ArcsRoute: ArcsRouteWithChildren,
   AskGraphRoute: AskGraphRoute,
