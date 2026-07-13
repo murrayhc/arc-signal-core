@@ -708,7 +708,7 @@ function About() {
 
 const FAQ_ITEMS = [
   { q: "What sources does Arklight use?", a: "Only public sources: company registries, procurement notices, regulatory releases, official statistics, public news wires and public web signals. Nothing private, nothing leaked. Attribution is preserved on every claim." },
-  { q: "Does Arklight predict the future?", a: "No. Arklight surfaces dated, testable scenarios with explicit probabilities. Each projection is frozen and later graded against public outcomes. Uncertainty is shown, not hidden." },
+  { q: "Does Arklight predict the future?", a: "No. Arklight surfaces dated, testable scenarios with explicit probabilities. Each projection is frozen and later graded against public outcomes. Uncertainty is shown plainly." },
   { q: "How does confidence work?", a: "Confidence combines source weighting (primary vs echo), cluster strength, contradiction signals, and evidence freshness. It is expressed as a number, with a deadline, and reviewed on outcome." },
   { q: "Is this financial advice?", a: "No. Arklight is not a broker or adviser and does not recommend buys, sells, or target prices. All figures are GBP. Use it as one input into your own decisions." },
   { q: "What is stored?", a: "Your account, your watched items, and your research history. The public-signal record itself is derived from public sources. See the Privacy page for detail." },
