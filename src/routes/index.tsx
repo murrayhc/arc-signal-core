@@ -300,7 +300,7 @@ function BentoOne() {
                 key={i}
                 className="h-6 rounded"
                 style={{
-                  background: `rgba(255,204,0,${0.08 + (Math.sin(i * 0.9) + 1) * 0.18})`,
+                  background: `rgba(255,204,0,${(0.08 + (Math.sin(i * 0.9) + 1) * 0.18).toFixed(3)})`,
                 }}
               />
             ))}
