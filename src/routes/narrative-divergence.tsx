@@ -30,14 +30,7 @@ function NarrativeDivergencePage() {
     queryFn: () => listNarrativeDivergence({ data: { limit: 20 } }),
   });
   const analyse = useMutation({
-    mutationFn: () => {
-      if (typeof window !== "undefined" && !window.localStorage.getItem("owner_token")) {
-        const t = window.prompt("Enter owner token to run analysis:");
-        if (!t) return Promise.reject(new Error("Owner token required"));
-        window.localStorage.setItem("owner_token", t);
-      }
-      return autoAnalyseTopConvergence({ data: { limit: 5 } });
-    },
+    mutationFn: () => autoAnalyseTopConvergence({ data: { limit: 5 } }),
     onSuccess: (r) => {
       toast.success(`Analysed ${r.analysed} · skipped ${r.skipped}`);
       qc.invalidateQueries({ queryKey: ["narrative-divergence"] });
