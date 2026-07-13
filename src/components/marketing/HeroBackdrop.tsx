@@ -173,9 +173,11 @@ function Stars() {
           cy={star.cy}
           r={star.r}
           fill="white"
+          className="mkt-star"
           style={{
-            animation: `mkt-twinkle ${2 + seeded(i) * 3}s ease-in-out ${1.2 + seeded(i + 100) * 2.5}s infinite`,
-          }}
+            "--mkt-star-duration": `${2 + seeded(i) * 3}s`,
+            "--mkt-star-delay": `${1.2 + seeded(i + 100) * 2.5}s`,
+          } as React.CSSProperties}
         />
       ))}
     </svg>
