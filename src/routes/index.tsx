@@ -347,7 +347,7 @@ function BentoOne() {
 
         {/* Project */}
         <BentoTile dark className="md:col-span-3 min-h-[240px]">
-          <TileHead dark label="04 · Project" title="Dated, testable scenarios" icon={Target} />
+          <TileHead dark label="04 · Project · Illustrative example" title="Dated, testable scenarios" icon={Target} />
           <div className="mt-4 space-y-2">
             {[
               { h: "7d", p: 0.42, t: "Notice re-issued with tighter scope" },
