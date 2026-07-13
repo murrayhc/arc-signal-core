@@ -162,8 +162,8 @@ function ThemeToggle() {
 }
 
 function AlertsBell() {
-  const { data } = useQuery({ queryKey: ["archlight", "dashboard"], queryFn: () => getDashboard(), staleTime: 30_000 });
-  const count = data?.counts.unseen_alerts ?? 0;
+  const { data } = useQuery({ queryKey: ["archlight", "unseenAlerts"], queryFn: () => getUnseenAlertCount(), staleTime: 30_000 });
+  const count = data?.count ?? 0;
   return (
     <Link to="/watchlist" className="relative h-8 w-8 rounded-md border border-border/60 grid place-items-center text-muted-foreground hover:text-foreground hover:bg-accent/40 transition">
       <Bell className="h-4 w-4"/>
