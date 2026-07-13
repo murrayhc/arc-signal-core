@@ -23,6 +23,7 @@ import { Route as InterrogationsRouteImport } from './routes/interrogations'
 import { Route as InterrogateRouteImport } from './routes/interrogate'
 import { Route as ExposuresRouteImport } from './routes/exposures'
 import { Route as DigestRouteImport } from './routes/digest'
+import { Route as CookiesRouteImport } from './routes/cookies'
 import { Route as CompaniesRouteImport } from './routes/companies'
 import { Route as BriefingsRouteImport } from './routes/briefings'
 import { Route as BacktestRouteImport } from './routes/backtest'
@@ -114,6 +115,11 @@ const ExposuresRoute = ExposuresRouteImport.update({
 const DigestRoute = DigestRouteImport.update({
   id: '/digest',
   path: '/digest',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CookiesRoute = CookiesRouteImport.update({
+  id: '/cookies',
+  path: '/cookies',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CompaniesRoute = CompaniesRouteImport.update({
@@ -236,6 +242,7 @@ export interface FileRoutesByFullPath {
   '/backtest': typeof BacktestRoute
   '/briefings': typeof BriefingsRoute
   '/companies': typeof CompaniesRouteWithChildren
+  '/cookies': typeof CookiesRoute
   '/digest': typeof DigestRoute
   '/exposures': typeof ExposuresRoute
   '/interrogate': typeof InterrogateRoute
@@ -274,6 +281,7 @@ export interface FileRoutesByTo {
   '/backtest': typeof BacktestRoute
   '/briefings': typeof BriefingsRoute
   '/companies': typeof CompaniesRouteWithChildren
+  '/cookies': typeof CookiesRoute
   '/digest': typeof DigestRoute
   '/exposures': typeof ExposuresRoute
   '/interrogate': typeof InterrogateRoute
@@ -312,6 +320,7 @@ export interface FileRoutesById {
   '/backtest': typeof BacktestRoute
   '/briefings': typeof BriefingsRoute
   '/companies': typeof CompaniesRouteWithChildren
+  '/cookies': typeof CookiesRoute
   '/digest': typeof DigestRoute
   '/exposures': typeof ExposuresRoute
   '/interrogate': typeof InterrogateRoute
@@ -352,6 +361,7 @@ export interface FileRouteTypes {
     | '/backtest'
     | '/briefings'
     | '/companies'
+    | '/cookies'
     | '/digest'
     | '/exposures'
     | '/interrogate'
@@ -390,6 +400,7 @@ export interface FileRouteTypes {
     | '/backtest'
     | '/briefings'
     | '/companies'
+    | '/cookies'
     | '/digest'
     | '/exposures'
     | '/interrogate'
@@ -427,6 +438,7 @@ export interface FileRouteTypes {
     | '/backtest'
     | '/briefings'
     | '/companies'
+    | '/cookies'
     | '/digest'
     | '/exposures'
     | '/interrogate'
@@ -466,6 +478,7 @@ export interface RootRouteChildren {
   BacktestRoute: typeof BacktestRoute
   BriefingsRoute: typeof BriefingsRoute
   CompaniesRoute: typeof CompaniesRouteWithChildren
+  CookiesRoute: typeof CookiesRoute
   DigestRoute: typeof DigestRoute
   ExposuresRoute: typeof ExposuresRoute
   InterrogateRoute: typeof InterrogateRoute
@@ -589,6 +602,13 @@ declare module '@tanstack/react-router' {
       path: '/digest'
       fullPath: '/digest'
       preLoaderRoute: typeof DigestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cookies': {
+      id: '/cookies'
+      path: '/cookies'
+      fullPath: '/cookies'
+      preLoaderRoute: typeof CookiesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/companies': {
@@ -804,6 +824,7 @@ const rootRouteChildren: RootRouteChildren = {
   BacktestRoute: BacktestRoute,
   BriefingsRoute: BriefingsRoute,
   CompaniesRoute: CompaniesRouteWithChildren,
+  CookiesRoute: CookiesRoute,
   DigestRoute: DigestRoute,
   ExposuresRoute: ExposuresRoute,
   InterrogateRoute: InterrogateRoute,
