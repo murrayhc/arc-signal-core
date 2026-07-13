@@ -281,7 +281,10 @@ function BentoOne() {
             </div>
           </div>
           <p className="mt-5 text-xs text-[color:var(--mkt-muted)]">
-            Group-owned repetition is treated as risk, not corroboration.
+            Group-owned repetition raises a flag instead of adding confidence.
+          </p>
+          <p className="mt-3 text-xs text-[color:var(--mkt-heading)]">
+            You know a signal is real before you act on it. What looks like twelve confirmations is often one release repeated, and Arklight shows you which.
           </p>
         </BentoTile>
 
