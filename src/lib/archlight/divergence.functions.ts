@@ -396,6 +396,7 @@ export const analyseNarrativeDivergence = createServerFn({ method: "POST" })
     const ai = await callJson<{
       baseline?: string;
       framings?: Array<{ domain?: string; outlet_name?: string; angle?: string; emphasises?: string; downplays?: string; framing?: string }>;
+      divergence_score?: number;
     }>({
       task: "narrative_framing",
       system:
@@ -406,7 +407,10 @@ export const analyseNarrativeDivergence = createServerFn({ method: "POST" })
       user:
         `EVENT TITLE: ${evt.title ?? ""}\nEVENT SUMMARY: ${evt.summary ?? ""}\n\n` +
         `${userBlocks}\n\n` +
-        `Return STRICT JSON: {"baseline": string, "framings": [{"domain": string, "outlet_name": string, "angle": string, "emphasises": string, "downplays": string, "framing": string}]}`,
+        `Also assess divergence_score: an integer 0..100 for how far apart the outlets' framings are ` +
+        `on CAUSE, BLAME and CONSEQUENCE (0 = essentially the same story; 100 = flatly contradictory). ` +
+        `Ground it ONLY in the provided framings/texts — no outside knowledge.\n\n` +
+        `Return STRICT JSON: {"baseline": string, "framings": [{"domain": string, "outlet_name": string, "angle": string, "emphasises": string, "downplays": string, "framing": string}], "divergence_score": number}`,
       temperature: 0.2,
       maxTokens: 2048,
     });
