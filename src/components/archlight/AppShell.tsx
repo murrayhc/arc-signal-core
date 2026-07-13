@@ -78,7 +78,7 @@ function TopNav({ onRunScan, scanning }: { onRunScan?: () => void; scanning?: bo
             <span className="h-1.5 w-1.5 rounded-full animate-pulse" style={{ background: "var(--color-signal)" }}/>
             live
           </div>
-          <div className="h-8 w-8 rounded-full border border-border/60 grid place-items-center text-[11px] font-mono bg-accent/40">AR</div>
+          <UserMenu />
         </div>
       </div>
     </header>
