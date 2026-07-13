@@ -5,6 +5,7 @@ import { z } from "zod";
 import { callAI, callJson, guardFinancialAdvice, pickModel } from "./ai-gateway.server";
 import { shingles, cosine, centroid, fetchFeed } from "./text.server";
 import { DEFAULT_SCAN_SETTINGS, type ScanSettings } from "./settings.defaults";
+import { isProUser } from "./billing.functions";
 
 const SCAN_RUNTIME_BUDGET_MS = 4 * 60 * 1000;
 const STALE_RUNNING_SCAN_MS = 6 * 60 * 1000;
