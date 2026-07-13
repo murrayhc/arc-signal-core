@@ -11,7 +11,7 @@ import { getRisingStressRail } from "@/lib/archlight/beliefs.functions";
 import { toast } from "sonner";
 import { Activity, ArrowDown, ArrowUp, Bell, Crosshair, Minus, Receipt, Settings, SlidersHorizontal } from "lucide-react";
 
-export const Route = createFileRoute("/")({
+export const Route = createFileRoute("/app")({
   head: () => ({
     meta: [
       { title: "Archlight · Your book" },

@@ -26,7 +26,7 @@ import { Route as BacktestRouteImport } from './routes/backtest'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AskGraphRouteImport } from './routes/ask-graph'
 import { Route as ArcsRouteImport } from './routes/arcs'
-import { Route as IndexRouteImport } from './routes/index'
+import { Route as AppRouteImport } from './routes/app'
 import { Route as OpportunitiesIndexRouteImport } from './routes/opportunities.index'
 import { Route as SourcesIdRouteImport } from './routes/sources.$id'
 import { Route as SettingsScanRouteImport } from './routes/settings.scan'
@@ -127,9 +127,9 @@ const ArcsRoute = ArcsRouteImport.update({
   path: '/arcs',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const AppRoute = AppRouteImport.update({
+  id: '/app',
+  path: '/app',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OpportunitiesIndexRoute = OpportunitiesIndexRouteImport.update({
@@ -204,7 +204,7 @@ const ApiPublicExportsEventsRoute = ApiPublicExportsEventsRouteImport.update({
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
+  '/app': typeof AppRoute
   '/arcs': typeof ArcsRouteWithChildren
   '/ask-graph': typeof AskGraphRoute
   '/auth': typeof AuthRoute
@@ -238,7 +238,7 @@ export interface FileRoutesByFullPath {
   '/api/public/stripe/webhook': typeof ApiPublicStripeWebhookRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
+  '/app': typeof AppRoute
   '/arcs': typeof ArcsRouteWithChildren
   '/ask-graph': typeof AskGraphRoute
   '/auth': typeof AuthRoute
@@ -272,7 +272,7 @@ export interface FileRoutesByTo {
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
+  '/app': typeof AppRoute
   '/arcs': typeof ArcsRouteWithChildren
   '/ask-graph': typeof AskGraphRoute
   '/auth': typeof AuthRoute
@@ -308,7 +308,7 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    | '/'
+    | '/app'
     | '/arcs'
     | '/ask-graph'
     | '/auth'
@@ -342,7 +342,7 @@ export interface FileRouteTypes {
     | '/api/public/stripe/webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/'
+    | '/app'
     | '/arcs'
     | '/ask-graph'
     | '/auth'
@@ -375,7 +375,7 @@ export interface FileRouteTypes {
     | '/api/public/stripe/webhook'
   id:
     | '__root__'
-    | '/'
+    | '/app'
     | '/arcs'
     | '/ask-graph'
     | '/auth'
@@ -410,7 +410,7 @@ export interface FileRouteTypes {
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
+  AppRoute: typeof AppRoute
   ArcsRoute: typeof ArcsRouteWithChildren
   AskGraphRoute: typeof AskGraphRoute
   AuthRoute: typeof AuthRoute
@@ -560,11 +560,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ArcsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/app': {
+      id: '/app'
+      path: '/app'
+      fullPath: '/app'
+      preLoaderRoute: typeof AppRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/opportunities/': {
@@ -716,7 +716,7 @@ const SourcesRouteWithChildren =
   SourcesRoute._addFileChildren(SourcesRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
+  AppRoute: AppRoute,
   ArcsRoute: ArcsRouteWithChildren,
   AskGraphRoute: AskGraphRoute,
   AuthRoute: AuthRoute,
@@ -747,13 +747,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
