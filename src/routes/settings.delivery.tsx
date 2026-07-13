@@ -168,7 +168,7 @@ function ChannelRow({ channel, profileName, onChanged }: {
   });
   const test = useMutation({
     mutationFn: () => sendTestMessage({ data: { id: channel.id } }),
-    onSuccess: (r) => {
+    onSuccess: (r: { ok: boolean; status: number; error?: string }) => {
       if (r.ok) toast.success(`Test sent (HTTP ${r.status})`);
       else toast.error(`Test failed (HTTP ${r.status || "network"})`);
     },
