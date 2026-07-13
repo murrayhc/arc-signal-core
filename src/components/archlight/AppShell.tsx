@@ -2,7 +2,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Bell, Building2, ChevronDown, Command, Compass, Crosshair, Database, Download, Eye, FlaskConical, Flame, Gauge, GitBranch, HelpCircle, Layers, LogOut, Moon, Play, Radar, Search, Settings, Shield, Sparkles, Sun, Target } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { getDashboard } from "@/lib/archlight/pipeline.functions";
+import { getDashboard, getUnseenAlertCount } from "@/lib/archlight/pipeline.functions";
 import { GuidedTour, NavHoverTooltips, startGuidedTour } from "@/components/archlight/GuidedTour";
 import { useSession } from "@/lib/useSession";
 import { supabase } from "@/integrations/supabase/client";
