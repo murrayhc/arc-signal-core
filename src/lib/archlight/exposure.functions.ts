@@ -300,6 +300,15 @@ export const addExposureItem = createServerFn({ method: "POST" }).middleware([re
   .handler(async ({ data, context }) => {
     const db = context.supabase;
     const userId = context.userId;
+    if (!(await isProUser(userId))) {
+      const { count } = await db
+        .from("exposure_items")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", userId);
+      if ((count ?? 0) >= 10) {
+        throw new Error("FREE_LIMIT: Your plan is limited to 10 watched items. Upgrade to Pro for unlimited.");
+      }
+    }
     // Best-effort entity resolution for name-based kinds (uses user client; entities is readable).
     let entityId: string | null = null;
     if (["company", "supplier", "customer", "competitor"].includes(data.kind)) {
