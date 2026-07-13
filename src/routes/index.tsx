@@ -234,7 +234,7 @@ function BentoOne() {
       <SectionHeader
         eyebrow="How Arklight works · Illustrative interface"
         title={<>From raw public signal to a call you can grade later.</>}
-        sub="Five stages, run continuously. Every step keeps its receipts. Values shown below are illustrative examples, not measured Arklight results."
+        sub="Five stages, run continuously, and every step keeps its receipts. The values shown below are illustrative examples, not measured Arklight results."
       />
 
       <div className="mt-12 grid grid-cols-1 md:grid-cols-6 gap-3">
