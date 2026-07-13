@@ -52,15 +52,14 @@ export function MarketingHeader({ overlay = false }: { overlay?: boolean }) {
             </span>
           </Link>
           <nav className="hidden md:flex items-center gap-1 text-sm">
-            {NAV.map((n) => (
-              <a
-                key={n.href}
-                href={n.href}
-                className={`px-3 py-1.5 rounded-md ${textBase} ${textHover} transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40`}
-              >
-                {n.label}
-              </a>
-            ))}
+            {NAV.map((n) => {
+              const cls = `px-3 py-1.5 rounded-md ${textBase} ${textHover} transition focus:outline-none focus-visible:ring-2 ${dark ? "focus-visible:ring-white/40" : "focus-visible:ring-[color:var(--mkt-charcoal)]/40"}`;
+              return n.route ? (
+                <Link key={n.href} to={n.href as any} className={cls}>{n.label}</Link>
+              ) : (
+                <a key={n.href} href={n.href} className={cls}>{n.label}</a>
+              );
+            })}
           </nav>
           <div className="flex-1" />
           <div className="hidden md:flex items-center gap-2">
