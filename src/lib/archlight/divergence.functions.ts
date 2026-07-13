@@ -241,6 +241,8 @@ export type AnalyseDivergenceResult =
       distinct_lean_zones: number;
       baseline: string;
       framings: Framing[];
+      divergence_score: number | null;
+      divergence_label: string | null;
     };
 
 function stripIfUnsafe(text: string): string {
@@ -394,6 +396,7 @@ export const analyseNarrativeDivergence = createServerFn({ method: "POST" })
     const ai = await callJson<{
       baseline?: string;
       framings?: Array<{ domain?: string; outlet_name?: string; angle?: string; emphasises?: string; downplays?: string; framing?: string }>;
+      divergence_score?: number;
     }>({
       task: "narrative_framing",
       system:
@@ -404,7 +407,10 @@ export const analyseNarrativeDivergence = createServerFn({ method: "POST" })
       user:
         `EVENT TITLE: ${evt.title ?? ""}\nEVENT SUMMARY: ${evt.summary ?? ""}\n\n` +
         `${userBlocks}\n\n` +
-        `Return STRICT JSON: {"baseline": string, "framings": [{"domain": string, "outlet_name": string, "angle": string, "emphasises": string, "downplays": string, "framing": string}]}`,
+        `Also assess divergence_score: an integer 0..100 for how far apart the outlets' framings are ` +
+        `on CAUSE, BLAME and CONSEQUENCE (0 = essentially the same story; 100 = flatly contradictory). ` +
+        `Ground it ONLY in the provided framings/texts — no outside knowledge.\n\n` +
+        `Return STRICT JSON: {"baseline": string, "framings": [{"domain": string, "outlet_name": string, "angle": string, "emphasises": string, "downplays": string, "framing": string}], "divergence_score": number}`,
       temperature: 0.2,
       maxTokens: 2048,
     });
@@ -441,6 +447,16 @@ export const analyseNarrativeDivergence = createServerFn({ method: "POST" })
     const n_with_lean = outletInputs.filter((o) => o.lean).length;
     const distinct_lean_zones = new Set(outletInputs.map((o) => o.lean).filter((x): x is string => !!x)).size;
 
+    const rawScore = Number(ai.data.divergence_score);
+    const divergence_score: number | null = Number.isFinite(rawScore)
+      ? Math.max(0, Math.min(100, Math.round(rawScore)))
+      : null;
+    const divergence_label: string | null = divergence_score === null
+      ? null
+      : divergence_score <= 33 ? "Aligned"
+      : divergence_score <= 66 ? "Mixed"
+      : "Sharply divergent";
+
     await db.from("narrative_divergence").upsert({
       event_candidate_id: eventId,
       baseline,
@@ -448,11 +464,13 @@ export const analyseNarrativeDivergence = createServerFn({ method: "POST" })
       n_outlets,
       n_with_lean,
       distinct_lean_zones,
+      divergence_score,
+      divergence_label,
       model: pickModel("narrative_framing"),
       computed_at: new Date().toISOString(),
     }, { onConflict: "event_candidate_id" });
 
-    return { skipped: false, eventId, n_outlets, n_with_lean, distinct_lean_zones, baseline, framings };
+    return { skipped: false, eventId, n_outlets, n_with_lean, distinct_lean_zones, baseline, framings, divergence_score, divergence_label };
   });
 
 const autoInput = z.object({ limit: z.number().int().min(1).max(20).optional() });
