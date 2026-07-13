@@ -305,20 +305,6 @@ function YourExposuresRail() {
 
 
 
-
-function buildTicker(data: { system: { source_coverage: number; model_health: number }; counts: { sources_online: number; sources_total: number }; opportunities: Array<{ title: string }>; risks: Array<{ title: string }> }): string[] {
-  return [
-    `Global pulse · model ${data.system.model_health.toFixed(2)}`,
-    `Source coverage ${(data.system.source_coverage * 100).toFixed(0)}%`,
-    "Market provider not configured",
-    "Commodity provider not configured",
-    ...data.opportunities.slice(0, 3).map((o) => `Signal ↑ ${o.title}`),
-    ...data.risks.slice(0, 3).map((r) => `Risk ⚠ ${r.title}`),
-    `Sources online ${data.counts.sources_online} / ${data.counts.sources_total}`,
-    "No financial advice · Public signals only",
-  ];
-}
-
 function RisingStressRail() {
   const { data, isLoading } = useQuery({
     queryKey: ["archlight", "rising-stress"],
