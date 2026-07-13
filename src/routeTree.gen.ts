@@ -31,6 +31,7 @@ import { Route as OpportunitiesIndexRouteImport } from './routes/opportunities.i
 import { Route as SourcesIdRouteImport } from './routes/sources.$id'
 import { Route as SettingsScanRouteImport } from './routes/settings.scan'
 import { Route as SettingsDeliveryRouteImport } from './routes/settings.delivery'
+import { Route as SettingsBillingRouteImport } from './routes/settings.billing'
 import { Route as OpportunitiesIdRouteImport } from './routes/opportunities.$id'
 import { Route as EventsIdRouteImport } from './routes/events.$id'
 import { Route as CompaniesNameRouteImport } from './routes/companies.$name'
@@ -151,6 +152,11 @@ const SettingsDeliveryRoute = SettingsDeliveryRouteImport.update({
   path: '/settings/delivery',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SettingsBillingRoute = SettingsBillingRouteImport.update({
+  id: '/settings/billing',
+  path: '/settings/billing',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OpportunitiesIdRoute = OpportunitiesIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -221,6 +227,7 @@ export interface FileRoutesByFullPath {
   '/companies/$name': typeof CompaniesNameRoute
   '/events/$id': typeof EventsIdRoute
   '/opportunities/$id': typeof OpportunitiesIdRoute
+  '/settings/billing': typeof SettingsBillingRoute
   '/settings/delivery': typeof SettingsDeliveryRoute
   '/settings/scan': typeof SettingsScanRoute
   '/sources/$id': typeof SourcesIdRoute
@@ -253,6 +260,7 @@ export interface FileRoutesByTo {
   '/companies/$name': typeof CompaniesNameRoute
   '/events/$id': typeof EventsIdRoute
   '/opportunities/$id': typeof OpportunitiesIdRoute
+  '/settings/billing': typeof SettingsBillingRoute
   '/settings/delivery': typeof SettingsDeliveryRoute
   '/settings/scan': typeof SettingsScanRoute
   '/sources/$id': typeof SourcesIdRoute
@@ -287,6 +295,7 @@ export interface FileRoutesById {
   '/companies/$name': typeof CompaniesNameRoute
   '/events/$id': typeof EventsIdRoute
   '/opportunities/$id': typeof OpportunitiesIdRoute
+  '/settings/billing': typeof SettingsBillingRoute
   '/settings/delivery': typeof SettingsDeliveryRoute
   '/settings/scan': typeof SettingsScanRoute
   '/sources/$id': typeof SourcesIdRoute
@@ -322,6 +331,7 @@ export interface FileRouteTypes {
     | '/companies/$name'
     | '/events/$id'
     | '/opportunities/$id'
+    | '/settings/billing'
     | '/settings/delivery'
     | '/settings/scan'
     | '/sources/$id'
@@ -354,6 +364,7 @@ export interface FileRouteTypes {
     | '/companies/$name'
     | '/events/$id'
     | '/opportunities/$id'
+    | '/settings/billing'
     | '/settings/delivery'
     | '/settings/scan'
     | '/sources/$id'
@@ -387,6 +398,7 @@ export interface FileRouteTypes {
     | '/companies/$name'
     | '/events/$id'
     | '/opportunities/$id'
+    | '/settings/billing'
     | '/settings/delivery'
     | '/settings/scan'
     | '/sources/$id'
@@ -418,6 +430,7 @@ export interface RootRouteChildren {
   WatchlistRoute: typeof WatchlistRoute
   AdminRoutingRoute: typeof AdminRoutingRoute
   EventsIdRoute: typeof EventsIdRoute
+  SettingsBillingRoute: typeof SettingsBillingRoute
   SettingsDeliveryRoute: typeof SettingsDeliveryRoute
   SettingsScanRoute: typeof SettingsScanRoute
   ApiPublicExportsEventsRoute: typeof ApiPublicExportsEventsRoute
@@ -582,6 +595,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsDeliveryRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/settings/billing': {
+      id: '/settings/billing'
+      path: '/settings/billing'
+      fullPath: '/settings/billing'
+      preLoaderRoute: typeof SettingsBillingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/opportunities/$id': {
       id: '/opportunities/$id'
       path: '/$id'
@@ -716,6 +736,7 @@ const rootRouteChildren: RootRouteChildren = {
   WatchlistRoute: WatchlistRoute,
   AdminRoutingRoute: AdminRoutingRoute,
   EventsIdRoute: EventsIdRoute,
+  SettingsBillingRoute: SettingsBillingRoute,
   SettingsDeliveryRoute: SettingsDeliveryRoute,
   SettingsScanRoute: SettingsScanRoute,
   ApiPublicExportsEventsRoute: ApiPublicExportsEventsRoute,

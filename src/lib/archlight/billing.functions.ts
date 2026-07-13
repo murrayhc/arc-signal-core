@@ -165,3 +165,35 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
     }
     return { url: session.url };
   });
+
+export const createPortalSession = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<{ url: string }> => {
+    const secretKey = process.env.STRIPE_SECRET_KEY;
+    if (!secretKey) {
+      throw new Error("Billing is not configured (missing STRIPE_SECRET_KEY).");
+    }
+    const db = await admin();
+    const { data: subRow, error } = await db
+      .from("subscriptions")
+      .select("stripe_customer_id")
+      .eq("user_id", context.userId)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    const customerId = subRow?.stripe_customer_id;
+    if (!customerId) {
+      throw new Error("No billing account yet. Start a subscription first.");
+    }
+
+    const appUrl = resolveAppUrl();
+    const Stripe = (await import("stripe")).default;
+    const stripe = new Stripe(secretKey);
+    const session = await stripe.billingPortal.sessions.create({
+      customer: customerId,
+      return_url: `${appUrl}/settings/billing`,
+    });
+    if (!session.url) {
+      throw new Error("Stripe did not return a portal URL.");
+    }
+    return { url: session.url };
+  });

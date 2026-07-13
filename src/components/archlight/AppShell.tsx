@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Bell, Building2, ChevronDown, Command, Compass, Crosshair, Database, Download, Eye, FlaskConical, Flame, Gauge, GitBranch, HelpCircle, Layers, LogOut, Moon, Play, Radar, Search, Settings, Shield, Sparkles, Sun, Target } from "lucide-react";
+import { Bell, Building2, ChevronDown, Command, Compass, CreditCard, Crosshair, Database, Download, Eye, FlaskConical, Flame, Gauge, GitBranch, HelpCircle, Layers, LogOut, Moon, Play, Radar, Search, Settings, Shield, Sparkles, Sun, Target } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { getDashboard, getUnseenAlertCount } from "@/lib/archlight/pipeline.functions";
 import { GuidedTour, NavHoverTooltips, startGuidedTour } from "@/components/archlight/GuidedTour";
@@ -123,6 +123,13 @@ function UserMenu() {
         <div className="absolute right-0 mt-2 w-56 rounded-md border border-border/60 bg-background/95 backdrop-blur-xl shadow-lg z-40 p-2 text-xs">
           <div className="px-2 py-1.5 text-muted-foreground truncate">{email}</div>
           <div className="my-1 h-px bg-border/60" />
+          <Link
+            to="/settings/billing"
+            onClick={() => setOpen(false)}
+            className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-accent/60 text-foreground text-left"
+          >
+            <CreditCard className="h-3.5 w-3.5" /> Billing
+          </Link>
           <button
             onClick={signOut}
             className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-accent/60 text-foreground text-left"
