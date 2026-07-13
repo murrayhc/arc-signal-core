@@ -389,7 +389,7 @@ function Scenarios() {
         <SectionHeader
           eyebrow="Illustrative scenarios"
           title="What an early Arklight signal looks like."
-          sub="Constructed examples — no customers named. Every real projection is dated, evidenced, and graded on outcome."
+          sub="Constructed examples, with no customers named. Every real projection is dated, evidenced, and graded on the outcome."
         />
         <div className="mkt-mono text-[10px] uppercase tracking-widest text-[color:var(--mkt-muted)]">
           Not investment advice
