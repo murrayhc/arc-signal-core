@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireOwner } from "@/lib/archlight/owner-auth.server";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import { callAI, callJson, guardFinancialAdvice, pickModel } from "./ai-gateway.server";
 import { shingles, cosine, centroid, fetchFeed } from "./text.server";
@@ -45,7 +46,7 @@ async function loadScanSettings(): Promise<ScanSettings> {
 export const getDashboard = createServerFn({ method: "GET" }).handler(async () => {
   const db = await admin();
   try { await reapStaleRunningScans(db); } catch { /* best-effort */ }
-  const [sources, events, opps, risks, scan, sysConf, nodes, edges, ticker, positioning, docs, unseenAlerts, arcs] = await Promise.all([
+  const [sources, events, opps, risks, scan, sysConf, nodes, edges, ticker, positioning, docs, arcs] = await Promise.all([
     db.from("sources").select("status, health_score, reliability_score, is_synthetic"),
     db.from("event_candidates").select("id, title, event_class, status, severity, risk_score, opportunity_score, confidence").order("last_updated_at", { ascending: false }),
     db.from("opportunity_cards").select("id, title, opportunity_type, summary, affected_sectors, affected_regions, urgency_score, commercial_value_score, confidence").order("commercial_value_score", { ascending: false }).limit(8),
@@ -57,9 +58,9 @@ export const getDashboard = createServerFn({ method: "GET" }).handler(async () =
     db.from("event_candidates").select("title, event_class, opportunity_score, risk_score, confidence").order("last_updated_at", { ascending: false }).limit(6),
     db.from("strategic_positioning").select("id, title, user_type, how_it_could_be_used, why_it_may_matter, confidence, constraints").limit(4),
     db.from("documents").select("copy_loop_score, is_likely_copy").order("fetched_at", { ascending: false }).limit(200),
-    db.from("alerts").select("id, watchlist_id, event_candidate_id, reason, severity, created_at, seen").eq("seen", false).order("created_at", { ascending: false }).limit(20),
     db.from("evidence_arcs").select("id, title, true_potential_score, confidence, contradiction_score, source_diversity, momentum_score, updated_at").order("updated_at", { ascending: false }).limit(6),
   ]);
+
 
   const sourcesArr = sources.data ?? [];
   const online = sourcesArr.filter((s) => s.status === "active").length;
@@ -82,7 +83,7 @@ export const getDashboard = createServerFn({ method: "GET" }).handler(async () =
       events_tracked: events.data?.length ?? 0,
       open_opportunities: (events.data ?? []).filter((e) => e.event_class === "opportunity" || e.event_class === "mixed").length,
       active_risks: (events.data ?? []).filter((e) => e.event_class === "risk" || e.event_class === "mixed").length,
-      unseen_alerts: unseenAlerts.data?.length ?? 0,
+      unseen_alerts: 0,
     },
     system: {
       source_coverage: Number(avgHealth.toFixed(3)),
@@ -99,7 +100,7 @@ export const getDashboard = createServerFn({ method: "GET" }).handler(async () =
     },
     ticker: ticker.data ?? [],
     positioning: positioning.data ?? [],
-    alerts: unseenAlerts.data ?? [],
+    alerts: [],
     arcs: arcs.data ?? [],
   };
 });
@@ -841,6 +842,7 @@ export async function runScanImpl() {
           if (w.sectors?.length) parts.push(`sector ${sector}`);
           if (w.regions?.length) parts.push(`region ${region}`);
           await db.from("alerts").upsert({
+            user_id: w.user_id,
             watchlist_id: w.id,
             event_candidate_id: eventRow.id,
             reason: `Matched watchlist "${w.name}" · ${parts.join(" · ") || "score thresholds"}`,
@@ -849,6 +851,7 @@ export async function runScanImpl() {
           }, { onConflict: "watchlist_id,event_candidate_id" });
         }
       }
+
       await saveProgress(`Synthesised event from cluster ${key}.`);
     } catch (err) {
       notes.push(`Synthesis cluster ${key} failed: ${err instanceof Error ? err.message : String(err)}`);
@@ -2087,37 +2090,45 @@ const WatchlistCreate = z.object({
   min_opportunity: z.number().min(0).max(1).default(0),
   min_confidence: z.number().min(0).max(1).default(0),
 });
-export const createWatchlist = createServerFn({ method: "POST" }).middleware([requireOwner])
+export const createWatchlist = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => WatchlistCreate.parse(d))
-  .handler(async ({ data }) => {
-    const db = await admin();
-    const { data: row, error } = await db.from("watchlists").insert(data).select().single();
+  .handler(async ({ data, context }) => {
+    const db = context.supabase;
+    const { data: row, error } = await db.from("watchlists").insert({ ...data, user_id: context.userId }).select().single();
     if (error) throw new Error(error.message);
     return { watchlist: row };
   });
 
-export const deleteWatchlist = createServerFn({ method: "POST" }).middleware([requireOwner])
+export const deleteWatchlist = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => IdInput.parse(d))
-  .handler(async ({ data }) => {
-    const db = await admin();
+  .handler(async ({ data, context }) => {
+    const db = context.supabase;
     const { error } = await db.from("watchlists").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
 
-export const getWatchlists = createServerFn({ method: "GET" }).handler(async () => {
-  const db = await admin();
-  const [{ data: watchlists }, { data: alerts }] = await Promise.all([
-    db.from("watchlists").select("*").order("created_at", { ascending: false }),
-    db.from("alerts").select("id, watchlist_id, event_candidate_id, reason, severity, seen, created_at").order("created_at", { ascending: false }).limit(100),
-  ]);
-  return { watchlists: watchlists ?? [], alerts: alerts ?? [] };
-});
+export const getWatchlists = createServerFn({ method: "GET" }).middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const db = context.supabase;
+    const [{ data: watchlists }, { data: alerts }] = await Promise.all([
+      db.from("watchlists").select("*").order("created_at", { ascending: false }),
+      db.from("alerts").select("id, watchlist_id, event_candidate_id, reason, severity, seen, created_at").order("created_at", { ascending: false }).limit(100),
+    ]);
+    return { watchlists: watchlists ?? [], alerts: alerts ?? [] };
+  });
 
-export const markAlertSeen = createServerFn({ method: "POST" }).middleware([requireOwner])
+export const getUnseenAlertCount = createServerFn({ method: "GET" }).middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const db = context.supabase;
+    const { count } = await db.from("alerts").select("id", { count: "exact", head: true }).eq("seen", false);
+    return { count: count ?? 0 };
+  });
+
+export const markAlertSeen = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => IdInput.parse(d))
-  .handler(async ({ data }) => {
-    const db = await admin();
+  .handler(async ({ data, context }) => {
+    const db = context.supabase;
     await db.from("alerts").update({ seen: true }).eq("id", data.id);
     return { ok: true };
   });
@@ -2129,10 +2140,10 @@ const AddToWatchlistInput = z.object({
   kind: z.enum(["keyword", "sector", "region"]).default("keyword"),
   value: z.string().min(1).max(120),
 });
-export const addToWatchlist = createServerFn({ method: "POST" }).middleware([requireOwner])
+export const addToWatchlist = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => AddToWatchlistInput.parse(d))
-  .handler(async ({ data }) => {
-    const db = await admin();
+  .handler(async ({ data, context }) => {
+    const db = context.supabase;
     const col = data.kind === "sector" ? "sectors" : data.kind === "region" ? "regions" : "keywords";
     const { data: row, error: readErr } = await db.from("watchlists").select(`id, name, ${col}`).eq("id", data.watchlist_id).single();
     if (readErr || !row) throw new Error(readErr?.message ?? "Watchlist not found");
@@ -2145,5 +2156,6 @@ export const addToWatchlist = createServerFn({ method: "POST" }).middleware([req
     if (upErr) throw new Error(upErr.message);
     return { ok: true, added: true, watchlist_name: (row as { name: string }).name };
   });
+
 
 

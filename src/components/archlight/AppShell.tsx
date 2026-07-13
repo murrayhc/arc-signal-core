@@ -2,7 +2,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Bell, Building2, ChevronDown, Command, Compass, Crosshair, Database, Download, Eye, FlaskConical, Flame, Gauge, GitBranch, HelpCircle, Layers, LogOut, Moon, Play, Radar, Search, Settings, Shield, Sparkles, Sun, Target } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { getDashboard } from "@/lib/archlight/pipeline.functions";
+import { getDashboard, getUnseenAlertCount } from "@/lib/archlight/pipeline.functions";
 import { GuidedTour, NavHoverTooltips, startGuidedTour } from "@/components/archlight/GuidedTour";
 import { useSession } from "@/lib/useSession";
 import { supabase } from "@/integrations/supabase/client";
@@ -162,8 +162,8 @@ function ThemeToggle() {
 }
 
 function AlertsBell() {
-  const { data } = useQuery({ queryKey: ["archlight", "dashboard"], queryFn: () => getDashboard(), staleTime: 30_000 });
-  const count = data?.counts.unseen_alerts ?? 0;
+  const { data } = useQuery({ queryKey: ["archlight", "unseenAlerts"], queryFn: () => getUnseenAlertCount(), staleTime: 30_000 });
+  const count = data?.count ?? 0;
   return (
     <Link to="/watchlist" className="relative h-8 w-8 rounded-md border border-border/60 grid place-items-center text-muted-foreground hover:text-foreground hover:bg-accent/40 transition">
       <Bell className="h-4 w-4"/>
