@@ -1,6 +1,6 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
-import { Menu, X } from "lucide-react";
+import { Menu, X, ArrowUpRight } from "lucide-react";
 import { useSession } from "@/lib/useSession";
 
 type NavItem = { label: string; href: string; route?: boolean };
@@ -68,6 +68,113 @@ export function MarketingHeader({ overlay = false }: { overlay?: boolean }) {
   }, [open]);
 
   const dark = overlay;
+  if (!dark) {
+    const textBase = "text-[color:var(--mkt-heading)]";
+    const textHover = "hover:text-[color:var(--mkt-fg)]";
+
+    return (
+      <header className="sticky top-0 z-40 border-b border-[color:var(--mkt-line)] bg-[color:var(--mkt-bg)]/90 backdrop-blur-xl">
+        <div className="mx-auto max-w-7xl px-6">
+          <div className="flex h-14 lg:h-16 items-center gap-6">
+            <Link
+              to="/"
+              className="mkt-display shrink-0 text-[17px] tracking-tight text-[color:var(--mkt-fg)]"
+            >
+              <span className="inline-flex items-center gap-2">
+                <span
+                  aria-hidden
+                  className="inline-block h-2.5 w-2.5 rounded-full"
+                  style={{ background: "var(--mkt-accent)" }}
+                />
+                Arklight
+              </span>
+            </Link>
+            <nav className="hidden md:flex items-center gap-1 text-sm">
+              {NAV.map((n) => {
+                const cls = `px-3 py-1.5 rounded-md ${textBase} ${textHover} transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--mkt-charcoal)]/40`;
+                return n.route ? (
+                  <Link key={n.href} to={n.href as any} className={cls}>{n.label}</Link>
+                ) : (
+                  <a key={n.href} href={n.href} className={cls}>{n.label}</a>
+                );
+              })}
+            </nav>
+            <div className="flex-1" />
+            <div className="hidden md:flex items-center gap-2">
+              {user ? (
+                <Link
+                  to="/app"
+                  className="h-9 px-4 inline-flex items-center gap-1.5 rounded-md text-sm font-medium transition bg-[color:var(--mkt-charcoal)] text-white hover:opacity-90"
+                >
+                  Open Arklight <ArrowUpRight className="h-4 w-4" />
+                </Link>
+              ) : (
+                <>
+                  <Link
+                    to="/auth"
+                    search={{ mode: "signin" }}
+                    className={`h-9 px-3 inline-flex items-center rounded-md text-sm ${textBase} ${textHover}`}
+                  >
+                    Sign in
+                  </Link>
+                  <Link
+                    to="/auth"
+                    search={{ mode: "signup" }}
+                    className="h-9 px-4 inline-flex items-center rounded-md text-sm font-medium transition bg-[color:var(--mkt-charcoal)] text-white hover:opacity-90"
+                  >
+                    Get started
+                  </Link>
+                </>
+              )}
+            </div>
+            <button
+              type="button"
+              aria-label={open ? "Close menu" : "Open menu"}
+              aria-expanded={open}
+              aria-controls="marketing-mobile-menu"
+              onClick={() => setOpen((v) => !v)}
+              className="md:hidden h-9 w-9 grid place-items-center rounded-md border border-[color:var(--mkt-line-strong)] text-[color:var(--mkt-fg)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--mkt-charcoal)]/40"
+            >
+              {open ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+            </button>
+          </div>
+          {open && (
+            <div
+              id="marketing-mobile-menu"
+              className="md:hidden mt-2 rounded-xl overflow-hidden bg-white text-[color:var(--mkt-fg)] border border-[color:var(--mkt-line)]"
+            >
+              <div className="px-3 py-3 flex flex-col gap-1">
+                {NAV.map((n) => {
+                  const cls = "px-3 py-2 rounded-md text-sm text-[color:var(--mkt-heading)] hover:bg-black/5";
+                  return n.route ? (
+                    <Link key={n.href} to={n.href as any} onClick={() => setOpen(false)} className={cls}>{n.label}</Link>
+                  ) : (
+                    <a key={n.href} href={n.href} onClick={() => setOpen(false)} className={cls}>{n.label}</a>
+                  );
+                })}
+                <div className="h-px my-2 bg-[color:var(--mkt-line)]" />
+                {user ? (
+                  <Link to="/app" onClick={() => setOpen(false)} className="h-10 inline-flex items-center justify-center rounded-md text-sm font-medium bg-[color:var(--mkt-accent)] text-black">
+                    Open Arklight
+                  </Link>
+                ) : (
+                  <>
+                    <Link to="/auth" search={{ mode: "signin" }} onClick={() => setOpen(false)} className="h-10 inline-flex items-center justify-center rounded-md text-sm border border-[color:var(--mkt-line-strong)] text-[color:var(--mkt-fg)]">
+                      Sign in
+                    </Link>
+                    <Link to="/auth" search={{ mode: "signup" }} onClick={() => setOpen(false)} className="h-10 inline-flex items-center justify-center rounded-md text-sm font-medium bg-[color:var(--mkt-accent)] text-black">
+                      Get started
+                    </Link>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </header>
+    );
+  }
+
   const wrap = dark
     ? "absolute inset-x-0 top-4 z-50 mx-auto w-full lg:top-4 lg:max-w-[calc(100%-4rem)]"
     : "sticky top-0 z-40 border-b border-[color:var(--mkt-line)] bg-[color:var(--mkt-bg)]/90 backdrop-blur-xl";
