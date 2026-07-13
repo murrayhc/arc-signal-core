@@ -43,9 +43,7 @@ function PricingPage() {
           Free while you decide. Pro when you're ready.
         </h1>
         <p className="mt-5 max-w-2xl text-[color:var(--mkt-muted)]">
-          The Free tier is currently £0 — explore the graph, run scoped research
-          and watch calls get graded. Pro adds delivery, unlimited research and
-          advanced analytics. No card required until you upgrade.
+          The Free tier is currently £0. Explore the graph, run scoped research and watch calls get graded. Pro adds delivery, unlimited research and advanced analytics. No card required until you upgrade.
         </p>
       </section>
 
