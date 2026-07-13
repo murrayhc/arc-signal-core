@@ -46,7 +46,7 @@ async function loadScanSettings(): Promise<ScanSettings> {
 export const getDashboard = createServerFn({ method: "GET" }).handler(async () => {
   const db = await admin();
   try { await reapStaleRunningScans(db); } catch { /* best-effort */ }
-  const [sources, events, opps, risks, scan, sysConf, nodes, edges, ticker, positioning, docs, unseenAlerts, arcs] = await Promise.all([
+  const [sources, events, opps, risks, scan, sysConf, nodes, edges, ticker, positioning, docs, arcs] = await Promise.all([
     db.from("sources").select("status, health_score, reliability_score, is_synthetic"),
     db.from("event_candidates").select("id, title, event_class, status, severity, risk_score, opportunity_score, confidence").order("last_updated_at", { ascending: false }),
     db.from("opportunity_cards").select("id, title, opportunity_type, summary, affected_sectors, affected_regions, urgency_score, commercial_value_score, confidence").order("commercial_value_score", { ascending: false }).limit(8),
@@ -58,9 +58,9 @@ export const getDashboard = createServerFn({ method: "GET" }).handler(async () =
     db.from("event_candidates").select("title, event_class, opportunity_score, risk_score, confidence").order("last_updated_at", { ascending: false }).limit(6),
     db.from("strategic_positioning").select("id, title, user_type, how_it_could_be_used, why_it_may_matter, confidence, constraints").limit(4),
     db.from("documents").select("copy_loop_score, is_likely_copy").order("fetched_at", { ascending: false }).limit(200),
-    db.from("alerts").select("id, watchlist_id, event_candidate_id, reason, severity, created_at, seen").eq("seen", false).order("created_at", { ascending: false }).limit(20),
     db.from("evidence_arcs").select("id, title, true_potential_score, confidence, contradiction_score, source_diversity, momentum_score, updated_at").order("updated_at", { ascending: false }).limit(6),
   ]);
+
 
   const sourcesArr = sources.data ?? [];
   const online = sourcesArr.filter((s) => s.status === "active").length;
