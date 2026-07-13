@@ -100,7 +100,7 @@ export const getDashboard = createServerFn({ method: "GET" }).handler(async () =
     },
     ticker: ticker.data ?? [],
     positioning: positioning.data ?? [],
-    alerts: unseenAlerts.data ?? [],
+    alerts: [],
     arcs: arcs.data ?? [],
   };
 });
