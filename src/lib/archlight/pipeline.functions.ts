@@ -1629,6 +1629,19 @@ export const interrogate = createServerFn({ method: "POST" }).middleware([requir
     const q = data.query.trim();
     const userId = context.userId;
 
+    if (!(await isProUser(userId))) {
+      const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+      const { count } = await db
+        .from("investigation_queries")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", userId)
+        .gte("created_at", since);
+      if ((count ?? 0) >= 5) {
+        throw new Error("FREE_LIMIT: Your plan includes 5 research runs per month. Upgrade to Pro.");
+      }
+    }
+
+
     if (!data.forceRefresh) {
       const cached = await loadCachedInterrogation(db, q, userId);
       if (cached) return cached;
