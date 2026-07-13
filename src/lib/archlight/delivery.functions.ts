@@ -222,29 +222,40 @@ export async function deliverExposureHits(_opts: DeliverOpts): Promise<DeliverRe
   if (channels.length === 0) return result;
   result.channels = channels.length;
 
-  // Cache the set of active profile ids for channels that target "all".
-  const { data: activeProfiles } = await db
-    .from("exposure_profiles")
-    .select("id")
-    .eq("active", true);
-  const activeProfileIds = (activeProfiles ?? []).map((p) => p.id);
+  // Cache active profile ids per owner (for channels targeting "all this user's profiles").
+  const ownerIds = Array.from(new Set(channels.map((c) => c.user_id)));
+  const activeProfilesByOwner = new Map<string, string[]>();
+  if (ownerIds.length) {
+    const { data: activeProfiles } = await db
+      .from("exposure_profiles")
+      .select("id, user_id")
+      .eq("active", true)
+      .in("user_id", ownerIds);
+    for (const p of activeProfiles ?? []) {
+      const arr = activeProfilesByOwner.get(p.user_id) ?? [];
+      arr.push(p.id);
+      activeProfilesByOwner.set(p.user_id, arr);
+    }
+  }
 
   for (const ch of channels) {
-    // Select undelivered hits above the channel's threshold, scoped to profile.
+    // Undelivered hits for this channel's owner, above threshold.
     let q = db
       .from("exposure_hits")
       .select("id, profile_id, exposure_item_id, event_candidate_id, relevance, direction, rationale")
+      .eq("user_id", ch.user_id)
       .is("delivered_at", null)
       .gte("relevance", Number(ch.min_relevance))
       .order("relevance", { ascending: false })
       .limit(20);
     if (ch.profile_id) {
       q = q.eq("profile_id", ch.profile_id);
-    } else if (activeProfileIds.length) {
-      q = q.in("profile_id", activeProfileIds);
     } else {
-      continue;
+      const ids = activeProfilesByOwner.get(ch.user_id) ?? [];
+      if (ids.length === 0) continue;
+      q = q.in("profile_id", ids);
     }
+
     const { data: hits } = await q;
     const hitArr = hits ?? [];
     if (hitArr.length === 0) continue;
