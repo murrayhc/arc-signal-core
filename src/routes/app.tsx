@@ -1,14 +1,12 @@
-import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { AppShell, InterrogateSearch } from "@/components/archlight/AppShell";
 import { ActiveOpportunities } from "@/components/archlight/panels";
 import { dashboardQueryOptions } from "@/lib/archlight/queries";
-import { runScan } from "@/lib/archlight/pipeline.functions";
 import { getScanSettings } from "@/lib/archlight/settings.functions";
 import { countKnobsOffDefault } from "@/lib/archlight/settings.defaults";
 import { listExposureHits, markHitSeen } from "@/lib/archlight/exposure.functions";
 import { getRisingStressRail } from "@/lib/archlight/beliefs.functions";
-import { toast } from "sonner";
 import { Activity, ArrowDown, ArrowUp, Bell, Crosshair, Minus, Receipt, Settings, SlidersHorizontal } from "lucide-react";
 
 export const Route = createFileRoute("/app")({
@@ -28,21 +26,8 @@ export const Route = createFileRoute("/app")({
 
 function Dashboard() {
   const { data } = useSuspenseQuery(dashboardQueryOptions);
-  const router = useRouter();
-
-  const scan = useMutation({
-    mutationFn: () => runScan(),
-    onSuccess: (r) => {
-      toast.success(`Scan ${r.status}`, {
-        description: `${r.sources_succeeded}/${r.sources_attempted} sources · ${r.documents_collected} docs · ${r.atomic_claims_created} atomic claims`,
-      });
-      router.invalidate();
-    },
-    onError: (e) => toast.error("Scan failed", { description: e instanceof Error ? e.message : String(e) }),
-  });
-
   return (
-    <AppShell onRunScan={() => scan.mutate()} scanning={scan.isPending}>
+    <AppShell>
       {/* Header */}
       <div className="flex items-end justify-between gap-4 flex-wrap">
         <div>

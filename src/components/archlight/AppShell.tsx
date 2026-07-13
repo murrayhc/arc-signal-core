@@ -1,13 +1,13 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Bell, Building2, ChevronDown, Command, Compass, CreditCard, Crosshair, Database, Download, Eye, FlaskConical, Flame, Gauge, GitBranch, HelpCircle, Layers, LogOut, Moon, Play, Radar, Search, Settings, Shield, Sparkles, Sun, Target } from "lucide-react";
+import { Bell, Building2, ChevronDown, Command, Compass, CreditCard, Crosshair, Database, Download, Eye, FlaskConical, Flame, Gauge, GitBranch, HelpCircle, Layers, LogOut, Moon, Radar, Search, Settings, Shield, Sparkles, Sun, Target } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { getDashboard, getUnseenAlertCount } from "@/lib/archlight/pipeline.functions";
+import { getDashboard, getUnseenAlertCount, getEngineFreshness } from "@/lib/archlight/pipeline.functions";
 import { GuidedTour, NavHoverTooltips, startGuidedTour } from "@/components/archlight/GuidedTour";
 import { useSession } from "@/lib/useSession";
 import { supabase } from "@/integrations/supabase/client";
 
-export function AppShell({ children, onRunScan, scanning }: { children: ReactNode; onRunScan?: () => void; scanning?: boolean }) {
+export function AppShell({ children }: { children: ReactNode }) {
   const { user, loading } = useSession();
   const navigate = useNavigate();
 
@@ -25,7 +25,7 @@ export function AppShell({ children, onRunScan, scanning }: { children: ReactNod
 
   return (
     <div className="min-h-screen w-full flex flex-col">
-      <TopNav onRunScan={onRunScan} scanning={scanning}/>
+      <TopNav />
       <div className="flex-1 flex">
         <SideNav />
         <main className="flex-1 min-w-0 p-5 flex flex-col gap-5">{children}</main>
@@ -37,7 +37,7 @@ export function AppShell({ children, onRunScan, scanning }: { children: ReactNod
   );
 }
 
-function TopNav({ onRunScan, scanning }: { onRunScan?: () => void; scanning?: boolean }) {
+function TopNav() {
   return (
     <header className="sticky top-0 z-30 border-b border-border/60 bg-background/70 backdrop-blur-xl">
       <div className="flex items-center gap-6 px-5 h-14">
@@ -62,7 +62,7 @@ function TopNav({ onRunScan, scanning }: { onRunScan?: () => void; scanning?: bo
 
 
         <div className="flex items-center gap-1.5 shrink-0">
-          <TopBtn icon={<Play className="h-3.5 w-3.5"/>} label={scanning ? "Scanning…" : "Run scan"} accent onClick={onRunScan} disabled={scanning}/>
+          <EngineFreshness />
           <a href="/api/public/exports/events" download className="hidden xl:inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md text-[11px] border border-border/60 text-muted-foreground hover:text-foreground hover:bg-accent/40 transition">
             <Download className="h-3.5 w-3.5"/>Export CSV
           </a>
@@ -226,17 +226,27 @@ export function InterrogateSearch({ className = "" }: { className?: string } = {
   );
 }
 
-function TopBtn({ icon, label, accent, onClick, disabled }: { icon: ReactNode; label: string; accent?: boolean; onClick?: () => void; disabled?: boolean }) {
+function EngineFreshness() {
+  const { data } = useQuery({
+    queryKey: ["archlight", "engineFreshness"],
+    queryFn: () => getEngineFreshness(),
+    staleTime: 60_000,
+  });
+  const iso = data?.lastCompletedAt ?? null;
+  const label = iso
+    ? new Date(iso).toLocaleString("en-GB", {
+        day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit",
+        timeZone: "UTC",
+      }) + " GMT"
+    : "pending first run";
   return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      className={`hidden xl:inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md text-[11px] border transition disabled:opacity-50 disabled:cursor-not-allowed ${
-        accent ? "border-[color:var(--color-signal)]/60 text-[color:var(--color-signal)] hover:bg-[color:var(--color-signal)]/10 ring-signal"
-               : "border-border/60 text-muted-foreground hover:text-foreground hover:bg-accent/40"
-      }`}>
-      {icon}{label}
-    </button>
+    <div
+      title="Last completed global scan"
+      className="hidden xl:flex items-center gap-1.5 h-8 px-2.5 rounded-md text-[11px] border border-border/60 text-muted-foreground"
+    >
+      <Radar className="h-3.5 w-3.5" />
+      Engine updated: {label}
+    </div>
   );
 }
 function IconBtn({ children }: { children: ReactNode }) {

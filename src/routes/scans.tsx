@@ -34,7 +34,7 @@ function ScansPage() {
   });
 
   return (
-    <AppShell onRunScan={() => mut.mutate()} scanning={mut.isPending}>
+    <AppShell>
       <div className="max-w-6xl mx-auto w-full flex flex-col gap-5">
         <div className="flex items-end justify-between gap-3 flex-wrap">
           <div>
