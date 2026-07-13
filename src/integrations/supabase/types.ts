@@ -1826,6 +1826,62 @@ export type Database = {
         }
         Relationships: []
       }
+      narrative_divergence: {
+        Row: {
+          baseline: string | null
+          computed_at: string | null
+          created_at: string
+          distinct_lean_zones: number
+          divergence_label: string | null
+          divergence_score: number | null
+          event_candidate_id: string
+          id: string
+          model: string | null
+          n_outlets: number
+          n_with_lean: number
+          outlet_framings: Json
+          updated_at: string
+        }
+        Insert: {
+          baseline?: string | null
+          computed_at?: string | null
+          created_at?: string
+          distinct_lean_zones?: number
+          divergence_label?: string | null
+          divergence_score?: number | null
+          event_candidate_id: string
+          id?: string
+          model?: string | null
+          n_outlets?: number
+          n_with_lean?: number
+          outlet_framings?: Json
+          updated_at?: string
+        }
+        Update: {
+          baseline?: string | null
+          computed_at?: string | null
+          created_at?: string
+          distinct_lean_zones?: number
+          divergence_label?: string | null
+          divergence_score?: number | null
+          event_candidate_id?: string
+          id?: string
+          model?: string | null
+          n_outlets?: number
+          n_with_lean?: number
+          outlet_framings?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "narrative_divergence_event_candidate_id_fkey"
+            columns: ["event_candidate_id"]
+            isOneToOne: true
+            referencedRelation: "event_candidates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       opportunity_cards: {
         Row: {
           actionability_score: number
