@@ -32,6 +32,7 @@ export function GuidedTour() {
   const [reduced, setReduced] = useState(false);
   const [entering, setEntering] = useState(true);
   const prevStep = useRef(0);
+  const settlingRef = useRef(false);
 
   const start = useCallback(() => {
     setStep(0);
