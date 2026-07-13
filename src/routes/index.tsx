@@ -322,6 +322,12 @@ function BentoOne() {
               </div>
             ))}
           </div>
+          <p className="mt-4 text-xs text-white/70">
+            Related signals become dated scenarios, each with a probability, a deadline, and the evidence behind it.
+          </p>
+          <p className="mt-3 text-xs text-white">
+            A forward view you can weigh. You see what is likely and by when, while a headline only confirms what already happened.
+          </p>
         </BentoTile>
 
         {/* Prove */}
