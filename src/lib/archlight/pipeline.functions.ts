@@ -1621,14 +1621,15 @@ function buildQueries(kind: string, canonical: string, adjacent: string[]): stri
   return Array.from(new Set(base)).slice(0, 8);
 }
 
-export const interrogate = createServerFn({ method: "POST" }).middleware([requireOwner])
+export const interrogate = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) => SearchInput.parse(data))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     const db = await admin();
     const q = data.query.trim();
+    const userId = context.userId;
 
     if (!data.forceRefresh) {
-      const cached = await loadCachedInterrogation(db, q);
+      const cached = await loadCachedInterrogation(db, q, userId);
       if (cached) return cached;
     }
 
