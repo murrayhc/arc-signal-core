@@ -1956,6 +1956,21 @@ export const getScanHistory = createServerFn({ method: "GET" }).handler(async ()
   return { runs: runs.data ?? [], logs: logs.data ?? [] };
 });
 
+// Freshness signal for the top nav: when did the most recent global scan finish?
+export const getEngineFreshness = createServerFn({ method: "GET" }).handler(
+  async (): Promise<{ lastCompletedAt: string | null }> => {
+    const db = await admin();
+    const { data } = await db
+      .from("scan_runs")
+      .select("finished_at, started_at, status")
+      .in("status", ["completed", "completed_with_errors"])
+      .order("finished_at", { ascending: false, nullsFirst: false })
+      .limit(1)
+      .maybeSingle();
+    return { lastCompletedAt: data?.finished_at ?? data?.started_at ?? null };
+  },
+);
+
 export const getRoutingInfo = createServerFn({ method: "GET" }).handler(async () => {
   return {
     router: {
