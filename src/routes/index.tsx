@@ -1,8 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState, type ReactNode } from "react";
 import {
-  Activity, ArrowRight, Building2, Compass, Database, Eye, GitBranch,
-  Layers, Radar, Receipt, Scale, ShieldCheck, Signal, Sparkles, Target, Waves,
+  ArrowUpRight, Check, Minus, Radar, GitBranch, Compass, Target, Receipt,
+  Building2, FileText, Scale, BarChart3, Newspaper, Globe2, Plus,
 } from "lucide-react";
 import { MarketingLayout } from "@/components/marketing/MarketingLayout";
 
@@ -10,17 +10,9 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "Project Arklight · See it forming before it becomes the news" },
-      {
-        name: "description",
-        content:
-          "Arklight reads the open public record, traces every claim to its origin, maps consequence, and turns early signals into dated, testable scenarios. Receipts, not opinions.",
-      },
+      { name: "description", content: "Arklight reads the open public record, traces every claim to its origin, maps who it reaches, and turns early signals into dated, testable scenarios." },
       { property: "og:title", content: "Project Arklight — Public-signals early warning" },
-      {
-        property: "og:description",
-        content:
-          "A precision public-intelligence instrument for investors, strategy, risk, and public-affairs teams. Public sources only. Every call frozen and graded.",
-      },
+      { property: "og:description", content: "A precision public-intelligence instrument. Public sources only. Every call frozen and graded." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:title", content: "Project Arklight" },
@@ -31,708 +23,681 @@ export const Route = createFileRoute("/")({
 });
 
 /* ------------------------------------------------------------------ */
-/*  Section shell utilities                                            */
+/*  Shared bits                                                       */
 /* ------------------------------------------------------------------ */
 
-function Eyebrow({ children }: { children: React.ReactNode }) {
+function Eyebrow({ children, tone = "dark" }: { children: ReactNode; tone?: "dark" | "light" }) {
+  const cls = tone === "light"
+    ? "text-white/60"
+    : "text-[color:var(--mkt-muted)]";
   return (
-    <div className="text-[10px] font-mono uppercase tracking-[0.28em] text-muted-foreground">
+    <div className={`mkt-mono text-[11px] uppercase tracking-[0.28em] ${cls}`}>
       {children}
     </div>
   );
 }
 
-function Section({
-  id,
-  className = "",
-  children,
-}: {
-  id?: string;
-  className?: string;
-  children: React.ReactNode;
-}) {
+function SectionHeader({
+  eyebrow, title, sub, id,
+}: { eyebrow: string; title: ReactNode; sub?: ReactNode; id?: string }) {
   return (
-    <section
-      id={id}
-      className={`scroll-mt-24 border-t border-border ${className}`}
+    <div id={id} className="max-w-3xl">
+      <Eyebrow>{eyebrow}</Eyebrow>
+      <h2 className="mkt-display mt-4 text-3xl md:text-5xl font-medium text-[color:var(--mkt-heading)] text-balance">
+        {title}
+      </h2>
+      {sub && <p className="mt-5 text-[color:var(--mkt-muted)] text-base md:text-lg max-w-2xl">{sub}</p>}
+    </div>
+  );
+}
+
+function PrimaryCta({ children, to = "/auth", search }: { children: ReactNode; to?: string; search?: Record<string, string> }) {
+  return (
+    <Link
+      to={to as any}
+      search={search as any}
+      className="inline-flex items-center gap-1.5 rounded-md bg-[color:var(--mkt-accent)] px-5 h-11 text-sm font-semibold text-black hover:opacity-90 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--mkt-accent)]/60"
     >
-      <div className="mx-auto max-w-7xl px-6 py-20 md:py-28">{children}</div>
+      {children} <ArrowUpRight className="h-4 w-4" />
+    </Link>
+  );
+}
+
+function GhostCtaLight({ children, href }: { children: ReactNode; href: string }) {
+  return (
+    <a
+      href={href}
+      className="inline-flex items-center gap-1.5 rounded-md border border-white/20 px-5 h-11 text-sm font-medium text-white hover:bg-white/10 transition"
+    >
+      {children}
+    </a>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Hero — dark shell + product-relevant visual                       */
+/* ------------------------------------------------------------------ */
+
+function HeroVisual() {
+  // Radial "scanning" instrument with source→claim→event lineage
+  return (
+    <div className="relative w-full h-[280px] sm:h-[360px] md:h-[440px]">
+      <div className="absolute inset-0 mkt-hero-grid" aria-hidden />
+      {/* dot map field */}
+      <div className="absolute inset-0 mkt-dotmap opacity-40" aria-hidden
+        style={{ maskImage: "radial-gradient(ellipse 60% 55% at 50% 50%, black 30%, transparent 80%)" }} />
+      {/* concentric radar */}
+      <div className="absolute inset-0 flex items-center justify-center" aria-hidden>
+        <div className="relative w-[520px] h-[520px] max-w-[95%] max-h-[95%]">
+          {[0.35, 0.55, 0.75, 0.95].map((s, i) => (
+            <div
+              key={i}
+              className="absolute inset-0 m-auto rounded-full border border-white/10"
+              style={{
+                width: `${s * 100}%`,
+                height: `${s * 100}%`,
+                left: 0, right: 0, top: 0, bottom: 0,
+              }}
+            />
+          ))}
+          {/* sweep arm */}
+          <div
+            className="absolute inset-0 m-auto w-full h-full rounded-full"
+            style={{
+              background:
+                "conic-gradient(from 0deg, rgba(255,204,0,0.35), rgba(255,204,0,0) 25%, rgba(255,204,0,0) 100%)",
+              maskImage: "radial-gradient(circle, transparent 20%, black 21%, black 92%, transparent 93%)",
+              animation: "mkt-sweep 12s linear infinite",
+            }}
+          />
+          {/* signal nodes */}
+          {[
+            { x: "22%", y: "38%", label: "Filing", delay: "0s" },
+            { x: "68%", y: "28%", label: "Tender", delay: "1.2s" },
+            { x: "78%", y: "62%", label: "Notice", delay: "2.4s" },
+            { x: "34%", y: "72%", label: "Wire", delay: "3.6s" },
+            { x: "50%", y: "50%", label: "Claim", delay: "0.6s", strong: true },
+          ].map((n) => (
+            <div key={n.label} className="absolute" style={{ left: n.x, top: n.y, transform: "translate(-50%,-50%)" }}>
+              <span
+                className="block rounded-full"
+                style={{
+                  width: n.strong ? 12 : 8,
+                  height: n.strong ? 12 : 8,
+                  background: n.strong ? "var(--mkt-accent)" : "#f5f4ef",
+                  boxShadow: n.strong ? "0 0 22px rgba(255,204,0,0.7)" : "0 0 12px rgba(245,244,239,0.35)",
+                  animation: `mkt-pulse-dot 3.6s ease-in-out ${n.delay} infinite`,
+                }}
+              />
+              <span className="mt-1 block mkt-mono text-[10px] uppercase tracking-widest text-white/60 whitespace-nowrap">
+                {n.label}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Lineage card overlay */}
+      <div className="hidden md:block absolute left-4 bottom-4 max-w-[300px] rounded-xl border border-white/10 bg-black/50 backdrop-blur-md p-4">
+        <div className="mkt-mono text-[10px] uppercase tracking-widest text-white/50">Evidence lineage</div>
+        <ol className="mt-3 space-y-2 text-xs text-white/80">
+          <li className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-white/60" /> Companies House · charge filed</li>
+          <li className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-white/60" /> Contracts Finder · notice cancelled</li>
+          <li className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full" style={{ background: "var(--mkt-accent)" }} /> Cluster confidence · 0.72</li>
+        </ol>
+      </div>
+
+      <div className="hidden md:block absolute right-4 bottom-4 max-w-[280px] rounded-xl border border-white/10 bg-black/50 backdrop-blur-md p-4">
+        <div className="mkt-mono text-[10px] uppercase tracking-widest text-white/50">Frozen call</div>
+        <div className="mt-3 text-sm text-white/90">Supplier consolidation likely in <span className="text-[color:var(--mkt-accent)]">14–21 days</span></div>
+        <div className="mt-1 mkt-mono text-[10px] text-white/50">P = 0.68 · graded on outcome</div>
+      </div>
+    </div>
+  );
+}
+
+function Hero() {
+  return (
+    <section className="px-2 md:px-3 pt-2 md:pt-3">
+      <div className="mkt-hero-shell relative overflow-hidden rounded-3xl">
+        {/* nav sits above via MarketingHeader overlay */}
+        <div className="relative px-6 md:px-12 pt-28 md:pt-36 pb-14 md:pb-20">
+          <div className="max-w-6xl mx-auto">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 pl-1 pr-3 py-1 text-[11px] mkt-mono uppercase tracking-widest text-white/80">
+              <span className="rounded-full bg-[color:var(--mkt-accent)] text-black px-2 py-0.5 text-[10px] font-semibold">Live</span>
+              Public-signals early warning
+            </div>
+            <div className="mt-6 grid lg:grid-cols-[1.15fr_0.85fr] gap-8 lg:gap-14 items-start">
+              <div>
+                <h1 className="mkt-display text-white text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-medium leading-[1.02] tracking-tight text-balance">
+                  See it forming <span className="text-white/70">before it becomes</span> the news.
+                </h1>
+              </div>
+              <div className="lg:pt-2">
+                <p className="text-white/70 text-base md:text-lg max-w-md">
+                  Arklight reads the open public record, traces every claim to its
+                  origin, maps who it reaches, and turns early signals into dated,
+                  testable scenarios.
+                </p>
+                <div className="mt-7 flex flex-wrap items-center gap-3">
+                  <PrimaryCta to="/auth" search={{ mode: "signup" }}>Start free</PrimaryCta>
+                  <GhostCtaLight href="#how">See how it works</GhostCtaLight>
+                </div>
+                <div className="mt-4 mkt-mono text-[10px] uppercase tracking-widest text-white/40">
+                  Public sources only · Not financial advice · GBP
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-10 md:mt-14 max-w-6xl mx-auto">
+            <HeroVisual />
+          </div>
+
+          {/* faint wordmark */}
+          <div aria-hidden className="pointer-events-none absolute inset-x-0 -bottom-6 md:-bottom-10 flex justify-center">
+            <span
+              className="mkt-display text-[22vw] leading-none font-semibold tracking-tight bg-clip-text text-transparent"
+              style={{ backgroundImage: "linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0))" }}
+            >
+              Arklight
+            </span>
+          </div>
+        </div>
+      </div>
     </section>
   );
 }
 
 /* ------------------------------------------------------------------ */
-/*  Hero — one immersive instrument field                              */
+/*  Source category strip (replaces logo cloud)                        */
 /* ------------------------------------------------------------------ */
 
-function HeroBackdrop({ prefersReduced }: { prefersReduced: boolean }) {
-  // Grid + radar + lineage form the ambient instrument field. The chart itself
-  // is placed as a flex row inside the hero so it never overlaps the copy.
+const SOURCES = [
+  { label: "Company registries", icon: Building2 },
+  { label: "Procurement notices", icon: FileText },
+  { label: "Regulatory releases", icon: Scale },
+  { label: "Official statistics", icon: BarChart3 },
+  { label: "Public news wires", icon: Newspaper },
+  { label: "Public web signals", icon: Globe2 },
+];
+
+function SourceStrip() {
   return (
-    <div className="absolute inset-0 pointer-events-none select-none z-0" aria-hidden="true">
-      <svg className="absolute inset-0 h-full w-full opacity-[0.35]">
-        <defs>
-          <pattern id="hero-grid" width="40" height="40" patternUnits="userSpaceOnUse">
-            <path d="M40 0H0V40" fill="none" stroke="currentColor" strokeWidth="0.5" className="text-border" />
-          </pattern>
-        </defs>
-        <rect width="100%" height="100%" fill="url(#hero-grid)" />
-      </svg>
-
-      {/* Radar — anchored to hero top-right corner */}
-      <div className="hidden md:block absolute top-8 right-8 lg:right-16">
-        <div className="relative h-28 w-28 lg:h-32 lg:w-32 rounded-full border border-border">
-          <div className="absolute inset-2 rounded-full border border-border/70" />
-          <div className="absolute inset-6 rounded-full border border-border/60" />
-          <div className="absolute inset-10 rounded-full border border-border/50" />
-          {!prefersReduced && (
-            <div
-              className="absolute inset-0 rounded-full"
-              style={{
-                background:
-                  "conic-gradient(from 0deg, transparent 0deg, color-mix(in srgb, var(--foreground) 18%, transparent) 40deg, transparent 60deg)",
-                animation: "hero-spin 4s linear infinite",
-              }}
-            />
-          )}
-          <div className="absolute inset-0 grid place-items-center">
-            <div className="h-1.5 w-1.5 rounded-full bg-foreground" />
-          </div>
-        </div>
-        <div className="mt-2 text-center text-[9px] font-mono uppercase tracking-widest text-muted-foreground">
-          Live scan
-        </div>
-      </div>
-
-      <style>{`@keyframes hero-spin { to { transform: rotate(360deg); } }`}</style>
-    </div>
-  );
-}
-
-function HeroTimeline({ prefersReduced }: { prefersReduced: boolean }) {
-  return (
-    <div className="w-full">
-      <div className="flex items-center justify-between text-[10px] font-mono uppercase tracking-widest text-muted-foreground mb-2">
-        <span>Illustrative view · Early signal vs. mainstream coverage</span>
-        <span className="hidden sm:inline">T-0 = story published</span>
-      </div>
-      <svg viewBox="0 0 800 180" preserveAspectRatio="none" className="w-full h-[160px] md:h-[280px]" aria-hidden="true">
-        <line x1="0" y1="150" x2="800" y2="150" stroke="currentColor" className="text-border" strokeWidth="1" />
-        <line x1="600" y1="10" x2="600" y2="150" stroke="currentColor" className="text-border" strokeDasharray="4 4" />
-        <text x="604" y="20" className="fill-muted-foreground" style={{ fontFamily: "JetBrains Mono, monospace", fontSize: 10 }}>T-0</text>
-        <path
-          d="M0,148 C60,146 90,140 130,130 C170,120 210,105 250,95 C300,82 350,80 400,72 C460,62 520,55 590,42 L600,40"
-          fill="none" stroke="currentColor" className="text-foreground" strokeWidth="2"
-        />
-        <path
-          d="M0,152 L520,150 C560,148 585,140 600,128 C640,100 680,72 760,40 L800,32"
-          fill="none" stroke="currentColor" className="text-muted-foreground" strokeWidth="1.5" strokeDasharray="6 4"
-        />
-        {[100, 220, 360, 470, 560].map((x, i) => (
-          <g key={x}>
-            <circle cx={x} cy={148 - i * 12} r="3" className="fill-foreground" />
-            {!prefersReduced && (
-              <circle cx={x} cy={148 - i * 12} r="3" className="fill-foreground/40">
-                <animate attributeName="r" values="3;10;3" dur="2.4s" begin={`${i * 0.4}s`} repeatCount="indefinite" />
-                <animate attributeName="opacity" values="0.6;0;0.6" dur="2.4s" begin={`${i * 0.4}s`} repeatCount="indefinite" />
-              </circle>
-            )}
-          </g>
-        ))}
-        <g style={{ fontFamily: "JetBrains Mono, monospace", fontSize: 10 }}>
-          <rect x="12" y="8" width="16" height="2" className="fill-foreground" />
-          <text x="34" y="12" className="fill-foreground">Early signal</text>
-          <rect x="150" y="8" width="16" height="2" className="fill-muted-foreground" />
-          <text x="172" y="12" className="fill-muted-foreground">Mainstream coverage</text>
-        </g>
-      </svg>
-    </div>
-  );
-}
-
-function HeroLineage() {
-  return (
-    <div className="hidden lg:block w-[280px] shrink-0 ml-auto">
-      <div className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground mb-2">
-        Evidence lineage
-      </div>
-      <ol className="space-y-1.5 text-[11px]">
-        {[
-          { k: "SRC", v: "Companies House filing" },
-          { k: "→", v: "Regional wire, 14:02" },
-          { k: "→", v: "National desk, 09:41 next day" },
-        ].map((r) => (
-          <li key={r.v} className="flex items-center gap-2 rounded-md border border-border bg-background/85 backdrop-blur-sm px-2 py-1.5">
-            <span className="text-[9px] font-mono text-muted-foreground w-6">{r.k}</span>
-            <span className="text-foreground">{r.v}</span>
-          </li>
-        ))}
-      </ol>
-    </div>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/*  Landing page                                                       */
-/* ------------------------------------------------------------------ */
-
-function LandingPage() {
-  const [prefersReduced, setPrefersReduced] = useState(false);
-  useEffect(() => {
-    const m = window.matchMedia("(prefers-reduced-motion: reduce)");
-    setPrefersReduced(m.matches);
-    const l = () => setPrefersReduced(m.matches);
-    m.addEventListener("change", l);
-    return () => m.removeEventListener("change", l);
-  }, []);
-
-  return (
-    <MarketingLayout>
-      {/* ===== HERO ===== */}
-      <section
-        className="relative overflow-hidden border-b border-border flex flex-col"
-        style={{
-          minHeight: "620px",
-          height: "calc(100svh - 4rem - 64px)",
-          maxHeight: "920px",
-        }}
-      >
-        <HeroBackdrop prefersReduced={prefersReduced} />
-
-        {/* Copy sits on the quiet upper region of the field — no card */}
-        <div className="relative z-10 mx-auto max-w-7xl w-full px-6 pt-10 md:pt-16 shrink-0">
-          <Eyebrow>Public-signals early warning</Eyebrow>
-          <h1 className="mt-4 font-display text-[36px] leading-[1.05] tracking-tight sm:text-5xl md:text-[68px] md:leading-[0.98] text-foreground max-w-[18ch]">
-            See it forming before it becomes the news.
-          </h1>
-          <p className="mt-4 md:mt-6 max-w-xl text-[15px] md:text-lg text-muted-foreground">
-            Arklight reads the open public record, traces every claim to its origin,
-            maps who it reaches, and turns early signals into dated, testable scenarios.
-          </p>
-
-          <div className="mt-6 md:mt-7 flex flex-wrap items-center gap-3">
-            <a
-              href="/auth?mode=signup"
-              className="h-11 inline-flex items-center gap-2 px-5 rounded-md text-sm font-medium bg-foreground text-background hover:opacity-90 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-foreground/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-            >
-              Start free <ArrowRight className="h-4 w-4" />
-            </a>
-            <a
-              href="#how"
-              className="h-11 inline-flex items-center gap-2 px-5 rounded-md text-sm font-medium border border-border bg-background/70 backdrop-blur-sm text-foreground hover:bg-accent/60 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-foreground/40"
-            >
-              See how it works
-            </a>
-          </div>
-
-          <div className="mt-4 md:mt-5 text-[11px] font-mono uppercase tracking-widest text-muted-foreground">
-            Public sources only · Every call frozen and graded · Not financial advice
-          </div>
-        </div>
-
-        {/* Flex spacer keeps copy and instrument apart at any viewport height */}
-        <div className="flex-1 min-h-4" aria-hidden="true" />
-
-        {/* Instrument row: lineage (desktop right) + timeline strip along the bottom */}
-        <div className="relative z-10 mx-auto max-w-7xl w-full px-6 md:px-10 pb-6 shrink-0">
-          <div className="hidden lg:flex justify-end mb-4">
-            <HeroLineage />
-          </div>
-          <HeroTimeline prefersReduced={prefersReduced} />
-        </div>
-      </section>
-
-
-
-
-      {/* ===== SOURCE STRIP ===== */}
-      <Section id="sources">
-        <div className="grid md:grid-cols-[1fr_auto] gap-8 items-end">
-          <div>
-            <Eyebrow>The record we read</Eyebrow>
-            <h2 className="mt-3 font-display text-3xl md:text-4xl tracking-tight max-w-[24ch]">
-              The open record. Nothing private. Nothing leaked.
-            </h2>
-          </div>
-          <p className="text-sm text-muted-foreground max-w-md">
-            33+ named outlets tracked across the political spectrum, alongside primary-source registries.
-          </p>
-        </div>
-        <div className="mt-10 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-          {[
-            { icon: Signal, label: "News wires" },
-            { icon: Building2, label: "Company filings" },
-            { icon: Layers, label: "Tenders & contracts" },
-            { icon: Waves, label: "Insolvency notices" },
-            { icon: ShieldCheck, label: "Regulatory actions" },
-            { icon: Scale, label: "Court records" },
-          ].map(({ icon: Icon, label }) => (
-            <div
-              key={label}
-              className="h-20 rounded-md border border-border bg-card px-4 flex items-center gap-3"
-            >
-              <Icon className="h-4 w-4 text-foreground" />
-              <span className="text-sm text-foreground">{label}</span>
-            </div>
-          ))}
-        </div>
-      </Section>
-
-      {/* ===== CASE ===== */}
-      <Section id="case">
-        <div className="grid md:grid-cols-2 gap-14 items-start">
-          <div>
-            <Eyebrow>The case</Eyebrow>
-            <h2 className="mt-3 font-display text-3xl md:text-5xl tracking-tight max-w-[18ch]">
-              By the time it is news, the move has already begun.
-            </h2>
-          </div>
-          <div className="space-y-4 text-[15px] leading-relaxed text-muted-foreground">
-            <p>
-              A regulator opens a consultation. A supplier files an unusual charge.
-              A small trade paper runs a paragraph nobody re-shares. Three weeks later
-              a national headline explains what the market already priced in.
-            </p>
-            <p className="text-foreground">
-              Arklight is built for the space between the first document and the loud headline —
-              detecting what is <em className="not-italic underline decoration-foreground/30 underline-offset-4">forming</em>,
-              not just reporting what is confirmed.
-            </p>
-          </div>
-        </div>
-      </Section>
-
-      {/* ===== HOW IT WORKS ===== */}
-      <Section id="how" className="bg-muted/30">
-        <Eyebrow>How it works</Eyebrow>
-        <h2 className="mt-3 font-display text-3xl md:text-5xl tracking-tight">
-          Scan · Trace · Map · Project · Prove
-        </h2>
-
-        <ol className="mt-12 grid md:grid-cols-5 gap-4">
-          {HOW_STEPS.map((s, i) => (
-            <li key={s.title} className="rounded-md border border-border bg-card p-5">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
-                  Step {String(i + 1).padStart(2, "0")}
-                </span>
-                <s.icon className="h-4 w-4 text-foreground" />
-              </div>
-              <div className="mt-3 font-display text-lg tracking-tight text-foreground">{s.title}</div>
-              <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{s.body}</p>
-            </li>
-          ))}
-        </ol>
-      </Section>
-
-      {/* ===== FEATURES ===== */}
-      <Section id="features">
-        <Eyebrow>Capability</Eyebrow>
-        <h2 className="mt-3 font-display text-3xl md:text-5xl tracking-tight max-w-[22ch]">
-          A working instrument — not a dashboard of decoration.
-        </h2>
-
-        <div className="mt-14 space-y-24">
-          <FeatureBand
-            eyebrow="Lineage"
-            title="Every claim traced to its origin."
-            body="See who reported it first, who repeated it, and where the trail actually ends. Repetition is not corroboration."
-            visual={<LineageVisual />}
-            reverse={false}
-          />
-          <FeatureBand
-            eyebrow="Book scoring"
-            title="Scored to your book — priority, not portfolio value."
-            body="Add the entities, sectors, and themes you care about. Signals are ranked by how strongly they touch what you watch. No holdings, no P&L."
-            visual={<BookScoreVisual />}
-            reverse
-          />
-          <FeatureBand
-            eyebrow="Narrative Divergence"
-            title="Left, centre, and right — measured on the same event."
-            body="A 0–100 gauge quantifies how far coverage diverges from a neutral baseline, using AllSides political-lean data."
-            visual={<DivergenceVisual />}
-            reverse={false}
-          />
-          <FeatureBand
-            eyebrow="Four horizons"
-            title="Dated scenarios instead of vibes."
-            body="Every projection ships with a horizon, a probability, and the leading and contradicting signals that would move it."
-            visual={<HorizonsVisual />}
-            reverse
-          />
-          <FeatureBand
-            eyebrow="Frozen track record"
-            title="Calibrated forecasts. Graded later."
-            body="Probability, deadline, and evidence are frozen when a call is made. Outcomes are graded from measured facts, not memory."
-            visual={<LedgerVisual />}
-            reverse={false}
-          />
-          <FeatureBand
-            eyebrow="Delivery"
-            title="Slack and email — for Pro."
-            body="Pro users receive prioritised alerts and briefings pushed to their channels. Free users read everything in-app."
-            visual={<DeliveryVisual />}
-            reverse
-          />
-        </div>
-      </Section>
-
-      {/* ===== PROOF ===== */}
-      <Section id="proof" className="bg-muted/30">
-        <div className="grid md:grid-cols-2 gap-14 items-start">
-          <div>
-            <Eyebrow>Proof</Eyebrow>
-            <h2 className="mt-3 font-display text-3xl md:text-5xl tracking-tight max-w-[18ch]">
-              A forecast should leave a receipt.
-            </h2>
-            <p className="mt-6 text-[15px] text-muted-foreground max-w-md">
-              Probability, deadline, and evidence are frozen when a call is made,
-              then graded later against public outcomes. Track record builds from
-              measured outcomes, not marketing claims.
-            </p>
-          </div>
-          <LedgerVisual full />
-        </div>
-      </Section>
-
-      {/* ===== NARRATIVE DIVERGENCE ===== */}
-      <Section id="divergence">
-        <div className="grid md:grid-cols-[1fr_auto] gap-8 items-end">
-          <div>
-            <Eyebrow>Narrative Divergence</Eyebrow>
-            <h2 className="mt-3 font-display text-3xl md:text-5xl tracking-tight max-w-[22ch]">
-              How far the story pulls from a neutral baseline.
-            </h2>
-          </div>
-          <p className="text-xs font-mono uppercase tracking-widest text-muted-foreground">
-            Political-lean data: AllSides
-          </p>
-        </div>
-
-        <div className="mt-10 rounded-md border border-border bg-card p-6 md:p-10">
-          <DivergenceVisual full />
-          <p className="mt-6 max-w-2xl text-sm text-muted-foreground">
-            Left, centre and right coverage of the same event, compared side-by-side.
-            Repetition inside one lane is not independent corroboration — the gauge
-            makes that visible.
-          </p>
-          <div className="mt-3 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
-            Illustrative view
-          </div>
-        </div>
-      </Section>
-
-      {/* ===== PRICING TEASER ===== */}
-      <Section id="pricing-teaser" className="bg-muted/30">
-        <Eyebrow>Pricing</Eyebrow>
-        <h2 className="mt-3 font-display text-3xl md:text-5xl tracking-tight">
-          Start free. Upgrade when the receipts speak for themselves.
-        </h2>
-
-        <div className="mt-10 grid md:grid-cols-2 gap-4">
-          <PricingCard
-            name="Free"
-            price="£0"
-            trailing="currently"
-            bullets={[
-              "Public-signal graph",
-              "Starter book — up to 10 watched items",
-              "5 research interrogations / month",
-              "Track record and weekly digest in-app",
-            ]}
-            cta={{ label: "Start free", href: "/auth?mode=signup", primary: true }}
-          />
-          <PricingCard
-            name="Pro"
-            price="Price to be announced"
-            trailing="7-day free trial"
-            highlight
-            bullets={[
-              "Slack and email alerts and briefings",
-              "Unlimited book and research",
-              "Advanced analytics and Narrative Divergence",
-              "Everything in Free",
-            ]}
-            cta={{ label: "See pricing", href: "/pricing", primary: false }}
-          />
-        </div>
-      </Section>
-
-      {/* ===== FAQ ===== */}
-      <Section id="faq">
-        <Eyebrow>FAQ</Eyebrow>
-        <h2 className="mt-3 font-display text-3xl md:text-5xl tracking-tight">
-          Questions we hear most often.
-        </h2>
-        <div className="mt-10 max-w-3xl">
-          <FAQ items={FAQ_ITEMS} />
-        </div>
-      </Section>
-
-      {/* ===== CTA ===== */}
-      <Section id="cta" className="bg-foreground text-background border-t-0">
-        <div className="text-center">
-          <h2 className="font-display text-3xl md:text-5xl tracking-tight">
-            Start seeing the signal before the summary.
-          </h2>
-          <p className="mt-4 text-sm md:text-base opacity-80">
-            Free to start. No card until Pro.
-          </p>
-          <div className="mt-8 flex flex-wrap justify-center gap-3">
-            <a
-              href="/auth?mode=signup"
-              className="h-11 inline-flex items-center gap-2 px-5 rounded-md text-sm font-medium bg-background text-foreground hover:opacity-90 transition"
-            >
-              Get started <ArrowRight className="h-4 w-4" />
-            </a>
-            <a
-              href="/pricing"
-              className="h-11 inline-flex items-center gap-2 px-5 rounded-md text-sm font-medium border border-background/30 text-background hover:bg-background/10 transition"
-            >
-              See pricing
-            </a>
-          </div>
-        </div>
-      </Section>
-    </MarketingLayout>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/*  Feature band + visuals                                             */
-/* ------------------------------------------------------------------ */
-
-function FeatureBand({
-  eyebrow,
-  title,
-  body,
-  visual,
-  reverse,
-}: {
-  eyebrow: string;
-  title: string;
-  body: string;
-  visual: React.ReactNode;
-  reverse: boolean;
-}) {
-  return (
-    <div className={`grid md:grid-cols-2 gap-10 items-center ${reverse ? "md:[&>div:first-child]:order-2" : ""}`}>
-      <div>
-        <Eyebrow>{eyebrow}</Eyebrow>
-        <h3 className="mt-3 font-display text-2xl md:text-3xl tracking-tight max-w-[22ch]">
-          {title}
-        </h3>
-        <p className="mt-4 text-[15px] text-muted-foreground leading-relaxed max-w-md">
-          {body}
+    <section className="mx-auto max-w-7xl px-6 py-16 md:py-24">
+      <div className="text-center">
+        <Eyebrow>Reads only from the public record</Eyebrow>
+        <p className="mt-3 text-[color:var(--mkt-muted)] text-sm">
+          Categories of primary source Arklight ingests. Category names are descriptive — no endorsement is claimed.
         </p>
       </div>
-      <div className="rounded-md border border-border bg-card p-5">
-        {visual}
-        <div className="mt-4 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
-          Illustrative view
-        </div>
+      <div className="mt-10 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        {SOURCES.map((s) => (
+          <div
+            key={s.label}
+            className="flex flex-col items-center gap-2 rounded-xl border border-[color:var(--mkt-line)] bg-[color:var(--mkt-panel)] px-4 py-5 text-center"
+          >
+            <s.icon className="h-5 w-5 text-[color:var(--mkt-heading)]" aria-hidden />
+            <span className="text-xs md:text-sm text-[color:var(--mkt-heading)] font-medium">{s.label}</span>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  BentoOne — Scan / Trace / Map / Project / Prove                    */
+/* ------------------------------------------------------------------ */
+
+function BentoTile({
+  className = "", dark = false, children,
+}: { className?: string; dark?: boolean; children: ReactNode }) {
+  return (
+    <div
+      className={`relative overflow-hidden rounded-2xl border p-6 ${
+        dark
+          ? "bg-[color:var(--mkt-charcoal)] text-white border-white/10"
+          : "bg-[color:var(--mkt-panel)] text-[color:var(--mkt-heading)] border-[color:var(--mkt-line)]"
+      } ${className}`}
+    >
+      {children}
+    </div>
+  );
+}
+
+function TileHead({ label, title, icon: Icon, dark }: { label: string; title: string; icon: any; dark?: boolean }) {
+  return (
+    <div>
+      <div className={`mkt-mono text-[10px] uppercase tracking-widest ${dark ? "text-white/50" : "text-[color:var(--mkt-muted)]"}`}>{label}</div>
+      <div className={`mt-2 flex items-center gap-2 mkt-display text-lg md:text-xl font-medium ${dark ? "text-white" : ""}`}>
+        <Icon className="h-4 w-4" aria-hidden /> {title}
       </div>
     </div>
   );
 }
 
-function LineageVisual() {
-  const rows = [
-    { t: "T-14d", k: "Primary", v: "Regulator publishes consultation PDF", strong: true },
-    { t: "T-11d", k: "Wire", v: "Trade paper republishes 2 paragraphs" },
-    { t: "T-6d",  k: "Wire", v: "Regional broadsheet repeats trade-paper phrasing" },
-    { t: "T-2d",  k: "News", v: "Two nationals — same wording, no new source" },
-    { t: "T-0",   k: "News", v: "Story becomes mainstream headline" },
-  ];
+function BentoOne() {
   return (
-    <ol className="space-y-1.5">
-      {rows.map((r) => (
-        <li key={r.t} className="flex items-center gap-3 rounded border border-border bg-background px-3 py-2">
-          <span className="w-14 text-[10px] font-mono text-muted-foreground">{r.t}</span>
-          <span className={`text-[10px] font-mono uppercase tracking-widest w-16 ${r.strong ? "text-foreground" : "text-muted-foreground"}`}>{r.k}</span>
-          <span className={`flex-1 text-sm ${r.strong ? "text-foreground font-medium" : "text-muted-foreground"}`}>{r.v}</span>
-        </li>
-      ))}
-    </ol>
-  );
-}
+    <section id="how" className="mx-auto max-w-7xl px-6 py-16 md:py-24 scroll-mt-24">
+      <SectionHeader
+        eyebrow="How Arklight works"
+        title={<>From raw public signal to a call you can grade later.</>}
+        sub="Five stages, run continuously. Every step keeps its receipts."
+      />
 
-function BookScoreVisual() {
-  const rows = [
-    { entity: "Northern Rail freight",  score: 82, tag: "risk" as const },
-    { entity: "Copper LT contracts",    score: 64, tag: "opportunity" as const },
-    { entity: "Independent gas suppliers", score: 47, tag: "risk" as const },
-    { entity: "UK offshore wind consenting", score: 31, tag: "opportunity" as const },
-  ];
-  const color = (t: "risk" | "opportunity") =>
-    t === "risk" ? "var(--color-risk)" : "var(--color-opportunity)";
-  return (
-    <ul className="space-y-3">
-      {rows.map((r) => (
-        <li key={r.entity} className="grid grid-cols-[1fr_auto] gap-3 items-center">
-          <div>
-            <div className="text-sm text-foreground">{r.entity}</div>
-            <div className="mt-1 h-1.5 rounded-full bg-border/70 overflow-hidden">
+      <div className="mt-12 grid grid-cols-1 md:grid-cols-6 gap-3">
+        {/* Scan — big dark */}
+        <BentoTile dark className="md:col-span-4 md:row-span-2 min-h-[320px] flex flex-col justify-between">
+          <TileHead dark label="01 · Scan" title="Continuous read of the open record" icon={Radar} />
+          <p className="mt-3 max-w-md text-white/70 text-sm">
+            Approved public sources — filings, tenders, regulatory notices, court
+            records, wires — are read on a schedule, deduplicated, and clustered.
+          </p>
+          <div className="mt-6 grid grid-cols-6 gap-1">
+            {Array.from({ length: 42 }).map((_, i) => (
               <div
-                className="h-full rounded-full"
-                style={{ width: `${r.score}%`, background: color(r.tag) }}
+                key={i}
+                className="h-6 rounded"
+                style={{
+                  background: `rgba(255,204,0,${0.08 + (Math.sin(i * 0.9) + 1) * 0.18})`,
+                }}
               />
+            ))}
+          </div>
+          <div className="mt-4 mkt-mono text-[10px] uppercase tracking-widest text-white/40">
+            Ingest cadence · minutes to hours by source
+          </div>
+        </BentoTile>
+
+        {/* Trace */}
+        <BentoTile className="md:col-span-2 min-h-[320px]">
+          <TileHead label="02 · Trace" title="Origin & repetition" icon={GitBranch} />
+          <div className="mt-5 space-y-2 text-sm">
+            <div className="flex items-center gap-2">
+              <span className="h-1.5 w-1.5 rounded-full bg-[color:var(--mkt-heading)]" />
+              Primary filing · trusted
+            </div>
+            <div className="flex items-center gap-2 pl-4">
+              <span className="h-1.5 w-1.5 rounded-full bg-[color:var(--mkt-muted)]" />
+              Wire pickup · same content
+            </div>
+            <div className="flex items-center gap-2 pl-4">
+              <span className="h-1.5 w-1.5 rounded-full" style={{ background: "var(--mkt-warn)" }} />
+              12 co-owned outlets · flagged
             </div>
           </div>
-          <div className="text-[11px] font-mono text-foreground w-12 text-right">{r.score}</div>
-        </li>
-      ))}
-    </ul>
+          <p className="mt-5 text-xs text-[color:var(--mkt-muted)]">
+            Group-owned repetition is treated as risk, not corroboration.
+          </p>
+        </BentoTile>
+
+        {/* Map */}
+        <BentoTile className="md:col-span-3 min-h-[240px]">
+          <TileHead label="03 · Map" title="Who this actually reaches" icon={Compass} />
+          <div className="mt-4 grid grid-cols-3 gap-2 text-xs">
+            {["Suppliers", "Regulators", "Rivals", "Buyers", "Investors", "Adjacent sectors"].map((n) => (
+              <div key={n} className="rounded border border-[color:var(--mkt-line)] px-2 py-2 text-center">{n}</div>
+            ))}
+          </div>
+          <p className="mt-4 text-xs text-[color:var(--mkt-muted)]">
+            Consequence is walked through verified relationships, not free-text guesses.
+          </p>
+        </BentoTile>
+
+        {/* Project */}
+        <BentoTile dark className="md:col-span-3 min-h-[240px]">
+          <TileHead dark label="04 · Project" title="Dated, testable scenarios" icon={Target} />
+          <div className="mt-4 space-y-2">
+            {[
+              { h: "7d", p: 0.42, t: "Notice re-issued with tighter scope" },
+              { h: "30d", p: 0.68, t: "Supplier consolidation announced" },
+              { h: "90d", p: 0.31, t: "Regulatory review opened" },
+            ].map((r) => (
+              <div key={r.h} className="grid grid-cols-[36px_1fr_auto] items-center gap-3 text-xs">
+                <span className="mkt-mono text-white/60">{r.h}</span>
+                <div className="h-1.5 rounded bg-white/10 relative overflow-hidden">
+                  <div className="absolute inset-y-0 left-0" style={{ width: `${r.p * 100}%`, background: "var(--mkt-accent)" }} />
+                </div>
+                <span className="mkt-mono text-white/60">P={r.p.toFixed(2)}</span>
+              </div>
+            ))}
+          </div>
+        </BentoTile>
+
+        {/* Prove */}
+        <BentoTile className="md:col-span-6 min-h-[200px] flex flex-col md:flex-row md:items-center gap-6 md:gap-10">
+          <div className="md:max-w-sm">
+            <TileHead label="05 · Prove" title="Every call frozen and graded" icon={Receipt} />
+            <p className="mt-3 text-sm text-[color:var(--mkt-muted)]">
+              Probability, deadline and evidence are frozen when a projection is made.
+              Outcomes are graded later from public facts — the track record is the ledger.
+            </p>
+          </div>
+          <div className="flex-1 grid grid-cols-3 gap-3">
+            {[
+              { k: "Frozen", v: "Yes", note: "Written to ledger on projection" },
+              { k: "Graded", v: "Outcomes", note: "Measured from public facts" },
+              { k: "Confidence", v: "Explicit", note: "Uncertainty shown, not hidden" },
+            ].map((s) => (
+              <div key={s.k} className="rounded-xl border border-[color:var(--mkt-line)] p-4">
+                <div className="mkt-mono text-[10px] uppercase tracking-widest text-[color:var(--mkt-muted)]">{s.k}</div>
+                <div className="mkt-display mt-1 text-lg">{s.v}</div>
+                <div className="mt-1 text-xs text-[color:var(--mkt-muted)]">{s.note}</div>
+              </div>
+            ))}
+          </div>
+        </BentoTile>
+      </div>
+    </section>
   );
 }
 
-function DivergenceVisual({ full = false }: { full?: boolean }) {
-  const value = 68;
+/* ------------------------------------------------------------------ */
+/*  Illustrative scenarios (replaces case studies)                     */
+/* ------------------------------------------------------------------ */
+
+const SCENARIOS = [
+  {
+    tag: "Regulatory tension",
+    title: "A quiet consultation, then a rules change",
+    body: "Arklight ties a low-noise consultation opening to a related enforcement action from six weeks earlier — projecting a rule tightening window with a dated confidence band.",
+  },
+  {
+    tag: "Supply-chain disruption",
+    title: "Charges filed against a single supplier",
+    body: "Multiple filings against a mid-tier supplier are clustered with cancelled tenders and hiring pauses at three of its buyers, projecting a consolidation event.",
+  },
+  {
+    tag: "Labour-market shift",
+    title: "Redundancy notices ahead of the wire",
+    body: "Statutory redundancy notices lodged in a region are combined with plant-level filings and procurement freezes, projecting a sector-level contraction weeks before news coverage.",
+  },
+];
+
+function Scenarios() {
   return (
-    <div>
-      <div className="flex items-center justify-between text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
-        <span>Left</span><span>Centre</span><span>Right</span>
+    <section className="mx-auto max-w-7xl px-6 py-16 md:py-24">
+      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
+        <SectionHeader
+          eyebrow="Illustrative scenarios"
+          title="What an early Arklight signal looks like."
+          sub="Constructed examples — no customers named. Every real projection is dated, evidenced, and graded on outcome."
+        />
+        <div className="mkt-mono text-[10px] uppercase tracking-widest text-[color:var(--mkt-muted)]">
+          Not investment advice
+        </div>
       </div>
-      <div className="mt-2 h-2 rounded-full bg-border/60 overflow-hidden">
-        <div className="h-full" style={{ width: `${value}%`, background: "var(--color-foreground)" }} />
+      <div className="mt-10 grid md:grid-cols-3 gap-3">
+        {SCENARIOS.map((s) => (
+          <article key={s.title} className="group rounded-2xl border border-[color:var(--mkt-line)] bg-[color:var(--mkt-panel)] p-6 flex flex-col">
+            <div className="mkt-mono text-[10px] uppercase tracking-widest text-[color:var(--mkt-muted)]">{s.tag}</div>
+            <h3 className="mkt-display mt-3 text-xl font-medium text-[color:var(--mkt-heading)]">{s.title}</h3>
+            <p className="mt-3 text-sm text-[color:var(--mkt-muted)] flex-1">{s.body}</p>
+            <div className="mt-6 h-24 rounded-lg border border-[color:var(--mkt-line)] bg-[color:var(--mkt-panel-2)] relative overflow-hidden">
+              <div className="absolute inset-x-0 bottom-0 flex items-end gap-1 px-2 pb-2 h-full">
+                {Array.from({ length: 22 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="flex-1 rounded-t"
+                    style={{
+                      height: `${18 + (Math.sin(i * 0.7 + s.title.length) + 1) * 30}%`,
+                      background: i > 15 ? "var(--mkt-accent)" : "rgba(30,29,25,0.15)",
+                    }}
+                  />
+                ))}
+              </div>
+              <span className="absolute top-2 right-3 mkt-mono text-[10px] uppercase tracking-widest text-[color:var(--mkt-muted)]">
+                Signal onset · pre-coverage
+              </span>
+            </div>
+          </article>
+        ))}
       </div>
-      <div className="mt-4 flex items-baseline gap-3">
-        <div className="font-display text-4xl tracking-tight text-foreground">{value}</div>
-        <div className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground">/ 100 divergence</div>
-      </div>
-      {full && (
-        <div className="mt-6 grid md:grid-cols-3 gap-3">
+    </section>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Proof, not promises                                                */
+/* ------------------------------------------------------------------ */
+
+function Proof() {
+  return (
+    <section id="proof" className="scroll-mt-24 mx-auto max-w-7xl px-6 py-16 md:py-24">
+      <div className="rounded-3xl border border-[color:var(--mkt-line)] bg-[color:var(--mkt-panel)] p-6 md:p-12">
+        <SectionHeader
+          eyebrow="Proof, not promises"
+          title="Frozen calls. Traceable evidence. Graded outcomes."
+          sub="We do not publish aggregate hit-rates until they are measured on live user calls. What we do show, from day one, is the ledger machinery itself."
+        />
+        <div className="mt-10 grid md:grid-cols-4 gap-3">
           {[
-            { lane: "Left", quote: "‘…framed as a public-safety failure.’" },
-            { lane: "Centre", quote: "‘…described as an operational review.’" },
-            { lane: "Right",  quote: "‘…characterised as regulatory overreach.’" },
-          ].map((l) => (
-            <div key={l.lane} className="rounded border border-border bg-background p-3">
-              <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">{l.lane}</div>
-              <div className="mt-1 text-sm text-foreground">{l.quote}</div>
+            { k: "Every call frozen", v: "Probability, deadline, evidence written to ledger at time of projection." },
+            { k: "Evidence lineage", v: "Each claim traces back to primary source, timestamp, and cluster." },
+            { k: "Confidence grading", v: "Uncertainty is shown, not hidden — no false precision." },
+            { k: "Outcome review", v: "Outcomes measured from public facts. Hits, misses, still-open calls." },
+          ].map((s) => (
+            <div key={s.k} className="rounded-xl border border-[color:var(--mkt-line)] p-5">
+              <div className="mkt-mono text-[10px] uppercase tracking-widest text-[color:var(--mkt-muted)]">{s.k}</div>
+              <div className="mt-3 text-sm text-[color:var(--mkt-heading)]">{s.v}</div>
             </div>
           ))}
         </div>
-      )}
-    </div>
-  );
-}
-
-function HorizonsVisual() {
-  const rows = [
-    { h: "72h",  p: 62, label: "Consultation extended" },
-    { h: "14d",  p: 41, label: "Two majors alter guidance" },
-    { h: "90d",  p: 28, label: "Contract award reallocated" },
-    { h: "180d", p: 17, label: "New primary regulation drafted" },
-  ];
-  return (
-    <ul className="space-y-2">
-      {rows.map((r) => (
-        <li key={r.h} className="grid grid-cols-[3rem_1fr_auto] gap-3 items-center rounded border border-border bg-background px-3 py-2">
-          <span className="text-[11px] font-mono text-foreground">{r.h}</span>
-          <span className="text-sm text-foreground truncate">{r.label}</span>
-          <span className="text-[11px] font-mono text-muted-foreground">p = 0.{String(r.p).padStart(2, "0")}</span>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-function LedgerVisual({ full = false }: { full?: boolean }) {
-  const rows = [
-    { date: "2026-06-01", claim: "Consultation extends past deadline",   verdict: "hit"  as const, p: 0.62 },
-    { date: "2026-05-18", claim: "Contract award reallocated within 90d", verdict: "hit"  as const, p: 0.44 },
-    { date: "2026-05-02", claim: "Two majors alter guidance in 14d",     verdict: "miss" as const, p: 0.41 },
-    { date: "2026-04-11", claim: "Insolvency filed by supplier",         verdict: "hit"  as const, p: 0.72 },
-    { date: "2026-03-28", claim: "Regulatory action escalates in 30d",    verdict: "open" as const, p: 0.36 },
-  ];
-  const tone = (v: "hit" | "miss" | "open") =>
-    v === "hit" ? "var(--color-opportunity)" : v === "miss" ? "var(--color-risk)" : "var(--color-muted-foreground)";
-  const visible = full ? rows : rows.slice(0, 4);
-  return (
-    <div className="text-[13px]">
-      <div className="grid grid-cols-[6rem_1fr_4rem_3rem] gap-2 text-[10px] font-mono uppercase tracking-widest text-muted-foreground pb-2 border-b border-border">
-        <span>Frozen</span><span>Claim</span><span className="text-right">Prob.</span><span className="text-right">Grade</span>
       </div>
-      <ul className="divide-y divide-border">
-        {visible.map((r) => (
-          <li key={r.date + r.claim} className="grid grid-cols-[6rem_1fr_4rem_3rem] gap-2 items-center py-2.5">
-            <span className="font-mono text-[11px] text-muted-foreground">{r.date}</span>
-            <span className="text-foreground truncate">{r.claim}</span>
-            <span className="font-mono text-[11px] text-foreground text-right">{r.p.toFixed(2)}</span>
-            <span
-              className="text-[10px] font-mono uppercase tracking-widest text-right"
-              style={{ color: tone(r.verdict) }}
-            >
-              {r.verdict}
-            </span>
-          </li>
-        ))}
-      </ul>
-    </div>
+    </section>
   );
 }
 
-function DeliveryVisual() {
+/* ------------------------------------------------------------------ */
+/*  BentoTwo — quality mechanics                                       */
+/* ------------------------------------------------------------------ */
+
+function BentoTwo() {
   return (
-    <div className="space-y-2">
-      {[
-        { ch: "Slack #book-signals", body: "Northern Rail freight — new insolvency notice from a tier-2 supplier.", meta: "priority · 82" },
-        { ch: "Email · weekly digest", body: "3 new frozen calls, 2 graded (1 hit, 1 miss), narrative divergence up 12 pts.", meta: "Mon 07:00" },
-        { ch: "Slack #ops-risk", body: "Regulator opened consultation touching 4 items on your book.", meta: "priority · 64" },
-      ].map((m) => (
-        <div key={m.ch} className="rounded border border-border bg-background p-3">
-          <div className="flex items-center justify-between text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
-            <span>{m.ch}</span><span>{m.meta}</span>
+    <section className="mx-auto max-w-7xl px-6 py-16 md:py-24">
+      <SectionHeader
+        eyebrow="Signal quality"
+        title="The mechanics that keep the signal honest."
+      />
+      <div className="mt-10 grid md:grid-cols-3 gap-3">
+        <BentoTile className="md:row-span-2 min-h-[380px] flex flex-col justify-between">
+          <div>
+            <TileHead label="Source diversity" title="Weighted by primary vs echo" icon={Radar} />
+            <p className="mt-3 text-sm text-[color:var(--mkt-muted)]">
+              Primary filings carry more weight than downstream pickups. Group-owned repetition
+              is discounted or flagged.
+            </p>
           </div>
-          <div className="mt-1 text-sm text-foreground">{m.body}</div>
-        </div>
-      ))}
-    </div>
+          <div className="mt-6 space-y-2 text-xs">
+            {[
+              { l: "Primary registry", w: 0.9 },
+              { l: "Regulator release", w: 0.85 },
+              { l: "Independent wire", w: 0.6 },
+              { l: "Aggregator repeat", w: 0.2 },
+            ].map((r) => (
+              <div key={r.l} className="grid grid-cols-[130px_1fr_36px] items-center gap-3">
+                <span className="text-[color:var(--mkt-heading)]">{r.l}</span>
+                <div className="h-1.5 rounded bg-[color:var(--mkt-line)] relative overflow-hidden">
+                  <div className="absolute inset-y-0 left-0" style={{ width: `${r.w * 100}%`, background: "var(--mkt-charcoal)" }} />
+                </div>
+                <span className="mkt-mono text-[color:var(--mkt-muted)]">{r.w.toFixed(2)}</span>
+              </div>
+            ))}
+          </div>
+        </BentoTile>
+
+        <BentoTile className="min-h-[180px]">
+          <TileHead label="Narrative divergence" title="When claims disagree, we say so" icon={GitBranch} />
+          <p className="mt-3 text-xs text-[color:var(--mkt-muted)]">Disagreements between sources are surfaced, not smoothed into consensus.</p>
+        </BentoTile>
+
+        <BentoTile dark className="min-h-[180px]">
+          <TileHead dark label="Contradiction detection" title="Claim vs later filing" icon={Scale} />
+          <p className="mt-3 text-xs text-white/60">A claim that is later contradicted by a primary source is marked and re-graded.</p>
+        </BentoTile>
+
+        <BentoTile dark className="min-h-[180px]">
+          <TileHead dark label="Scan cadence" title="Minutes, not weeks" icon={Radar} />
+          <p className="mt-3 text-xs text-white/60">Priority sources on Pro run at tighter cadence with faster delivery.</p>
+        </BentoTile>
+
+        <BentoTile className="min-h-[180px]">
+          <TileHead label="Evidence freshness" title="Every claim carries its timestamp" icon={Receipt} />
+          <p className="mt-3 text-xs text-[color:var(--mkt-muted)]">Age of the underlying evidence is shown alongside the projection.</p>
+        </BentoTile>
+      </div>
+    </section>
   );
 }
 
 /* ------------------------------------------------------------------ */
-/*  Pricing card                                                       */
+/*  Comparison table                                                   */
 /* ------------------------------------------------------------------ */
 
-function PricingCard({
+const COMPARISON: { row: string; ark: string; conv: string }[] = [
+  { row: "Discovery", ark: "Event-first — clusters signals into a single call", conv: "Feed-first — you scroll until you notice" },
+  { row: "Evidence", ark: "Every claim traces back to primary source", conv: "Headline links, provenance unclear" },
+  { row: "Uncertainty", ark: "Explicit probability + deadline", conv: "Implied by tone" },
+  { row: "Repetition", ark: "Group-owned echoes are flagged, not counted", conv: "Repetition read as corroboration" },
+  { row: "Outcomes", ark: "Frozen at projection, graded from facts", conv: "No public ledger" },
+  { row: "Delivery", ark: "Dated scenarios and briefings", conv: "Alert firehose" },
+];
+
+function Comparison() {
+  return (
+    <section id="compare" className="scroll-mt-24 mx-auto max-w-7xl px-6 py-16 md:py-24">
+      <SectionHeader
+        eyebrow="Arklight vs conventional monitoring"
+        title="Built to be answered for."
+        sub="Only defensible distinctions — no straw men. Compare the mechanics."
+      />
+      {/* desktop table */}
+      <div className="mt-10 hidden md:block rounded-2xl border border-[color:var(--mkt-line)] bg-[color:var(--mkt-panel)] overflow-hidden">
+        <div className="grid grid-cols-3 px-8 py-5 mkt-mono text-[10px] uppercase tracking-widest text-[color:var(--mkt-muted)] border-b border-[color:var(--mkt-line)]">
+          <span></span>
+          <span className="text-[color:var(--mkt-heading)]">Arklight</span>
+          <span>Conventional monitoring</span>
+        </div>
+        {COMPARISON.map((r) => (
+          <div key={r.row} className="grid grid-cols-3 px-8 py-5 border-b border-[color:var(--mkt-line)] last:border-b-0 text-sm">
+            <span className="mkt-display text-[color:var(--mkt-heading)]">{r.row}</span>
+            <span className="text-[color:var(--mkt-heading)] flex items-start gap-2">
+              <Check className="h-4 w-4 mt-0.5 shrink-0" style={{ color: "var(--mkt-ok)" }} />
+              {r.ark}
+            </span>
+            <span className="text-[color:var(--mkt-muted)] flex items-start gap-2">
+              <Minus className="h-4 w-4 mt-0.5 shrink-0" />
+              {r.conv}
+            </span>
+          </div>
+        ))}
+      </div>
+      {/* mobile stack */}
+      <div className="mt-8 md:hidden space-y-3">
+        {COMPARISON.map((r) => (
+          <div key={r.row} className="rounded-xl border border-[color:var(--mkt-line)] bg-[color:var(--mkt-panel)] p-4">
+            <div className="mkt-display font-medium">{r.row}</div>
+            <div className="mt-2 text-sm flex gap-2"><Check className="h-4 w-4 mt-0.5 shrink-0" style={{ color: "var(--mkt-ok)" }} /><span>{r.ark}</span></div>
+            <div className="mt-2 text-sm text-[color:var(--mkt-muted)] flex gap-2"><Minus className="h-4 w-4 mt-0.5 shrink-0" /><span>{r.conv}</span></div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Pricing preview                                                    */
+/* ------------------------------------------------------------------ */
+
+function PricingPreview() {
+  return (
+    <section className="mx-auto max-w-7xl px-6 py-16 md:py-24">
+      <SectionHeader
+        eyebrow="Pricing"
+        title="Free while you decide. Pro when you're ready."
+        sub="Free is currently £0. Pro price will be announced before any charge is possible."
+      />
+      <div className="mt-10 grid md:grid-cols-2 gap-3">
+        <PricingCard
+          name="Free"
+          price="£0"
+          trailing="currently"
+          bullets={[
+            "Public-signal graph",
+            "Starter book — up to 10 watched items",
+            "5 research interrogations / month",
+            "Weekly in-app digest",
+            "Frozen track record",
+          ]}
+          cta={{ label: "Start free", href: "/auth?mode=signup", primary: true }}
+        />
+        <PricingCard
+          highlight
+          name="Pro"
+          price="Price to be announced"
+          trailing="7-day free trial · cancel anytime"
+          bullets={[
+            "Everything in Free",
+            "Slack & email delivery",
+            "Unlimited book & research",
+            "Advanced analytics & Narrative Divergence",
+            "Priority scan cadence",
+          ]}
+          cta={{ label: "Create an account", href: "/auth?mode=signup", primary: false }}
+        />
+      </div>
+      <div className="mt-6 text-xs text-[color:var(--mkt-muted)]">
+        Creating an account today does not commit you to any charge.
+      </div>
+    </section>
+  );
+}
+
+export function PricingCard({
   name, price, trailing, bullets, cta, highlight,
 }: {
-  name: string;
-  price: string;
-  trailing?: string;
-  bullets: string[];
-  cta: { label: string; href: string; primary: boolean };
-  highlight?: boolean;
+  name: string; price: string; trailing?: string; bullets: string[];
+  cta: { label: string; href: string; primary: boolean }; highlight?: boolean;
 }) {
   return (
-    <div className={`rounded-md border ${highlight ? "border-foreground" : "border-border"} bg-card p-6 md:p-8`}>
-      <div className="flex items-baseline justify-between">
-        <div className="font-display text-xl tracking-tight text-foreground">{name}</div>
-        {highlight && (
-          <span className="text-[10px] font-mono uppercase tracking-widest text-foreground">Pro</span>
-        )}
+    <div
+      className={`relative overflow-hidden rounded-2xl border p-6 md:p-8 ${
+        highlight
+          ? "bg-[color:var(--mkt-charcoal)] text-white border-white/10"
+          : "bg-[color:var(--mkt-panel)] text-[color:var(--mkt-heading)] border-[color:var(--mkt-line)]"
+      }`}
+    >
+      {highlight && (
+        <span
+          aria-hidden
+          className="absolute -top-16 -right-16 h-40 w-40 rounded-full"
+          style={{ background: "radial-gradient(circle, rgba(255,204,0,0.35), transparent 70%)" }}
+        />
+      )}
+      <div className="relative flex items-baseline justify-between">
+        <div className="mkt-display text-xl">{name}</div>
+        {highlight && <span className="mkt-mono text-[10px] uppercase tracking-widest text-[color:var(--mkt-accent)]">Recommended</span>}
       </div>
-      <div className="mt-4 flex items-baseline gap-2">
-        <div className="font-display text-3xl md:text-4xl tracking-tight text-foreground">{price}</div>
-        {trailing && <div className="text-xs text-muted-foreground">{trailing}</div>}
+      <div className="relative mt-4 flex items-baseline gap-2 flex-wrap">
+        <div className="mkt-display text-3xl md:text-4xl">{price}</div>
+        {trailing && <div className={`text-xs ${highlight ? "text-white/60" : "text-[color:var(--mkt-muted)]"}`}>{trailing}</div>}
       </div>
-      <ul className="mt-6 space-y-2 text-sm text-foreground">
+      <ul className="relative mt-6 space-y-2 text-sm">
         {bullets.map((b) => (
-          <li key={b} className="flex gap-2">
-            <span aria-hidden className="mt-2 h-1 w-1 rounded-full bg-foreground shrink-0" />
+          <li key={b} className="flex items-start gap-3">
+            <Check className={`h-4 w-4 mt-0.5 shrink-0 ${highlight ? "text-[color:var(--mkt-accent)]" : ""}`} style={!highlight ? { color: "var(--mkt-ok)" } : {}} />
             <span>{b}</span>
           </li>
         ))}
       </ul>
       <a
         href={cta.href}
-        className={`mt-7 h-10 inline-flex items-center justify-center px-4 rounded-md text-sm font-medium w-full transition ${
-          cta.primary
-            ? "bg-foreground text-background hover:opacity-90"
-            : "border border-border text-foreground hover:bg-accent/60"
+        className={`relative mt-7 h-11 inline-flex items-center justify-center px-4 rounded-md text-sm font-semibold w-full transition ${
+          highlight
+            ? "bg-[color:var(--mkt-accent)] text-black hover:opacity-90"
+            : "bg-[color:var(--mkt-charcoal)] text-white hover:opacity-90"
         }`}
       >
         {cta.label}
@@ -742,13 +707,53 @@ function PricingCard({
 }
 
 /* ------------------------------------------------------------------ */
-/*  Accessible FAQ                                                     */
+/*  About                                                              */
 /* ------------------------------------------------------------------ */
+
+function About() {
+  return (
+    <section className="mx-auto max-w-7xl px-6 py-16 md:py-24">
+      <div className="grid md:grid-cols-[1fr_1.2fr] gap-10 items-start">
+        <div>
+          <Eyebrow>About</Eyebrow>
+          <h2 className="mkt-display mt-4 text-3xl md:text-5xl font-medium text-[color:var(--mkt-heading)]">
+            Built for decisions under uncertainty.
+          </h2>
+        </div>
+        <div className="space-y-5 text-[color:var(--mkt-heading)]">
+          <p>
+            Arklight exists because the news is the last, not the first, sign that
+            something has changed. The primary record — filings, tenders, notices,
+            registries — moves earlier and is answerable to something.
+          </p>
+          <p className="text-[color:var(--mkt-muted)]">
+            The instrument is built to be argued with. Every claim is traceable.
+            Every projection is dated. Every outcome is graded from public facts.
+            That is what receipts, not opinions, means.
+          </p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  FAQ                                                                */
+/* ------------------------------------------------------------------ */
+
+const FAQ_ITEMS = [
+  { q: "What sources does Arklight use?", a: "Only public sources: company registries, procurement notices, regulatory releases, official statistics, public news wires and public web signals. Nothing private, nothing leaked. Attribution is preserved on every claim." },
+  { q: "Does Arklight predict the future?", a: "No. Arklight surfaces dated, testable scenarios with explicit probabilities. Each projection is frozen and later graded against public outcomes. Uncertainty is shown, not hidden." },
+  { q: "How does confidence work?", a: "Confidence combines source weighting (primary vs echo), cluster strength, contradiction signals, and evidence freshness. It is expressed as a number, with a deadline, and reviewed on outcome." },
+  { q: "Is this financial advice?", a: "No. Arklight is not a broker or adviser and does not recommend buys, sells, or target prices. All figures are GBP. Use it as one input into your own decisions." },
+  { q: "What is stored?", a: "Your account, your watched items, and your research history. The public-signal record itself is derived from public sources. See the Privacy page for detail." },
+  { q: "How do I start?", a: "Create a free account and open Arklight. The Free tier is currently £0 and includes the graph, up to 10 watched items, and 5 research interrogations per 30 days." },
+];
 
 export function FAQ({ items }: { items: { q: string; a: string }[] }) {
   const [open, setOpen] = useState<number | null>(0);
   return (
-    <div className="divide-y divide-border border-y border-border">
+    <div className="divide-y divide-[color:var(--mkt-line)] border-y border-[color:var(--mkt-line)]">
       {items.map((it, i) => {
         const isOpen = open === i;
         const id = `faq-panel-${i}`;
@@ -759,13 +764,16 @@ export function FAQ({ items }: { items: { q: string; a: string }[] }) {
               aria-expanded={isOpen}
               aria-controls={id}
               onClick={() => setOpen(isOpen ? null : i)}
-              className="w-full flex items-center justify-between gap-6 py-5 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-foreground/30 rounded"
+              className="w-full flex items-center justify-between gap-6 py-5 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--mkt-charcoal)]/40 rounded"
             >
-              <span className="text-base md:text-lg text-foreground">{it.q}</span>
-              <span aria-hidden className={`text-foreground transition-transform ${isOpen ? "rotate-45" : ""}`}>+</span>
+              <span className="text-base md:text-lg text-[color:var(--mkt-heading)]">{it.q}</span>
+              <Plus
+                aria-hidden
+                className={`h-5 w-5 text-[color:var(--mkt-heading)] transition-transform ${isOpen ? "rotate-45" : ""}`}
+              />
             </button>
             {isOpen && (
-              <div id={id} className="pb-6 text-[15px] text-muted-foreground leading-relaxed max-w-3xl">
+              <div id={id} className="pb-6 text-[15px] text-[color:var(--mkt-muted)] leading-relaxed max-w-3xl">
                 {it.a}
               </div>
             )}
@@ -776,40 +784,75 @@ export function FAQ({ items }: { items: { q: string; a: string }[] }) {
   );
 }
 
+function FAQSection() {
+  return (
+    <section className="mx-auto max-w-7xl px-6 py-16 md:py-24">
+      <div className="grid lg:grid-cols-[1fr_1.2fr] gap-10">
+        <div>
+          <SectionHeader eyebrow="FAQ" title="Straight answers." />
+          <div className="mt-10 rounded-2xl border border-[color:var(--mkt-line)] bg-[color:var(--mkt-panel)] p-6">
+            <div className="mkt-display text-lg">Still deciding?</div>
+            <p className="mt-2 text-sm text-[color:var(--mkt-muted)]">
+              The Free tier is £0. You can explore the graph and research
+              without a card. Upgrade only when the receipts speak for themselves.
+            </p>
+            <div className="mt-5">
+              <PrimaryCta to="/auth" search={{ mode: "signup" }}>Start free</PrimaryCta>
+            </div>
+          </div>
+        </div>
+        <FAQ items={FAQ_ITEMS} />
+      </div>
+    </section>
+  );
+}
+
 /* ------------------------------------------------------------------ */
-/*  Data                                                               */
+/*  Final CTA                                                          */
 /* ------------------------------------------------------------------ */
 
-const HOW_STEPS = [
-  { title: "Scan",    icon: Radar,    body: "Approved public sources are read continuously — wires, filings, tenders, regulatory notices, court records." },
-  { title: "Trace",   icon: GitBranch, body: "Origin is identified; group-co-owned repetition and score manipulation are flagged as risk, not evidence." },
-  { title: "Map",     icon: Compass,  body: "Affected entities and sectors are mapped through verified relationships — who this actually reaches." },
-  { title: "Project", icon: Target,   body: "Dated scenarios across four horizons, with leading and contradicting signals attached." },
-  { title: "Prove",   icon: Receipt,  body: "Every call is frozen — probability, deadline, evidence — then graded from measured outcomes." },
-];
+function FinalCta() {
+  return (
+    <section className="px-2 md:px-3 pb-3">
+      <div className="mkt-hero-shell relative overflow-hidden rounded-3xl">
+        <div className="absolute inset-0 mkt-hero-grid opacity-60" aria-hidden />
+        <div className="relative px-6 md:px-12 py-16 md:py-24 max-w-6xl mx-auto text-center">
+          <Eyebrow tone="light">Ready</Eyebrow>
+          <h2 className="mkt-display mt-4 text-white text-3xl md:text-5xl font-medium text-balance">
+            See it forming, then grade the call.
+          </h2>
+          <p className="mt-4 text-white/70 max-w-xl mx-auto">
+            Create a free account and open Arklight. Public sources only. Not
+            financial advice.
+          </p>
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+            <PrimaryCta to="/auth" search={{ mode: "signup" }}>Start free</PrimaryCta>
+            <GhostCtaLight href="/pricing">See pricing</GhostCtaLight>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
 
-const FAQ_ITEMS = [
-  {
-    q: "What does Arklight do?",
-    a: "Arklight is a public-signals early-warning instrument. It continuously reads the open public record, traces claims to origin, maps who a development helps and harms through verified relationships, and turns those signals into dated, testable scenarios that are frozen and graded later.",
-  },
-  {
-    q: "Is this financial advice?",
-    a: "No. Arklight is not a broker, adviser, or product that recommends what to buy or sell. There is no buy, sell, or target-price language in the product. All figures are GBP. Use it as one input into your own decisions.",
-  },
-  {
-    q: "Where does the data come from?",
-    a: "Only public sources: news wires, company filings, tenders and contracts, insolvency notices, regulatory actions, court records, and other primary registries. Nothing private and nothing leaked. Attribution is preserved on every claim.",
-  },
-  {
-    q: "How does Arklight prove its forecasts?",
-    a: "When a projection is made, probability, deadline and supporting evidence are frozen. Later, outcomes are graded from measured public facts — hits, misses and still-open calls. The track record you see is the ledger, not a marketing summary.",
-  },
-  {
-    q: "Can I cancel anytime?",
-    a: "Yes. The Free tier is currently £0, with in-app track record and weekly digest. Pro starts with a 7-day free trial and can be cancelled at any time — no lock-in.",
-  },
-];
+/* ------------------------------------------------------------------ */
+/*  Page                                                               */
+/* ------------------------------------------------------------------ */
 
-// Suppress unused-import warnings for icons kept for symmetry.
-void Activity; void Sparkles; void Database; void Eye;
+function LandingPage() {
+  return (
+    <MarketingLayout>
+      <Hero />
+      <SourceStrip />
+      <BentoOne />
+      <Scenarios />
+      <Proof />
+      <BentoTwo />
+      <Comparison />
+      <PricingPreview />
+      <About />
+      <FAQSection />
+      <FinalCta />
+    </MarketingLayout>
+  );
+}
