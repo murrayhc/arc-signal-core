@@ -88,10 +88,10 @@ export function NavHoverTooltips() {
     background: 'var(--primary)', transform: 'rotate(45deg)', borderRadius: 2,
   };
   return (
-    <div style={style} className="rounded-lg p-3 shadow-lg bg-[var(--primary)] text-white pointer-events-none" role="tooltip">
+    <div style={style} className="rounded-lg p-3 shadow-lg bg-[var(--primary)] text-primary-foreground pointer-events-none" role="tooltip">
       <div style={arrowStyle} aria-hidden="true" />
-      <div className="font-display text-xs mb-1 text-white">{s.title}</div>
-      <p className="text-[11px] leading-relaxed text-white/85">{s.body}</p>
+      <div className="font-display text-xs mb-1 text-primary-foreground">{s.title}</div>
+      <p className="text-[11px] leading-relaxed text-primary-foreground/85">{s.body}</p>
     </div>
   );
 }
