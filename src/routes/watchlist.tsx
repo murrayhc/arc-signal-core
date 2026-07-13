@@ -9,9 +9,9 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/watchlist")({
   head: () => ({
     meta: [
-      { title: "Archlight · Watchlists & alerts" },
+      { title: "Arklight · Watchlists & alerts" },
       { name: "description", content: "Save named intelligence filters over sectors, regions, keywords and score thresholds. Every scan checks new events against every watchlist and fires an alert on a match." },
-      { property: "og:title", content: "Archlight · Watchlists" },
+      { property: "og:title", content: "Arklight · Watchlists" },
       { property: "og:description", content: "Save intelligence filters and receive alerts when public signals match." },
     ],
   }),
@@ -54,7 +54,7 @@ function WatchlistPage() {
         <header>
           <div className="text-[10px] font-mono uppercase tracking-[0.25em] text-muted-foreground flex items-center gap-2"><Eye className="h-3 w-3"/> watchlists & alerts</div>
           <h1 className="font-display text-2xl md:text-3xl mt-1">Watchlists</h1>
-          <p className="text-sm text-muted-foreground mt-1 max-w-2xl">Every 6h Archlight scans public signals. Any new event matching a watchlist becomes an alert here.</p>
+          <p className="text-sm text-muted-foreground mt-1 max-w-2xl">Every 6h Arklight scans public signals. Any new event matching a watchlist becomes an alert here.</p>
         </header>
 
         <section className="glass-panel rounded-xl p-4">

@@ -8,17 +8,17 @@ type Step = {
 
 const STEPS: Step[] = [
   { selector: '[data-tour-to="/app"]', title: "Overview", body: "Your daily start: what's changed on the things you watch since you were last here, with a clear next step for each." },
-  { selector: '[data-tour-to="/exposures"]', title: "My book", body: "Tell Archlight what you hold or care about — companies, suppliers, sectors, commodities, keywords. Every event is scored against this." },
+  { selector: '[data-tour-to="/exposures"]', title: "My book", body: "Tell Arklight what you hold or care about — companies, suppliers, sectors, commodities, keywords. Every event is scored against this." },
   { selector: '[data-tour-to="/watchlist"]', title: "Watchlist & alerts", body: "Save filters for topics you want to follow and get alerted the moment a new event matches." },
   { selector: '[data-tour-to="/briefings"]', title: "Briefings", body: "A daily summary of what moved on your book, delivered on a schedule." },
-  { selector: '[data-tour-to="/digest"]', title: "Digest", body: "A 7-day rollup of the biggest risks, openings and scenarios across everything Archlight watches." },
-  { selector: '[data-tour-to="/interrogate"]', title: "Research", body: "Ask Archlight to investigate any company, sector, commodity or theme and get a cited deep-research brief." },
+  { selector: '[data-tour-to="/digest"]', title: "Digest", body: "A 7-day rollup of the biggest risks, openings and scenarios across everything Arklight watches." },
+  { selector: '[data-tour-to="/interrogate"]', title: "Research", body: "Ask Arklight to investigate any company, sector, commodity or theme and get a cited deep-research brief." },
   { selector: '[data-tour-to="/interrogations"]', title: "Research history", body: "Every research brief you've run, saved so you can reopen it." },
   { selector: '[data-tour-to="/ask-graph"]', title: "Graph lookup", body: "Ask plain-English questions about how entities connect — who's exposed, who controls whom — answered only from verified data." },
-  { selector: '[data-tour-to="/companies"]', title: "Companies", body: "Every company Archlight has traced, with its risk, exposure and connections." },
+  { selector: '[data-tour-to="/companies"]', title: "Companies", body: "Every company Arklight has traced, with its risk, exposure and connections." },
   { selector: '[data-tour-to="/arcs"]', title: "Evidence", body: "Follow any signal back through its full chain: source → claim → event → who it affects." },
   { selector: '[data-tour-to="/opportunities"]', title: "Opportunities", body: "Strategic openings surfaced from the signals, with the reasoning and evidence behind each. Never financial advice." },
-  { selector: '[data-tour-to="/track-record"]', title: "Track record", body: "The receipts: how often Archlight's calls have been right, and how early — calibrated, not opinion." },
+  { selector: '[data-tour-to="/track-record"]', title: "Track record", body: "The receipts: how often Arklight's calls have been right, and how early — calibrated, not opinion." },
   { selector: '[data-tour-id="engine"]', title: "Engine", body: "Operator tools: run scans, tune sources and settings, review flagged calls. Most readers never need these." },
 ];
 

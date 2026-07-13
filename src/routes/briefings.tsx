@@ -8,7 +8,7 @@ import { listBriefings, runDailyBriefingNow } from "@/lib/archlight/briefing.fun
 export const Route = createFileRoute("/briefings")({
   head: () => ({
     meta: [
-      { title: "Archlight · Morning briefings" },
+      { title: "Arklight · Morning briefings" },
       { name: "description", content: "Daily per-profile briefing of what moved overnight — factual, hedged, GBP only." },
     ],
   }),

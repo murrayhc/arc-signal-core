@@ -617,7 +617,7 @@ export const resolveOutcomes = createServerFn({ method: "POST" }).middleware([re
       if (decision) {
         const y: 0 | 1 = decision.outcome === "happened" ? 1 : 0;
         // Lead time vs mainstream press: how many days earlier (positive) or
-        // later (negative) Archlight detected this compared to the first
+        // later (negative) Arklight detected this compared to the first
         // mainstream-tier report. Null + before_mainstream=true means no
         // mainstream outlet covered it at all (an exclusive).
         let leadTimeDays: number | null = null;
@@ -647,7 +647,7 @@ export const resolveOutcomes = createServerFn({ method: "POST" }).middleware([re
             }
           }
           if (mainstreamFirstMs != null) {
-            // Positive = Archlight was earlier than the first mainstream report.
+            // Positive = Arklight was earlier than the first mainstream report.
             leadTimeDays = Number(((mainstreamFirstMs - firstDetected) / DAY_MS).toFixed(2));
           } else {
             leadTimeDays = null;

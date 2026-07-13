@@ -14,9 +14,9 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/narrative-divergence")({
   head: () => ({
     meta: [
-      { title: "Archlight · Narrative divergence" },
+      { title: "Arklight · Narrative divergence" },
       { name: "description", content: "How independent outlets across the political spectrum frame the same story — baseline, per-outlet angle, and a divergence gauge. Framing analysis, not truth claims." },
-      { property: "og:title", content: "Archlight · Narrative divergence" },
+      { property: "og:title", content: "Arklight · Narrative divergence" },
       { property: "og:description", content: "Compare how outlets across the spectrum frame the same story." },
     ],
   }),

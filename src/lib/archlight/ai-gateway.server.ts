@@ -1,4 +1,4 @@
-// Server-only Archlight AI gateway helper.
+// Server-only Arklight AI gateway helper.
 // Uses Lovable AI Gateway (OpenAI-compatible) via direct fetch.
 
 const CHAT_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";

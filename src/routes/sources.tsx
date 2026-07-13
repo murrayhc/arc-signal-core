@@ -20,9 +20,9 @@ const suggestionsQuery = queryOptions({
 export const Route = createFileRoute("/sources")({
   head: () => ({
     meta: [
-      { title: "Archlight · Source registry" },
-      { name: "description", content: "Every source Archlight watches, its reliability, cadence, health, and last outcome. Public-information sources only." },
-      { property: "og:title", content: "Archlight · Source registry" },
+      { title: "Arklight · Source registry" },
+      { name: "description", content: "Every source Arklight watches, its reliability, cadence, health, and last outcome. Public-information sources only." },
+      { property: "og:title", content: "Arklight · Source registry" },
       { property: "og:description", content: "Reliability, cadence, and health for every source in the intelligence pipeline." },
     ],
   }),
@@ -58,7 +58,7 @@ function SourcesPage() {
             <Database className="h-6 w-6" style={{ color: "var(--color-signal)" }}/> Sources
           </h1>
           <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
-            Public-information sources Archlight watches. Reliability is learned; degraded sources are downweighted automatically.
+            Public-information sources Arklight watches. Reliability is learned; degraded sources are downweighted automatically.
           </p>
         </div>
 

@@ -16,8 +16,8 @@ import {
 export const Route = createFileRoute("/exposures")({
   head: () => ({
     meta: [
-      { title: "Archlight · Exposures" },
-      { name: "description", content: "Tell Archlight what you hold — companies, sectors, regions, commodities, keywords — and every synthesised event is scored against your exposure." },
+      { title: "Arklight · Exposures" },
+      { name: "description", content: "Tell Arklight what you hold — companies, sectors, regions, commodities, keywords — and every synthesised event is scored against your exposure." },
     ],
   }),
   component: ExposuresPage,
@@ -55,7 +55,7 @@ function ExposuresPage() {
           </div>
           <h1 className="font-display text-2xl md:text-3xl mt-1 text-glow-signal">Your exposures</h1>
           <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
-            Tell Archlight what you hold or care about. Every synthesised event is scored against these items, and the "why this matters to you" rail is built from those matches.
+            Tell Arklight what you hold or care about. Every synthesised event is scored against these items, and the "why this matters to you" rail is built from those matches.
           </p>
           <div className="mt-3">
             <Link
@@ -101,7 +101,7 @@ function ExposuresPage() {
           <div className="glass-panel rounded-xl p-8 text-center">
             <div className="font-display text-lg">No profiles yet</div>
             <p className="text-sm text-muted-foreground mt-2">
-              Create your first profile above. Add companies you hold, sectors you sell into, regions you operate in, or keywords you watch — Archlight will score every event against them.
+              Create your first profile above. Add companies you hold, sectors you sell into, regions you operate in, or keywords you watch — Arklight will score every event against them.
             </p>
           </div>
         )}

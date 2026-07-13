@@ -24,9 +24,9 @@ const snapshotsQuery = queryOptions({
 export const Route = createFileRoute("/track-record")({
   head: () => ({
     meta: [
-      { title: "Archlight · Verified track record" },
+      { title: "Arklight · Verified track record" },
       { name: "description", content: "Hard-data ledger of resolved predictions: base rate, Brier accuracy vs coin-flip, calibration by decile, mean lead time, and every recent verdict with rationale." },
-      { property: "og:title", content: "Archlight · Verified track record" },
+      { property: "og:title", content: "Arklight · Verified track record" },
       { property: "og:description", content: "No spin, no LLM. Just what the ledger says." },
     ],
   }),
@@ -60,7 +60,7 @@ function TrackRecordPage() {
             <Target className="h-6 w-6" style={{ color: "var(--color-signal)" }}/> Track record
           </h1>
           <div className="mt-3 rounded-lg border border-border/60 bg-accent/20 p-3 text-sm max-w-3xl">
-            <span className="font-medium">In plain terms:</span> <span className="text-muted-foreground">when Archlight commits to a probability, this page checks what really happened — and by how many days it beat mainstream coverage. Higher hit rate and longer lead are better. Every call is frozen when it's made, so it can't be edited after the fact.</span>
+            <span className="font-medium">In plain terms:</span> <span className="text-muted-foreground">when Arklight commits to a probability, this page checks what really happened — and by how many days it beat mainstream coverage. Higher hit rate and longer lead are better. Every call is frozen when it's made, so it can't be edited after the fact.</span>
           </div>
           <div className="mt-3">
             <Link
@@ -90,7 +90,7 @@ function TrackRecordPage() {
           <Tile
             label="Median lead"
             value={tr.median_lead_time_days == null ? "—" : `${tr.median_lead_time_days > 0 ? "+" : ""}${tr.median_lead_time_days.toFixed(1)}d`}
-            sub={tr.lead_time_n > 0 ? `n=${tr.lead_time_n} · positive = Archlight first` : "No mainstream-matched happened events yet"}
+            sub={tr.lead_time_n > 0 ? `n=${tr.lead_time_n} · positive = Arklight first` : "No mainstream-matched happened events yet"}
             color={tr.median_lead_time_days != null && tr.median_lead_time_days > 0 ? "var(--color-growth)" : "var(--color-signal)"}
           />
           <Tile
@@ -104,7 +104,7 @@ function TrackRecordPage() {
         {/* Calibration — visual chart */}
         <section className="glass-panel rounded-xl overflow-hidden">
           <div className="px-4 py-3 border-b border-border/40">
-            <div className="font-display text-sm">When Archlight says X%, does X% happen?</div>
+            <div className="font-display text-sm">When Arklight says X%, does X% happen?</div>
             <div className="text-xs text-muted-foreground mt-0.5">Each row groups calls by the confidence stated; a well-calibrated tool lands close to the line.</div>
           </div>
           {tr.calibration.every((b) => b.n === 0) ? (
@@ -113,7 +113,7 @@ function TrackRecordPage() {
             <div className="p-4 space-y-3">
               <div className="flex items-center gap-4 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
                 <span className="flex items-center gap-1.5"><span className="inline-block h-2.5 w-4 rounded-sm" style={{ background: "var(--color-opportunity)" }}/>What actually happened</span>
-                <span className="flex items-center gap-1.5"><span className="inline-block h-3 w-0.5" style={{ background: "var(--color-signal)" }}/>What Archlight said</span>
+                <span className="flex items-center gap-1.5"><span className="inline-block h-3 w-0.5" style={{ background: "var(--color-signal)" }}/>What Arklight said</span>
               </div>
               <div className="space-y-2.5">
                 {tr.calibration.filter((b) => b.n > 0).map((b) => {
@@ -234,7 +234,7 @@ function TrackRecordPage() {
         </section>
 
         <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
-          Archlight surfaces public signals · no buy · no sell · no target price
+          Arklight surfaces public signals · no buy · no sell · no target price
         </div>
       </div>
     </AppShell>

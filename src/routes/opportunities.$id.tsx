@@ -8,9 +8,9 @@ import { ForensicReport } from "@/components/archlight/ForensicReport";
 export const Route = createFileRoute("/opportunities/$id")({
   head: () => ({
     meta: [
-      { title: "Archlight · Opportunity detail" },
+      { title: "Arklight · Opportunity detail" },
       { name: "description", content: "Full opportunity card with buyer pain, likely buyers, suggested offer, evidence and hedged positioning." },
-      { property: "og:title", content: "Archlight · Opportunity detail" },
+      { property: "og:title", content: "Arklight · Opportunity detail" },
       { property: "og:description", content: "Traceable opportunity card grounded in public signals." },
     ],
   }),
@@ -42,7 +42,7 @@ function OpportunityDetailPage() {
                   to="/track-record"
                   className="inline-flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-widest text-muted-foreground hover:text-foreground px-2 py-1 rounded border border-border/60 w-fit"
                 >
-                  How often is Archlight right? — see the track record
+                  How often is Arklight right? — see the track record
                 </Link>
               </div>
               <div className="mt-4 grid grid-cols-2 md:grid-cols-5 gap-3 text-center">

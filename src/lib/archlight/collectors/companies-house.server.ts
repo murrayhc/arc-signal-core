@@ -11,7 +11,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 const BASE = "https://api.company-information.service.gov.uk";
 const USER_AGENT =
-  "Mozilla/5.0 (compatible; ArchlightBot/1.0; +https://arc-signal-core.lovable.app)";
+  "Mozilla/5.0 (compatible; ArklightBot/1.0; +https://arc-signal-core.lovable.app)";
 
 export interface CompaniesHouseDoc {
   title: string;

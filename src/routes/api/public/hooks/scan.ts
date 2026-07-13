@@ -20,7 +20,7 @@ export const Route = createFileRoute("/api/public/hooks/scan")({
           return new Response(JSON.stringify({ ok: false, error: err instanceof Error ? err.message : String(err) }), { status: 500, headers: { "Content-Type": "application/json" } });
         }
       },
-      GET: async () => new Response("Archlight scan hook — POST with apikey header only.", { headers: { "Content-Type": "text/plain" } }),
+      GET: async () => new Response("Arklight scan hook — POST with apikey header only.", { headers: { "Content-Type": "text/plain" } }),
     },
   },
 });

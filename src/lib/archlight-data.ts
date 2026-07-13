@@ -1,4 +1,4 @@
-// Synthetic intelligence data for Archlight prototype.
+// Synthetic intelligence data for Arklight prototype.
 // LABELLED as demo throughout the UI.
 
 export type NodeKind =

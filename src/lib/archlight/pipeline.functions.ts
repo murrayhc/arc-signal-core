@@ -311,7 +311,7 @@ export async function runScanImpl() {
         if (!title || !body) {
           const gen = await callJson<{ title: string; body: string }>({
             task: "atomic_claim_extraction",
-            system: "You are a synthetic public-signal generator for the Archlight prototype. Produce ONE short public information item (title + 3-5 sentence body) that could realistically come from the given source type. It should describe a concrete event, filing, procurement, layoff, executive move, regulatory action, supply issue, commodity move, or corporate statement in a specific sector and region. Return JSON: {\"title\":string,\"body\":string}. Do not give financial advice, no buy/sell/hold/target price language.",
+            system: "You are a synthetic public-signal generator for the Arklight prototype. Produce ONE short public information item (title + 3-5 sentence body) that could realistically come from the given source type. It should describe a concrete event, filing, procurement, layoff, executive move, regulatory action, supply issue, commodity move, or corporate statement in a specific sector and region. Return JSON: {\"title\":string,\"body\":string}. Do not give financial advice, no buy/sell/hold/target price language.",
             user: `Source: ${src.name} (${src.source_type}). Generate one realistic public-signal document.`,
           });
           await logTask(db, "atomic_claim_extraction", gen, "doc_generation");
@@ -537,7 +537,7 @@ export async function runScanImpl() {
         task: "company_impact_analysis",
         model: "google/gemini-2.5-flash",
         maxTokens: 2200,
-        system: "You are Archlight scan synthesis. Return ONLY strict JSON. Required shape: {\"event\":{\"title\":string,\"event_type\":string,\"event_class\":\"risk\"|\"opportunity\"|\"mixed\"|\"watch\"|\"unknown\",\"summary\":string,\"severity\":\"low\"|\"moderate\"|\"high\"|\"critical\",\"probability\":number,\"confidence\":number,\"risk_score\":number,\"opportunity_score\":number},\"impacts\":[{\"company\":string,\"impact_type\":\"beneficiary\"|\"harmed\"|\"mixed\"|\"exposed\"|\"watch_only\"|\"unknown\",\"pathway\":string,\"risk_score\":number,\"opportunity_score\":number,\"watch_signals\":string[],\"confidence\":number}],\"opportunity\":object|null,\"positioning\":object|null,\"contradictions\":string[]}. Be hedged (may, could, appears). NEVER give financial advice: no buy/sell/hold, no target price, no portfolio allocation.",
+        system: "You are Arklight scan synthesis. Return ONLY strict JSON. Required shape: {\"event\":{\"title\":string,\"event_type\":string,\"event_class\":\"risk\"|\"opportunity\"|\"mixed\"|\"watch\"|\"unknown\",\"summary\":string,\"severity\":\"low\"|\"moderate\"|\"high\"|\"critical\",\"probability\":number,\"confidence\":number,\"risk_score\":number,\"opportunity_score\":number},\"impacts\":[{\"company\":string,\"impact_type\":\"beneficiary\"|\"harmed\"|\"mixed\"|\"exposed\"|\"watch_only\"|\"unknown\",\"pathway\":string,\"risk_score\":number,\"opportunity_score\":number,\"watch_signals\":string[],\"confidence\":number}],\"opportunity\":object|null,\"positioning\":object|null,\"contradictions\":string[]}. Be hedged (may, could, appears). NEVER give financial advice: no buy/sell/hold, no target price, no portfolio allocation.",
         user: `Cluster type: ${type}. Sector: ${sector}. Region: ${region}. Entities: ${entities.join(", ") || "n/a"}. Commodities: ${commodities.join(", ") || "n/a"}. Sources: ${group.length} claims from ${sourceDiv} distinct publisher(s), avg reliability ${avgRel.toFixed(2)}.\n\nClaims:\n${group.map((g, i) => `[${i+1}] (${g.source_name}) ${g.text}`).join("\n")}\n\nReturn JSON with keys: event, impacts (array), opportunity (or null), positioning (or null), contradictions (array of strings).`,
       });
       await logTask(db, "company_impact_analysis", synth, `cluster:${key}`);
@@ -1437,7 +1437,7 @@ function fallbackReportFromEvidence(args: {
   const sourceIndices = cited.map((item) => item.idx);
   const adjacent = (subject.adjacent ?? []).slice(0, 6);
   const isCompany = subject.kind === "company" || subject.kind === "ticker";
-  const profileBase = `${name} is classified by Archlight as a ${subject.kind}. ${subject.rationale || "The classification is based on public identity signals and query context."}`;
+  const profileBase = `${name} is classified by Arklight as a ${subject.kind}. ${subject.rationale || "The classification is based on public identity signals and query context."}`;
   const evidenceLine = cited.length
     ? `The current evidence bundle contains ${cited.length} live public-news items, including ${recentTitles.slice(0, 4).join("; ")}.`
     : "The live news retrieval layer returned no current items, so this report is limited to identity-level context and should be refreshed when source access improves.";
@@ -1445,8 +1445,8 @@ function fallbackReportFromEvidence(args: {
   return {
     subject_profile: `${profileBase} ${evidenceLine}`,
     what_is_happening_now: cited.length
-      ? `Archlight retrieved recent public signals for ${name}. The strongest immediate reading is a watch brief rather than a definitive event call: current items should be reviewed for regulatory, product, client-flow, operational, and sector-read-across implications before drawing conclusions.`
-      : `Archlight could not retrieve enough live items for ${name} in this run. Treat this as a thin-evidence identity brief, not a complete interrogation.`,
+      ? `Arklight retrieved recent public signals for ${name}. The strongest immediate reading is a watch brief rather than a definitive event call: current items should be reviewed for regulatory, product, client-flow, operational, and sector-read-across implications before drawing conclusions.`
+      : `Arklight could not retrieve enough live items for ${name} in this run. Treat this as a thin-evidence identity brief, not a complete interrogation.`,
     key_developments: cited.map((item) => ({
       headline: item.title,
       detail: item.snippet || `Public item from ${item.source || "unknown source"}.`,
@@ -1509,7 +1509,7 @@ async function fetchGoogleNews(query: string, limit = 8): Promise<Omit<LiveNewsI
     try {
       const res = await fetch(url, {
         signal: controller.signal,
-        headers: { "User-Agent": "ArchlightBot/0.1 (+public-signals)" },
+        headers: { "User-Agent": "ArklightBot/0.1 (+public-signals)" },
       });
       if (!res.ok) return [];
       xml = await res.text();
@@ -1667,7 +1667,7 @@ export const interrogate = createServerFn({ method: "POST" }).middleware([requir
       if (liveItems.length >= 40) break;
     }
 
-    // 3. Pull local Archlight evidence
+    // 3. Pull local Arklight evidence
     const [{ data: entities }, { data: events }, { data: claims }, { data: impacts }, { data: positioning }] = await Promise.all([
       db.from("entities").select("*").or(`canonical_name.ilike.%${q}%,ticker.ilike.%${q}%`).limit(6),
       db.from("event_candidates").select("id, title, event_class, summary, risk_score, opportunity_score, confidence, affected_sector, affected_region, last_updated_at").or(`title.ilike.%${q}%,affected_sector.ilike.%${q}%,affected_region.ilike.%${q}%,summary.ilike.%${q}%`).order("last_updated_at", { ascending: false }).limit(12),
@@ -1690,7 +1690,7 @@ export const interrogate = createServerFn({ method: "POST" }).middleware([requir
     // 5. Deep synthesis with a strong reasoning model. Cite live_news items by integer index.
     const brief = await callJson<DeepReport>({
       task: "report_synthesis",
-      system: `You are Archlight, a precognitive public-signals analyst. You are given LIVE news (indexed 1..N) plus internal Archlight evidence. Produce a DEEP interrogation of the subject, treating live_news as the primary factual base. Cover: identity/profile, what is happening NOW, financial/market context (earnings, guidance, share-price direction, analyst tone), leadership/org changes, operational events (contracts, tenders, projects, layoffs, lawsuits, regulatory), directly impacted entities (name every company, country, commodity, sector mentioned in evidence), second-order effects (suppliers, customers, competitors, adjacent commodities, neighbouring regions), ranked risks and opportunities across horizons 0-7d / 8-30d / 1-3mo / 3-12mo, plausible scenarios with probabilities and leading indicators, and contrarian/rumor/speculative signals separated from confirmed items. Every claim MUST cite live_news indices in source_indices (integer array) when it originates from those sources. Use hedged wording. DO NOT give financial advice: never say buy/sell/hold, no target price, no investment recommendation, no portfolio allocation, no "guaranteed" language. Return STRICT JSON matching the requested schema. If the live_news set is thin, say so in evidence_coverage and lower confidence_overall.`,
+      system: `You are Arklight, a precognitive public-signals analyst. You are given LIVE news (indexed 1..N) plus internal Arklight evidence. Produce a DEEP interrogation of the subject, treating live_news as the primary factual base. Cover: identity/profile, what is happening NOW, financial/market context (earnings, guidance, share-price direction, analyst tone), leadership/org changes, operational events (contracts, tenders, projects, layoffs, lawsuits, regulatory), directly impacted entities (name every company, country, commodity, sector mentioned in evidence), second-order effects (suppliers, customers, competitors, adjacent commodities, neighbouring regions), ranked risks and opportunities across horizons 0-7d / 8-30d / 1-3mo / 3-12mo, plausible scenarios with probabilities and leading indicators, and contrarian/rumor/speculative signals separated from confirmed items. Every claim MUST cite live_news indices in source_indices (integer array) when it originates from those sources. Use hedged wording. DO NOT give financial advice: never say buy/sell/hold, no target price, no investment recommendation, no portfolio allocation, no "guaranteed" language. Return STRICT JSON matching the requested schema. If the live_news set is thin, say so in evidence_coverage and lower confidence_overall.`,
       user: `USER QUERY: ${q}\nSUBJECT CLASSIFICATION: ${JSON.stringify(subject)}\nEVIDENCE BUNDLE:\n${JSON.stringify(evidenceBundle, null, 2)}\n\nReturn JSON with fields: subject_profile, what_is_happening_now, key_developments[{headline,detail,source_indices,date}], financial_and_market, leadership_and_org, operational_and_projects, directly_impacted_entities[{name,kind,direction,mechanism,magnitude,confidence,source_indices}], second_order_effects[{name,kind,mechanism,direction,confidence}], risks[{title,description,likelihood,magnitude,horizon,source_indices}], opportunities[{title,description,likelihood,magnitude,horizon,source_indices}], scenarios[{label,horizon,description,probability,leading_indicators,source_indices}], contrarian_or_speculative[{claim,why_it_matters,verification_status,source_indices}], what_to_watch[], confidence_overall (0..1), evidence_coverage, caveats[].`,
       temperature: 0.3,
       maxTokens: 8192,
