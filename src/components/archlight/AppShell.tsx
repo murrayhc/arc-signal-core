@@ -201,6 +201,7 @@ function SideNav() {
         { icon: Compass, label: "Graph lookup", to: "/ask-graph" },
         { icon: Building2, label: "Companies", to: "/companies" },
         { icon: GitBranch, label: "Evidence", to: "/arcs" },
+        { icon: Compass, label: "Narrative divergence", to: "/narrative-divergence", badge: "NEW" },
       ],
     },
     { label: "OPENINGS", items: [{ icon: Sparkles, label: "Opportunities", to: "/opportunities" }] },

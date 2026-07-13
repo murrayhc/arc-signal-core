@@ -15,6 +15,7 @@ import { Route as SourcesRouteImport } from './routes/sources'
 import { Route as ScansRouteImport } from './routes/scans'
 import { Route as ReviewRouteImport } from './routes/review'
 import { Route as OpportunitiesRouteImport } from './routes/opportunities'
+import { Route as NarrativeDivergenceRouteImport } from './routes/narrative-divergence'
 import { Route as InterrogationsRouteImport } from './routes/interrogations'
 import { Route as InterrogateRouteImport } from './routes/interrogate'
 import { Route as ExposuresRouteImport } from './routes/exposures'
@@ -66,6 +67,11 @@ const ReviewRoute = ReviewRouteImport.update({
 const OpportunitiesRoute = OpportunitiesRouteImport.update({
   id: '/opportunities',
   path: '/opportunities',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NarrativeDivergenceRoute = NarrativeDivergenceRouteImport.update({
+  id: '/narrative-divergence',
+  path: '/narrative-divergence',
   getParentRoute: () => rootRouteImport,
 } as any)
 const InterrogationsRoute = InterrogationsRouteImport.update({
@@ -190,6 +196,7 @@ export interface FileRoutesByFullPath {
   '/exposures': typeof ExposuresRoute
   '/interrogate': typeof InterrogateRoute
   '/interrogations': typeof InterrogationsRoute
+  '/narrative-divergence': typeof NarrativeDivergenceRoute
   '/opportunities': typeof OpportunitiesRouteWithChildren
   '/review': typeof ReviewRoute
   '/scans': typeof ScansRoute
@@ -220,6 +227,7 @@ export interface FileRoutesByTo {
   '/exposures': typeof ExposuresRoute
   '/interrogate': typeof InterrogateRoute
   '/interrogations': typeof InterrogationsRoute
+  '/narrative-divergence': typeof NarrativeDivergenceRoute
   '/review': typeof ReviewRoute
   '/scans': typeof ScansRoute
   '/sources': typeof SourcesRouteWithChildren
@@ -250,6 +258,7 @@ export interface FileRoutesById {
   '/exposures': typeof ExposuresRoute
   '/interrogate': typeof InterrogateRoute
   '/interrogations': typeof InterrogationsRoute
+  '/narrative-divergence': typeof NarrativeDivergenceRoute
   '/opportunities': typeof OpportunitiesRouteWithChildren
   '/review': typeof ReviewRoute
   '/scans': typeof ScansRoute
@@ -282,6 +291,7 @@ export interface FileRouteTypes {
     | '/exposures'
     | '/interrogate'
     | '/interrogations'
+    | '/narrative-divergence'
     | '/opportunities'
     | '/review'
     | '/scans'
@@ -312,6 +322,7 @@ export interface FileRouteTypes {
     | '/exposures'
     | '/interrogate'
     | '/interrogations'
+    | '/narrative-divergence'
     | '/review'
     | '/scans'
     | '/sources'
@@ -341,6 +352,7 @@ export interface FileRouteTypes {
     | '/exposures'
     | '/interrogate'
     | '/interrogations'
+    | '/narrative-divergence'
     | '/opportunities'
     | '/review'
     | '/scans'
@@ -372,6 +384,7 @@ export interface RootRouteChildren {
   ExposuresRoute: typeof ExposuresRoute
   InterrogateRoute: typeof InterrogateRoute
   InterrogationsRoute: typeof InterrogationsRoute
+  NarrativeDivergenceRoute: typeof NarrativeDivergenceRoute
   OpportunitiesRoute: typeof OpportunitiesRouteWithChildren
   ReviewRoute: typeof ReviewRoute
   ScansRoute: typeof ScansRoute
@@ -429,6 +442,13 @@ declare module '@tanstack/react-router' {
       path: '/opportunities'
       fullPath: '/opportunities'
       preLoaderRoute: typeof OpportunitiesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/narrative-divergence': {
+      id: '/narrative-divergence'
+      path: '/narrative-divergence'
+      fullPath: '/narrative-divergence'
+      preLoaderRoute: typeof NarrativeDivergenceRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/interrogations': {
@@ -646,6 +666,7 @@ const rootRouteChildren: RootRouteChildren = {
   ExposuresRoute: ExposuresRoute,
   InterrogateRoute: InterrogateRoute,
   InterrogationsRoute: InterrogationsRoute,
+  NarrativeDivergenceRoute: NarrativeDivergenceRoute,
   OpportunitiesRoute: OpportunitiesRouteWithChildren,
   ReviewRoute: ReviewRoute,
   ScansRoute: ScansRoute,
