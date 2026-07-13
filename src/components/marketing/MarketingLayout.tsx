@@ -73,7 +73,7 @@ export function MarketingHeader({ overlay = false }: { overlay?: boolean }) {
     const textHover = "hover:text-[color:var(--mkt-fg)]";
 
     return (
-      <header className="sticky top-0 z-40 border-b border-[color:var(--mkt-line)] bg-[color:var(--mkt-bg)]/90 backdrop-blur-xl">
+      <header className="sticky top-0 z-40 border-b border-[color:var(--mkt-line)] bg-[color:var(--mkt-bg)]">
         <div className="mx-auto max-w-7xl px-6">
           <div className="flex h-14 lg:h-16 items-center gap-6">
             <Link
@@ -177,7 +177,7 @@ export function MarketingHeader({ overlay = false }: { overlay?: boolean }) {
 
   const wrap = dark
     ? "absolute inset-x-0 top-4 z-50 mx-auto w-full lg:top-4 lg:max-w-[calc(100%-4rem)]"
-    : "sticky top-0 z-40 border-b border-[color:var(--mkt-line)] bg-[color:var(--mkt-bg)]/90 backdrop-blur-xl";
+    : "sticky top-0 z-40 border-b border-[color:var(--mkt-line)] bg-[color:var(--mkt-bg)]";
   const inner = dark
     ? "mx-auto max-w-[1440px] px-8 lg:px-8"
     : "mx-auto max-w-7xl px-6";
