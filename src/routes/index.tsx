@@ -86,9 +86,9 @@ function Hero() {
         <HeroBackdrop />
 
         <div className="relative z-10 mx-auto flex h-full w-full max-w-[1440px] flex-col justify-between px-6 sm:px-8 lg:px-10">
-          <div className="pt-32 md:pt-42 lg:pt-75">
+          <div className="pt-32 md:pt-[10.5rem] lg:pt-[18.75rem]">
             <div className="flex w-fit rounded-full bg-neutral-900 p-1 shadow-lg shadow-black">
-              <div className="flex items-center gap-1 sm:gap-2 text-natural-white">
+              <div className="flex items-center gap-1 sm:gap-2 text-white">
               <span className="rounded-full bg-[color:var(--mkt-accent)] text-black px-2 py-0.5 text-[10px] font-semibold">Signal scan</span>
                 <span className="rounded-full pr-2 text-[10px] sm:text-xs text-white/80">Public-signals early warning</span>
               </div>
@@ -114,8 +114,8 @@ function Hero() {
             </div>
           </div>
 
-          <div className="relative h-18 sm:h-48 md:h-72" aria-hidden>
-            <p className="mkt-display absolute -top-10 left-1/2 -translate-x-1/2 bg-linear-to-r from-white/10 to-white/0 bg-clip-text text-center text-[100px] font-semibold leading-none text-transparent sm:text-[6rem] md:-top-6 md:mt-10 md:text-[160px] lg:-top-18 lg:text-[300px]">
+          <div className="relative h-[4.5rem] sm:h-48 md:h-72" aria-hidden>
+            <p className="mkt-display absolute -top-10 left-1/2 -translate-x-1/2 bg-gradient-to-r from-white/10 to-white/0 bg-clip-text text-center text-[100px] font-semibold leading-none text-transparent sm:text-[6rem] md:-top-6 md:mt-10 md:text-[160px] lg:-top-[4.5rem] lg:text-[300px]">
               Arklight
             </p>
           </div>
