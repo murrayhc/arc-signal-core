@@ -22,6 +22,7 @@ export type Database = {
           reason: string
           seen: boolean
           severity: string
+          user_id: string
           watchlist_id: string
         }
         Insert: {
@@ -31,6 +32,7 @@ export type Database = {
           reason: string
           seen?: boolean
           severity?: string
+          user_id: string
           watchlist_id: string
         }
         Update: {
@@ -40,6 +42,7 @@ export type Database = {
           reason?: string
           seen?: boolean
           severity?: string
+          user_id?: string
           watchlist_id?: string
         }
         Relationships: [
@@ -2834,6 +2837,7 @@ export type Database = {
           regions: string[]
           sectors: string[]
           updated_at: string
+          user_id: string
         }
         Insert: {
           created_at?: string
@@ -2847,6 +2851,7 @@ export type Database = {
           regions?: string[]
           sectors?: string[]
           updated_at?: string
+          user_id: string
         }
         Update: {
           created_at?: string
@@ -2860,6 +2865,7 @@ export type Database = {
           regions?: string[]
           sectors?: string[]
           updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
