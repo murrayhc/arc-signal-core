@@ -55,14 +55,14 @@ function InterrogatePage() {
     <AppShell>
       <div className="max-w-[1400px] mx-auto w-full flex flex-col gap-5 min-w-0">
         <div>
-          <div className="text-[10px] font-mono uppercase tracking-[0.25em] text-muted-foreground">Interrogation</div>
-          <h1 className="font-display text-2xl md:text-3xl mt-1 text-glow-signal">Ask Archlight</h1>
+          <div className="text-[10px] font-mono uppercase tracking-[0.25em] text-muted-foreground">Explore · Research</div>
+          <h1 className="font-display text-2xl md:text-3xl mt-1">Research a subject</h1>
           <p className="text-sm text-muted-foreground mt-1 max-w-3xl">
-            Enter a company, country, commodity, sector, ticker, person, or theme. Archlight pulls live public news, classifies the subject, expands into adjacent queries (weather, supply, competitors, regulators), and synthesises a hedged deep-research brief with cited sources, ranked risks/opportunities, second-order effects and multi-horizon scenarios.
+            Ask about any company, country, commodity, sector, ticker, person or theme. Archlight pulls live public sources, traces them, and writes a cited brief — it won't invent facts it can't source.
           </p>
-          <div className="mt-3 inline-flex items-center gap-1 p-1 rounded-lg border border-border/50 bg-background/40">
-            <Link to="/interrogate" className="px-3 py-1.5 text-xs rounded-md border border-border/60 bg-accent/60 text-foreground">Research</Link>
-            <Link to="/interrogations" className="px-3 py-1.5 text-xs rounded-md border border-border/60 text-muted-foreground hover:bg-accent/30">History</Link>
+          <div className="mt-3 inline-flex items-center p-1 rounded-full border border-border/50 bg-muted/40">
+            <Link to="/interrogate" className="px-3 py-1.5 text-xs rounded-full bg-primary text-primary-foreground shadow-sm">Research</Link>
+            <Link to="/interrogations" className="px-3 py-1.5 text-xs rounded-full text-muted-foreground hover:text-foreground hover:bg-accent/50">History</Link>
           </div>
         </div>
 
