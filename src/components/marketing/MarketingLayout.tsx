@@ -174,23 +174,23 @@ export function MarketingFooter() {
             { label: "How it works", href: "/#how" },
             { label: "Proof", href: "/#proof" },
             { label: "Compare", href: "/#compare" },
-            { label: "Pricing", href: "/pricing" },
+            { label: "Pricing", to: "/pricing" },
           ]}
         />
         <FooterCol
           title="Account"
           links={[
-            { label: "Create account", href: "/auth?mode=signup" },
-            { label: "Sign in", href: "/auth?mode=signin" },
-            { label: "Open Arklight", href: "/app" },
+            { label: "Create account", to: "/auth", search: { mode: "signup" } },
+            { label: "Sign in", to: "/auth", search: { mode: "signin" } },
+            { label: "Open Arklight", to: "/app" },
           ]}
         />
         <FooterCol
           title="Legal"
           links={[
-            { label: "Terms", href: "/terms" },
-            { label: "Privacy", href: "/privacy" },
-            { label: "Cookies", href: "/cookies" },
+            { label: "Terms", to: "/terms" },
+            { label: "Privacy", to: "/privacy" },
+            { label: "Cookies", to: "/cookies" },
           ]}
         />
       </div>
@@ -204,16 +204,23 @@ export function MarketingFooter() {
   );
 }
 
-function FooterCol({ title, links }: { title: string; links: { label: string; href: string }[] }) {
+type FooterLink =
+  | { label: string; href: string }
+  | { label: string; to: string; search?: Record<string, string> };
+
+function FooterCol({ title, links }: { title: string; links: FooterLink[] }) {
+  const cls = "text-[color:var(--mkt-heading)] hover:text-[color:var(--mkt-fg)] hover:underline underline-offset-4";
   return (
     <div>
       <div className="text-[10px] mkt-mono uppercase tracking-widest text-[color:var(--mkt-muted)]">{title}</div>
       <ul className="mt-3 space-y-2">
         {links.map((l) => (
-          <li key={l.href}>
-            <a href={l.href} className="text-[color:var(--mkt-heading)] hover:text-[color:var(--mkt-fg)] hover:underline underline-offset-4">
-              {l.label}
-            </a>
+          <li key={l.label}>
+            {"to" in l ? (
+              <Link to={l.to as any} search={l.search as any} className={cls}>{l.label}</Link>
+            ) : (
+              <a href={l.href} className={cls}>{l.label}</a>
+            )}
           </li>
         ))}
       </ul>
