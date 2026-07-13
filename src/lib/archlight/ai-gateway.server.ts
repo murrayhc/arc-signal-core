@@ -17,6 +17,7 @@ export type TaskClass =
   | "strategic_positioning"
   | "report_synthesis"
   | "json_repair"
+  | "narrative_framing"
   | "embedding";
 
 const ROUTES: Record<TaskClass, string> = {
@@ -32,6 +33,7 @@ const ROUTES: Record<TaskClass, string> = {
   strategic_positioning: "google/gemini-2.5-pro",
   report_synthesis: "google/gemini-2.5-pro",
   json_repair: "google/gemini-3-flash-preview",
+  narrative_framing: "google/gemini-2.5-flash",
   embedding: "openai/text-embedding-3-small",
 };
 
