@@ -1,12 +1,7 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { useState } from "react";
 import { AppShell, InterrogateSearch } from "@/components/archlight/AppShell";
-import { IntelligenceBrain, type GNode } from "@/components/archlight/IntelligenceBrain";
-import {
-  ActiveOpportunities, TopRisks, LiveScanningBars, TrendSignals,
-  SystemConfidence, InternationalData, LocalMarketFocus, GlobalPulseTicker,
-} from "@/components/archlight/panels";
+import { ActiveOpportunities } from "@/components/archlight/panels";
 import { dashboardQueryOptions } from "@/lib/archlight/queries";
 import { runScan } from "@/lib/archlight/pipeline.functions";
 import { getScanSettings } from "@/lib/archlight/settings.functions";
