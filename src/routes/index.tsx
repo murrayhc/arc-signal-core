@@ -80,7 +80,7 @@ function HeroTemplateCta({ children, to = "/auth", search }: { children: ReactNo
     <Link
       to={to as any}
       search={search as any}
-      className="group relative flex w-fit cursor-pointer items-center gap-2 rounded-lg border border-white/20 bg-black py-2 pr-4 pl-11 text-sm tracking-tight focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+      className="group relative mt-6 flex w-fit cursor-pointer items-center gap-2 rounded-lg border border-white/20 bg-black py-2 pr-4 pl-11 text-sm tracking-tight focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40 md:mt-8"
     >
       <span
         data-slot="button-box"
