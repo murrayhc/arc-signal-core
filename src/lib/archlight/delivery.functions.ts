@@ -108,20 +108,22 @@ function toPublic(row: ChannelRow): PublicChannel {
 
 // ============ CRUD (URLs never returned to client) ============
 
-export const listDeliveryChannels = createServerFn({ method: "GET" }).handler(async () => {
-  const db = await admin();
-  const { data, error } = await db
-    .from("delivery_channels")
-    .select("*")
-    .order("created_at", { ascending: false });
-  if (error) throw new Error(error.message);
-  const rows = (data ?? []) as ChannelRow[];
-  const profileIds = Array.from(new Set(rows.map((r) => r.profile_id).filter((v): v is string => !!v)));
-  const profiles = profileIds.length
-    ? ((await db.from("exposure_profiles").select("id, name").in("id", profileIds)).data ?? [])
-    : [];
-  return { channels: rows.map(toPublic), profiles };
-});
+export const listDeliveryChannels = createServerFn({ method: "GET" }).middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const db = await admin();
+    const { data, error } = await db
+      .from("delivery_channels")
+      .select("*")
+      .eq("user_id", context.userId)
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    const rows = (data ?? []) as ChannelRow[];
+    const profileIds = Array.from(new Set(rows.map((r) => r.profile_id).filter((v): v is string => !!v)));
+    const profiles = profileIds.length
+      ? ((await db.from("exposure_profiles").select("id, name").eq("user_id", context.userId).in("id", profileIds)).data ?? [])
+      : [];
+    return { channels: rows.map(toPublic), profiles };
+  });
 
 const AddInput = z.object({
   kind: KIND,
@@ -130,11 +132,12 @@ const AddInput = z.object({
   profileId: z.string().uuid().optional().nullable(),
   minRelevance: z.number().min(0).max(1).optional(),
 });
-export const addDeliveryChannel = createServerFn({ method: "POST" }).middleware([requireOwner])
+export const addDeliveryChannel = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => AddInput.parse(d))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     const db = await admin();
     const { data: row, error } = await db.from("delivery_channels").insert({
+      user_id: context.userId,
       kind: data.kind,
       url: data.url,
       label: data.label ?? null,
@@ -146,23 +149,24 @@ export const addDeliveryChannel = createServerFn({ method: "POST" }).middleware(
     return toPublic(row as ChannelRow);
   });
 
-export const removeDeliveryChannel = createServerFn({ method: "POST" }).middleware([requireOwner])
+export const removeDeliveryChannel = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     const db = await admin();
-    const { error } = await db.from("delivery_channels").delete().eq("id", data.id);
+    const { error } = await db.from("delivery_channels").delete().eq("id", data.id).eq("user_id", context.userId);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
 
-export const sendTestMessage = createServerFn({ method: "POST" }).middleware([requireOwner])
+export const sendTestMessage = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     const db = await admin();
     const { data: row, error } = await db
       .from("delivery_channels")
       .select("*")
       .eq("id", data.id)
+      .eq("user_id", context.userId)
       .maybeSingle();
     if (error || !row) throw new Error(error?.message ?? "Channel not found");
     const ch = row as ChannelRow;
@@ -182,6 +186,7 @@ export const sendTestMessage = createServerFn({ method: "POST" }).middleware([re
       return { ok: false, status: 0, error: err instanceof Error ? err.message : String(err) };
     }
   });
+
 
 // ============ DELIVERY PASS (called from runScan) ============
 
