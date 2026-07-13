@@ -83,7 +83,7 @@ export const getDashboard = createServerFn({ method: "GET" }).handler(async () =
       events_tracked: events.data?.length ?? 0,
       open_opportunities: (events.data ?? []).filter((e) => e.event_class === "opportunity" || e.event_class === "mixed").length,
       active_risks: (events.data ?? []).filter((e) => e.event_class === "risk" || e.event_class === "mixed").length,
-      unseen_alerts: unseenAlerts.data?.length ?? 0,
+      unseen_alerts: 0,
     },
     system: {
       source_coverage: Number(avgHealth.toFixed(3)),
