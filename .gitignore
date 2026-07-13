@@ -8,6 +8,8 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
+# This repo uses bun (bun.lock). Ignore npm's lockfile to avoid dual lockfiles.
+package-lock.json
 dist
 dist-ssr
 .output
