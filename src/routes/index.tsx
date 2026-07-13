@@ -29,7 +29,6 @@ export const Route = createFileRoute("/")({
 function Dashboard() {
   const { data } = useSuspenseQuery(dashboardQueryOptions);
   const router = useRouter();
-  const [selectedNode, setSelectedNode] = useState<GNode | null>(null);
 
   const scan = useMutation({
     mutationFn: () => runScan(),
