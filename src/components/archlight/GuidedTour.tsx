@@ -32,6 +32,7 @@ export function GuidedTour() {
   const [reduced, setReduced] = useState(false);
   const [entering, setEntering] = useState(true);
   const prevStep = useRef(0);
+  const settlingRef = useRef(false);
 
   const start = useCallback(() => {
     setStep(0);
@@ -77,26 +78,48 @@ export function GuidedTour() {
     return () => window.clearTimeout(t);
   }, [active, step, reduced]);
 
-  // Track target rect
+  // Track target rect; close the tour if the target scrolls behind the sticky header
+  // or out of the viewport, but ignore the brief settling window after a step change.
   useLayoutEffect(() => {
     if (!active) { setRect(null); return; }
     const s = STEPS[step];
-    const measure = () => {
+    const headerHeight = () => document.querySelector('header')?.getBoundingClientRect().height ?? 56;
+
+    settlingRef.current = true;
+    const settleT = window.setTimeout(() => { settlingRef.current = false; }, reduced ? 0 : 450);
+
+    const measure = (isStepChange: boolean) => {
       const el = document.querySelector(s.selector) as HTMLElement | null;
       if (!el) { setRect(null); return; }
-      el.scrollIntoView({ block: "nearest", behavior: reduced ? "auto" : "smooth" });
-      setRect(el.getBoundingClientRect());
+      if (isStepChange) {
+        el.scrollIntoView({ block: "nearest", behavior: reduced ? "auto" : "smooth" });
+      }
+      const r = el.getBoundingClientRect();
+      setRect(r);
+
+      if (!isStepChange && !settlingRef.current) {
+        const hh = headerHeight();
+        if (r.bottom <= hh || r.top >= window.innerHeight) {
+          end();
+        }
+      }
     };
-    measure();
-    const t = window.setTimeout(measure, reduced ? 0 : 250);
-    window.addEventListener("resize", measure);
-    window.addEventListener("scroll", measure, true);
+
+    measure(true);
+    const remeasureT = window.setTimeout(() => measure(true), reduced ? 0 : 250);
+
+    const onResize = () => measure(false);
+    const onScroll = () => measure(false);
+
+    window.addEventListener("resize", onResize);
+    window.addEventListener("scroll", onScroll, true);
     return () => {
-      window.clearTimeout(t);
-      window.removeEventListener("resize", measure);
-      window.removeEventListener("scroll", measure, true);
+      window.clearTimeout(settleT);
+      window.clearTimeout(remeasureT);
+      window.removeEventListener("resize", onResize);
+      window.removeEventListener("scroll", onScroll, true);
     };
-  }, [active, step, reduced]);
+  }, [active, step, reduced, end]);
 
   if (!active) return null;
   const s = STEPS[step];
