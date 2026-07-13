@@ -139,18 +139,18 @@ function HeroVisual() {
 
       {/* Lineage card overlay */}
       <div className="hidden md:block absolute left-4 bottom-4 max-w-[300px] rounded-xl border border-white/10 bg-black/50 backdrop-blur-md p-4">
-        <div className="mkt-mono text-[10px] uppercase tracking-widest text-white/50">Evidence lineage</div>
+        <div className="mkt-mono text-[10px] uppercase tracking-widest text-white/50">Evidence lineage · illustrative example</div>
         <ol className="mt-3 space-y-2 text-xs text-white/80">
           <li className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-white/60" /> Companies House · charge filed</li>
           <li className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-white/60" /> Contracts Finder · notice cancelled</li>
-          <li className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full" style={{ background: "var(--mkt-accent)" }} /> Cluster confidence · 0.72</li>
+          <li className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full" style={{ background: "var(--mkt-accent)" }} /> Cluster confidence · sample 0.72</li>
         </ol>
       </div>
 
       <div className="hidden md:block absolute right-4 bottom-4 max-w-[280px] rounded-xl border border-white/10 bg-black/50 backdrop-blur-md p-4">
-        <div className="mkt-mono text-[10px] uppercase tracking-widest text-white/50">Frozen call</div>
+        <div className="mkt-mono text-[10px] uppercase tracking-widest text-white/50">Frozen call · illustrative example</div>
         <div className="mt-3 text-sm text-white/90">Supplier consolidation likely in <span className="text-[color:var(--mkt-accent)]">14–21 days</span></div>
-        <div className="mt-1 mkt-mono text-[10px] text-white/50">P = 0.68 · graded on outcome</div>
+        <div className="mt-1 mkt-mono text-[10px] text-white/50">Sample P = 0.68 · graded on outcome</div>
       </div>
     </div>
   );
