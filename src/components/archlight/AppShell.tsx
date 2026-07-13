@@ -124,7 +124,7 @@ function UserMenu() {
           <div className="px-2 py-1.5 text-muted-foreground truncate">{email}</div>
           <div className="my-1 h-px bg-border/60" />
           <Link
-            to="/settings/billing"
+            to={"/settings/billing" as any}
             onClick={() => setOpen(false)}
             className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-accent/60 text-foreground text-left"
           >
