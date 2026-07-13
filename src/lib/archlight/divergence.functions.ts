@@ -220,7 +220,7 @@ export const getConvergenceEvents = createServerFn({ method: "GET" })
 
 const analyseInput = z.object({ eventId: z.string().uuid() });
 
-type Framing = {
+export type Framing = {
   domain: string;
   outlet_name: string | null;
   lean: string | null;
@@ -511,4 +511,76 @@ export const autoAnalyseTopConvergence = createServerFn({ method: "POST" })
     }
     return { analysed, skipped };
   });
+
+// ============ D4: read query for the Narrative Divergence page ============
+
+
+const listInput = z.object({ limit: z.number().int().min(1).max(100).optional() });
+
+export type NarrativeDivergenceRow = {
+  event_candidate_id: string;
+  baseline: string | null;
+  outlet_framings: Framing[];
+  divergence_score: number | null;
+  divergence_label: string | null;
+  n_outlets: number | null;
+  n_with_lean: number | null;
+  distinct_lean_zones: number | null;
+  computed_at: string | null;
+  title: string | null;
+  summary: string | null;
+  event_class: string | null;
+  affected_sector: string | null;
+  affected_region: string | null;
+};
+
+export const listNarrativeDivergence = createServerFn({ method: "GET" })
+  .inputValidator((input: unknown) => listInput.parse(input ?? {}))
+  .handler(async ({ data }): Promise<NarrativeDivergenceRow[]> => {
+    const limit = data.limit ?? 20;
+    const db = await admin();
+    const { data: rows } = await db
+      .from("narrative_divergence")
+      .select("event_candidate_id, baseline, outlet_framings, divergence_score, divergence_label, n_outlets, n_with_lean, distinct_lean_zones, computed_at")
+      .order("divergence_score", { ascending: false, nullsFirst: false })
+      .order("computed_at", { ascending: false })
+      .limit(limit);
+    if (!rows || rows.length === 0) return [];
+    const ids = rows.map((r) => r.event_candidate_id);
+    const { data: events } = await db
+      .from("event_candidates")
+      .select("id, title, summary, event_class, affected_sector, affected_region")
+      .in("id", ids);
+    const byId = new Map<string, { title: string | null; summary: string | null; event_class: string | null; affected_sector: string | null; affected_region: string | null }>();
+    for (const e of events ?? []) {
+      byId.set(e.id, {
+        title: e.title ?? null,
+        summary: e.summary ?? null,
+        event_class: e.event_class ?? null,
+        affected_sector: e.affected_sector ?? null,
+        affected_region: e.affected_region ?? null,
+      });
+    }
+    return rows.map((r) => {
+      const ev = byId.get(r.event_candidate_id);
+      const framings = Array.isArray(r.outlet_framings) ? (r.outlet_framings as unknown as Framing[]) : [];
+      return {
+        event_candidate_id: r.event_candidate_id,
+        baseline: r.baseline ?? null,
+        outlet_framings: framings,
+        divergence_score: r.divergence_score ?? null,
+        divergence_label: r.divergence_label ?? null,
+        n_outlets: r.n_outlets ?? null,
+        n_with_lean: r.n_with_lean ?? null,
+        distinct_lean_zones: r.distinct_lean_zones ?? null,
+        computed_at: r.computed_at ?? null,
+        title: ev?.title ?? null,
+        summary: ev?.summary ?? null,
+        event_class: ev?.event_class ?? null,
+        affected_sector: ev?.affected_sector ?? null,
+        affected_region: ev?.affected_region ?? null,
+      };
+    });
+  });
+
 

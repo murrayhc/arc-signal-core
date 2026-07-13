@@ -201,6 +201,7 @@ function SideNav() {
         { icon: Compass, label: "Graph lookup", to: "/ask-graph" },
         { icon: Building2, label: "Companies", to: "/companies" },
         { icon: GitBranch, label: "Evidence", to: "/arcs" },
+        { icon: Compass, label: "Narrative divergence", to: "/narrative-divergence", badge: "NEW" },
       ],
     },
     { label: "OPENINGS", items: [{ icon: Sparkles, label: "Opportunities", to: "/opportunities" }] },
@@ -264,19 +265,28 @@ function SideNav() {
                     {group.label}
                   </div>
                   <ul className="space-y-0.5">
-                    {group.items.map(({ icon: Icon, label, to }) => (
-                      <li key={to}>
-                        <Link
-                          to={to}
-                          data-tour-to={to}
-                          className="flex items-center gap-2.5 px-2.5 h-8 rounded-md text-xs transition text-muted-foreground hover:text-foreground hover:bg-accent/40"
-                          activeProps={{ className: "flex items-center gap-2.5 px-2.5 h-8 rounded-md text-xs bg-accent/60 text-foreground border border-border/60" }}
-                          activeOptions={{ exact: to === "/" }}
-                        >
-                          <Icon className="h-3.5 w-3.5"/>{label}
-                        </Link>
-                      </li>
-                    ))}
+                    {group.items.map((item) => {
+                      const { icon: Icon, label, to } = item;
+                      const badge = (item as { badge?: string }).badge;
+                      return (
+                        <li key={to}>
+                          <Link
+                            to={to}
+                            data-tour-to={to}
+                            className="flex items-center gap-2.5 px-2.5 h-8 rounded-md text-xs transition text-muted-foreground hover:text-foreground hover:bg-accent/40"
+                            activeProps={{ className: "flex items-center gap-2.5 px-2.5 h-8 rounded-md text-xs bg-accent/60 text-foreground border border-border/60" }}
+                            activeOptions={{ exact: to === "/" }}
+                          >
+                            <Icon className="h-3.5 w-3.5"/><span className="flex-1 truncate">{label}</span>
+                            {badge && (
+                              <span className="ml-auto text-[9px] font-mono uppercase tracking-widest px-1 h-4 rounded grid place-items-center border border-[color:var(--color-signal)]/60 text-[color:var(--color-signal)]">
+                                {badge}
+                              </span>
+                            )}
+                          </Link>
+                        </li>
+                      );
+                    })}
                   </ul>
                 </>
               )}
