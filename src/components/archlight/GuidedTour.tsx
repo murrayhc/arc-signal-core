@@ -70,6 +70,13 @@ export function GuidedTour() {
     return () => window.removeEventListener(TOUR_EVENT, onStart);
   }, [start]);
 
+  // Entrance animation reset
+  useEffect(() => {
+    if (!active) return;
+    const t = window.setTimeout(() => setEntering(false), reduced ? 0 : 200);
+    return () => window.clearTimeout(t);
+  }, [active, step, reduced]);
+
   // Track target rect
   useLayoutEffect(() => {
     if (!active) { setRect(null); return; }
