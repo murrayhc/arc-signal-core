@@ -242,8 +242,10 @@ function BentoOne() {
         <BentoTile dark className="md:col-span-4 md:row-span-2 min-h-[320px] flex flex-col justify-between">
           <TileHead dark label="01 · Scan" title="Continuous read of the open record" icon={Radar} />
           <p className="mt-3 max-w-md text-white/70 text-sm">
-            Approved public sources — filings, tenders, regulatory notices, court
-            records, wires — are read on a schedule, deduplicated, and clustered.
+            Arklight reads approved public sources on a schedule, then deduplicates and clusters them. These include filings, tenders, regulatory notices, court records and wires.
+          </p>
+          <p className="mt-3 max-w-md text-white text-sm">
+            You stop monitoring a dozen feeds. The reading is done for you, so you get the events that matter instead of a firehose.
           </p>
           <div className="mt-6 grid grid-cols-6 gap-1">
             {Array.from({ length: 42 }).map((_, i) => (
