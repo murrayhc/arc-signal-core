@@ -41,17 +41,17 @@ function DigestPage() {
       <div className="max-w-6xl mx-auto w-full flex flex-col gap-5">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <div className="text-[10px] font-mono uppercase tracking-[0.25em] text-muted-foreground">Weekly precognition</div>
-            <h1 className="font-display text-2xl md:text-3xl mt-1 text-glow-signal">Digest</h1>
-            <p className="text-sm text-muted-foreground mt-1 max-w-2xl">Seven-day rollup of ranked risks, ranked opportunities, and forward scenarios across four horizons — immediate (0-7d), near (8-30d), medium (1-3mo), strategic (3-12mo).</p>
+            <div className="text-[10px] font-mono uppercase tracking-[0.25em] text-muted-foreground">Explore · Digest</div>
+            <h1 className="font-display text-2xl md:text-3xl mt-1">This week's signal</h1>
+            <p className="text-sm text-muted-foreground mt-1 max-w-2xl">A 7-day rollup across everything Archlight watches — the biggest risks, openings and scenarios. Market-wide, not just your book.</p>
           </div>
           <button onClick={() => gen.mutate()} disabled={gen.isPending} className="h-9 px-4 rounded-md text-xs border border-[color:var(--color-signal)]/60 text-[color:var(--color-signal)] hover:bg-[color:var(--color-signal)]/10 disabled:opacity-50">
-            {gen.isPending ? <span className="flex items-center gap-1.5"><Loader2 className="h-3.5 w-3.5 animate-spin"/>Generating…</span> : "Regenerate digest"}
+            {gen.isPending ? <span className="flex items-center gap-1.5"><Loader2 className="h-3.5 w-3.5 animate-spin"/>Generating…</span> : "Regenerate"}
           </button>
         </div>
 
         {!d && !latest.isLoading && (
-          <div className="glass-panel rounded-xl p-8 text-center text-sm text-muted-foreground">No digest yet. Click "Regenerate digest" to generate one from the last 7 days of scans.</div>
+          <div className="glass-panel rounded-xl p-8 text-center text-sm text-muted-foreground">No digest yet. Click "Regenerate" to generate one from the last 7 days of scans.</div>
         )}
 
         {d && (
@@ -60,7 +60,8 @@ function DigestPage() {
               <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
                 <Newspaper className="h-3.5 w-3.5"/> digest · <span suppressHydrationWarning>{new Date(d.window_start).toLocaleDateString()} → {new Date(d.window_end).toLocaleDateString()}</span> · model {d.model ?? "—"}
               </div>
-              <h2 className="font-display text-xl mt-2">{d.headline}</h2>
+              <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mt-2">The week in one line</div>
+              <h2 className="font-display text-xl mt-1">{d.headline}</h2>
               <p className="text-sm text-muted-foreground mt-2 max-w-3xl">{d.summary}</p>
             </header>
 
@@ -68,22 +69,22 @@ function DigestPage() {
               <section className="col-span-12 lg:col-span-6 glass-panel rounded-xl p-4">
                 <div className="flex items-center gap-2 mb-3">
                   <TriangleAlert className="h-4 w-4" style={{ color: "var(--color-risk)" }}/>
-                  <h3 className="font-display text-sm">Top ranked risks</h3>
+                  <h3 className="font-display text-sm">Top risks this week</h3>
                   <span className="ml-auto text-[10px] font-mono text-muted-foreground">{topRisks.length}</span>
                 </div>
-                <ul className="space-y-2">
-                  {topRisks.map((e) => <EventRow key={e.id} e={e} kind="risk"/>)}
+                <ul className="space-y-2 max-h-[320px] overflow-y-auto slim-scroll">
+                  {topRisks.map((e, i) => <EventRow key={e.id} e={e} kind="risk" rank={i + 1}/>)}
                   {topRisks.length === 0 && <li className="text-xs text-muted-foreground italic py-3">No risks in window.</li>}
                 </ul>
               </section>
               <section className="col-span-12 lg:col-span-6 glass-panel rounded-xl p-4">
                 <div className="flex items-center gap-2 mb-3">
                   <Sparkles className="h-4 w-4" style={{ color: "var(--color-opportunity)" }}/>
-                  <h3 className="font-display text-sm">Top ranked opportunities</h3>
+                  <h3 className="font-display text-sm">Top openings this week</h3>
                   <span className="ml-auto text-[10px] font-mono text-muted-foreground">{topOpps.length}</span>
                 </div>
-                <ul className="space-y-2">
-                  {topOpps.map((e) => <EventRow key={e.id} e={e} kind="opportunity"/>)}
+                <ul className="space-y-2 max-h-[320px] overflow-y-auto slim-scroll">
+                  {topOpps.map((e, i) => <EventRow key={e.id} e={e} kind="opportunity" rank={i + 1}/>)}
                   {topOpps.length === 0 && <li className="text-xs text-muted-foreground italic py-3">No opportunities in window.</li>}
                 </ul>
               </section>
@@ -91,11 +92,11 @@ function DigestPage() {
               <section className="col-span-12 glass-panel rounded-xl p-4">
                 <div className="flex items-center gap-2 mb-3">
                   <Zap className="h-4 w-4" style={{ color: "var(--color-signal)" }}/>
-                  <h3 className="font-display text-sm">Forward scenarios (ranked by probability)</h3>
+                  <h3 className="font-display text-sm">Forward scenarios</h3>
                   <span className="ml-auto text-[10px] font-mono text-muted-foreground">{topScenarios.length}</span>
                 </div>
                 {topScenarios.length === 0 && <div className="text-xs text-muted-foreground italic py-3">No projected scenarios in window. Run a scan.</div>}
-                <ul className="grid md:grid-cols-2 gap-3">
+                <ul className="grid md:grid-cols-2 gap-3 max-h-[320px] overflow-y-auto slim-scroll">
                   {topScenarios.map((s) => (
                     <li key={s.id} className="rounded-lg border border-border/50 bg-background/30 p-3">
                       <div className="flex items-start justify-between gap-2">
@@ -124,12 +125,15 @@ function DigestPage() {
               </section>
 
               <section className="col-span-12 glass-panel rounded-xl p-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <Radar className="h-4 w-4"/>
-                  <h3 className="font-display text-sm">Full ranked feed</h3>
-                  <span className="ml-auto text-[10px] font-mono text-muted-foreground">{ranked.length}</span>
+                <div className="flex items-start justify-between gap-2 mb-3">
+                  <div className="flex items-center gap-2">
+                    <Radar className="h-4 w-4"/>
+                    <h3 className="font-display text-sm">Full ranked feed</h3>
+                    <span className="text-[10px] font-mono text-muted-foreground">{ranked.length}</span>
+                  </div>
+                  <span className="text-[10px] font-mono text-muted-foreground shrink-0">R · O · C = risk · opportunity · confidence</span>
                 </div>
-                <ol className="divide-y divide-border/40">
+                <ol className="divide-y divide-border/40 max-h-[320px] overflow-y-auto slim-scroll">
                   {ranked.slice(0, 20).map((e, i) => (
                     <li key={e.id} className="py-2 flex items-center gap-3">
                       <span className="text-[10px] font-mono text-muted-foreground w-6">#{i+1}</span>
@@ -168,13 +172,16 @@ function DigestPage() {
   );
 }
 
-function EventRow({ e, kind }: { e: Event; kind: "risk" | "opportunity" }) {
+function EventRow({ e, kind, rank }: { e: Event; kind: "risk" | "opportunity"; rank?: number }) {
   const color = kind === "risk" ? "var(--color-risk)" : "var(--color-opportunity)";
   const score = kind === "risk" ? Math.round(Number(e.risk_score) * 100) : Math.round(Number(e.opportunity_score) * 100);
   return (
     <li className="rounded-lg border border-border/50 bg-background/30 p-3">
       <div className="flex items-start justify-between gap-2">
-        <Link to="/events/$id" params={{ id: e.id }} className="font-display text-sm hover:text-[color:var(--color-signal)] flex-1 min-w-0 truncate">{e.title}</Link>
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          {rank !== undefined && <span className="text-[10px] font-mono text-muted-foreground shrink-0 w-5">{rank}</span>}
+          <Link to="/events/$id" params={{ id: e.id }} className="font-display text-sm hover:text-[color:var(--color-signal)] flex-1 min-w-0 truncate">{e.title}</Link>
+        </div>
         <span className="text-[10px] font-mono px-1.5 py-0.5 rounded border shrink-0" style={{ borderColor: color, color }}>{kind === "risk" ? "R" : "O"} {score}</span>
       </div>
       <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
