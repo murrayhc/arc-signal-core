@@ -6,6 +6,7 @@
 
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { isProUser } from "./billing.functions";
 import { z } from "zod";
 
 async function admin() {
