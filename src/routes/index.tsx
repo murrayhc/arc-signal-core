@@ -689,9 +689,7 @@ function About() {
         </div>
         <div className="space-y-5 text-[color:var(--mkt-heading)]">
           <p>
-            Arklight exists because the news is the last, not the first, sign that
-            something has changed. The primary record — filings, tenders, notices,
-            registries — moves earlier and is answerable to something.
+            Arklight exists because the news is where a change surfaces last, long after the primary record has already moved. That record is the filings, tenders, notices and registries, and it answers to something.
           </p>
           <p className="text-[color:var(--mkt-muted)]">
             The instrument is built to be argued with. Every claim is traceable.
