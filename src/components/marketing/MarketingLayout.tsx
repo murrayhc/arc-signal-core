@@ -118,16 +118,14 @@ export function MarketingHeader({ overlay = false }: { overlay?: boolean }) {
             }`}
           >
             <div className="px-3 py-3 flex flex-col gap-1">
-              {NAV.map((n) => (
-                <a
-                  key={n.href}
-                  href={n.href}
-                  onClick={() => setOpen(false)}
-                  className={`px-3 py-2 rounded-md text-sm ${dark ? "text-white/85 hover:bg-white/10" : "text-[color:var(--mkt-heading)] hover:bg-black/5"}`}
-                >
-                  {n.label}
-                </a>
-              ))}
+              {NAV.map((n) => {
+                const cls = `px-3 py-2 rounded-md text-sm ${dark ? "text-white/85 hover:bg-white/10" : "text-[color:var(--mkt-heading)] hover:bg-black/5"}`;
+                return n.route ? (
+                  <Link key={n.href} to={n.href as any} onClick={() => setOpen(false)} className={cls}>{n.label}</Link>
+                ) : (
+                  <a key={n.href} href={n.href} onClick={() => setOpen(false)} className={cls}>{n.label}</a>
+                );
+              })}
               <div className={`h-px my-2 ${dark ? "bg-white/10" : "bg-[color:var(--mkt-line)]"}`} />
               {user ? (
                 <Link to="/app" onClick={() => setOpen(false)} className="h-10 inline-flex items-center justify-center rounded-md text-sm font-medium bg-[color:var(--mkt-accent)] text-black">
