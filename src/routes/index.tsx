@@ -164,7 +164,7 @@ function Hero() {
         <div className="relative px-6 md:px-12 pt-28 md:pt-36 pb-14 md:pb-20">
           <div className="max-w-6xl mx-auto">
             <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 pl-1 pr-3 py-1 text-[11px] mkt-mono uppercase tracking-widest text-white/80">
-              <span className="rounded-full bg-[color:var(--mkt-accent)] text-black px-2 py-0.5 text-[10px] font-semibold">Live</span>
+              <span className="rounded-full bg-[color:var(--mkt-accent)] text-black px-2 py-0.5 text-[10px] font-semibold">Signal scan</span>
               Public-signals early warning
             </div>
             <div className="mt-6 grid lg:grid-cols-[1.15fr_0.85fr] gap-8 lg:gap-14 items-start">
