@@ -260,3 +260,11 @@ function OutcomeBadge({ outcome }: { outcome: string | null }) {
     : "var(--color-signal)";
   return <span className="text-[10px] font-mono px-1.5 py-0.5 rounded border uppercase tracking-widest" style={{ borderColor: c, color: c }}>{outcome ?? "—"}</span>;
 }
+function VerdictBadge({ outcome }: { outcome: string | null }) {
+  const label = outcome === "happened" ? "Right" : outcome === "did_not_happen" ? "Missed" : (outcome ?? "—");
+  const c = outcome === "happened" ? "var(--color-growth)"
+    : outcome === "did_not_happen" ? "var(--color-risk)"
+    : "var(--color-muted-foreground)";
+  return <span className="text-[11px] font-mono px-2 py-0.5 rounded-md uppercase tracking-widest" style={{ background: `color-mix(in oklab, ${c} 15%, transparent)`, color: c, border: `1px solid ${c}` }}>{label}</span>;
+}
+
