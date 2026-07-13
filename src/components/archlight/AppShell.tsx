@@ -107,7 +107,7 @@ function UserMenu() {
   async function signOut() {
     await supabase.auth.signOut();
     setOpen(false);
-    navigate({ to: "/auth" });
+    navigate({ to: "/" });
   }
 
   return (
