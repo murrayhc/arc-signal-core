@@ -14,6 +14,8 @@ export function AppShell({ children, onRunScan, scanning }: { children: ReactNod
         <main className="flex-1 min-w-0 p-5 flex flex-col gap-5">{children}</main>
       </div>
       <GuidedTour />
+      <NavHoverTooltips />
+
     </div>
   );
 }
