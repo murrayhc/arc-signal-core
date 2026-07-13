@@ -335,15 +335,17 @@ function BentoOne() {
           <div className="md:max-w-sm">
             <TileHead label="05 · Prove" title="Every call frozen and graded" icon={Receipt} />
             <p className="mt-3 text-sm text-[color:var(--mkt-muted)]">
-              Probability, deadline and evidence are frozen when a projection is made.
-              Outcomes are graded later from public facts — the track record is the ledger.
+              Probability, deadline and evidence are frozen when a projection is made. Outcomes are graded later from public facts, and the track record is that ledger.
+            </p>
+            <p className="mt-3 text-sm text-[color:var(--mkt-heading)]">
+              A reason to trust it. You can see its record of hits and misses, and its confidence is backed by that record.
             </p>
           </div>
           <div className="flex-1 grid grid-cols-3 gap-3">
             {[
               { k: "Frozen", v: "Yes", note: "Written to ledger on projection" },
               { k: "Graded", v: "Outcomes", note: "Measured from public facts" },
-              { k: "Confidence", v: "Explicit", note: "Uncertainty shown, not hidden" },
+              { k: "Confidence", v: "Explicit", note: "Uncertainty is shown plainly" },
             ].map((s) => (
               <div key={s.k} className="rounded-xl border border-[color:var(--mkt-line)] p-4">
                 <div className="mkt-mono text-[10px] uppercase tracking-widest text-[color:var(--mkt-muted)]">{s.k}</div>
