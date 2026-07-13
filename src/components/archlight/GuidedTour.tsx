@@ -7,7 +7,7 @@ type Step = {
 };
 
 const STEPS: Step[] = [
-  { selector: '[data-tour-to="/"]', title: "Overview", body: "Your daily start: what's changed on the things you watch since you were last here, with a clear next step for each." },
+  { selector: '[data-tour-to="/app"]', title: "Overview", body: "Your daily start: what's changed on the things you watch since you were last here, with a clear next step for each." },
   { selector: '[data-tour-to="/exposures"]', title: "My book", body: "Tell Archlight what you hold or care about — companies, suppliers, sectors, commodities, keywords. Every event is scored against this." },
   { selector: '[data-tour-to="/watchlist"]', title: "Watchlist & alerts", body: "Save filters for topics you want to follow and get alerted the moment a new event matches." },
   { selector: '[data-tour-to="/briefings"]', title: "Briefings", body: "A daily summary of what moved on your book, delivered on a schedule." },

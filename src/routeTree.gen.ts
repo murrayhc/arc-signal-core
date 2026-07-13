@@ -11,21 +11,26 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as WatchlistRouteImport } from './routes/watchlist'
 import { Route as TrackRecordRouteImport } from './routes/track-record'
+import { Route as TermsRouteImport } from './routes/terms'
 import { Route as SourcesRouteImport } from './routes/sources'
 import { Route as ScansRouteImport } from './routes/scans'
 import { Route as ReviewRouteImport } from './routes/review'
+import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as OpportunitiesRouteImport } from './routes/opportunities'
 import { Route as NarrativeDivergenceRouteImport } from './routes/narrative-divergence'
 import { Route as InterrogationsRouteImport } from './routes/interrogations'
 import { Route as InterrogateRouteImport } from './routes/interrogate'
 import { Route as ExposuresRouteImport } from './routes/exposures'
 import { Route as DigestRouteImport } from './routes/digest'
+import { Route as CookiesRouteImport } from './routes/cookies'
 import { Route as CompaniesRouteImport } from './routes/companies'
 import { Route as BriefingsRouteImport } from './routes/briefings'
 import { Route as BacktestRouteImport } from './routes/backtest'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AskGraphRouteImport } from './routes/ask-graph'
 import { Route as ArcsRouteImport } from './routes/arcs'
+import { Route as AppRouteImport } from './routes/app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as OpportunitiesIndexRouteImport } from './routes/opportunities.index'
 import { Route as SourcesIdRouteImport } from './routes/sources.$id'
@@ -52,6 +57,11 @@ const TrackRecordRoute = TrackRecordRouteImport.update({
   path: '/track-record',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SourcesRoute = SourcesRouteImport.update({
   id: '/sources',
   path: '/sources',
@@ -65,6 +75,16 @@ const ScansRoute = ScansRouteImport.update({
 const ReviewRoute = ReviewRouteImport.update({
   id: '/review',
   path: '/review',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PricingRoute = PricingRouteImport.update({
+  id: '/pricing',
+  path: '/pricing',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OpportunitiesRoute = OpportunitiesRouteImport.update({
@@ -97,6 +117,11 @@ const DigestRoute = DigestRouteImport.update({
   path: '/digest',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CookiesRoute = CookiesRouteImport.update({
+  id: '/cookies',
+  path: '/cookies',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CompaniesRoute = CompaniesRouteImport.update({
   id: '/companies',
   path: '/companies',
@@ -125,6 +150,11 @@ const AskGraphRoute = AskGraphRouteImport.update({
 const ArcsRoute = ArcsRouteImport.update({
   id: '/arcs',
   path: '/arcs',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppRoute = AppRouteImport.update({
+  id: '/app',
+  path: '/app',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -205,21 +235,26 @@ const ApiPublicExportsEventsRoute = ApiPublicExportsEventsRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/app': typeof AppRoute
   '/arcs': typeof ArcsRouteWithChildren
   '/ask-graph': typeof AskGraphRoute
   '/auth': typeof AuthRoute
   '/backtest': typeof BacktestRoute
   '/briefings': typeof BriefingsRoute
   '/companies': typeof CompaniesRouteWithChildren
+  '/cookies': typeof CookiesRoute
   '/digest': typeof DigestRoute
   '/exposures': typeof ExposuresRoute
   '/interrogate': typeof InterrogateRoute
   '/interrogations': typeof InterrogationsRoute
   '/narrative-divergence': typeof NarrativeDivergenceRoute
   '/opportunities': typeof OpportunitiesRouteWithChildren
+  '/pricing': typeof PricingRoute
+  '/privacy': typeof PrivacyRoute
   '/review': typeof ReviewRoute
   '/scans': typeof ScansRoute
   '/sources': typeof SourcesRouteWithChildren
+  '/terms': typeof TermsRoute
   '/track-record': typeof TrackRecordRoute
   '/watchlist': typeof WatchlistRoute
   '/admin/routing': typeof AdminRoutingRoute
@@ -239,20 +274,25 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/app': typeof AppRoute
   '/arcs': typeof ArcsRouteWithChildren
   '/ask-graph': typeof AskGraphRoute
   '/auth': typeof AuthRoute
   '/backtest': typeof BacktestRoute
   '/briefings': typeof BriefingsRoute
   '/companies': typeof CompaniesRouteWithChildren
+  '/cookies': typeof CookiesRoute
   '/digest': typeof DigestRoute
   '/exposures': typeof ExposuresRoute
   '/interrogate': typeof InterrogateRoute
   '/interrogations': typeof InterrogationsRoute
   '/narrative-divergence': typeof NarrativeDivergenceRoute
+  '/pricing': typeof PricingRoute
+  '/privacy': typeof PrivacyRoute
   '/review': typeof ReviewRoute
   '/scans': typeof ScansRoute
   '/sources': typeof SourcesRouteWithChildren
+  '/terms': typeof TermsRoute
   '/track-record': typeof TrackRecordRoute
   '/watchlist': typeof WatchlistRoute
   '/admin/routing': typeof AdminRoutingRoute
@@ -273,21 +313,26 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/app': typeof AppRoute
   '/arcs': typeof ArcsRouteWithChildren
   '/ask-graph': typeof AskGraphRoute
   '/auth': typeof AuthRoute
   '/backtest': typeof BacktestRoute
   '/briefings': typeof BriefingsRoute
   '/companies': typeof CompaniesRouteWithChildren
+  '/cookies': typeof CookiesRoute
   '/digest': typeof DigestRoute
   '/exposures': typeof ExposuresRoute
   '/interrogate': typeof InterrogateRoute
   '/interrogations': typeof InterrogationsRoute
   '/narrative-divergence': typeof NarrativeDivergenceRoute
   '/opportunities': typeof OpportunitiesRouteWithChildren
+  '/pricing': typeof PricingRoute
+  '/privacy': typeof PrivacyRoute
   '/review': typeof ReviewRoute
   '/scans': typeof ScansRoute
   '/sources': typeof SourcesRouteWithChildren
+  '/terms': typeof TermsRoute
   '/track-record': typeof TrackRecordRoute
   '/watchlist': typeof WatchlistRoute
   '/admin/routing': typeof AdminRoutingRoute
@@ -309,21 +354,26 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/app'
     | '/arcs'
     | '/ask-graph'
     | '/auth'
     | '/backtest'
     | '/briefings'
     | '/companies'
+    | '/cookies'
     | '/digest'
     | '/exposures'
     | '/interrogate'
     | '/interrogations'
     | '/narrative-divergence'
     | '/opportunities'
+    | '/pricing'
+    | '/privacy'
     | '/review'
     | '/scans'
     | '/sources'
+    | '/terms'
     | '/track-record'
     | '/watchlist'
     | '/admin/routing'
@@ -343,20 +393,25 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/app'
     | '/arcs'
     | '/ask-graph'
     | '/auth'
     | '/backtest'
     | '/briefings'
     | '/companies'
+    | '/cookies'
     | '/digest'
     | '/exposures'
     | '/interrogate'
     | '/interrogations'
     | '/narrative-divergence'
+    | '/pricing'
+    | '/privacy'
     | '/review'
     | '/scans'
     | '/sources'
+    | '/terms'
     | '/track-record'
     | '/watchlist'
     | '/admin/routing'
@@ -376,21 +431,26 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/app'
     | '/arcs'
     | '/ask-graph'
     | '/auth'
     | '/backtest'
     | '/briefings'
     | '/companies'
+    | '/cookies'
     | '/digest'
     | '/exposures'
     | '/interrogate'
     | '/interrogations'
     | '/narrative-divergence'
     | '/opportunities'
+    | '/pricing'
+    | '/privacy'
     | '/review'
     | '/scans'
     | '/sources'
+    | '/terms'
     | '/track-record'
     | '/watchlist'
     | '/admin/routing'
@@ -411,21 +471,26 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AppRoute: typeof AppRoute
   ArcsRoute: typeof ArcsRouteWithChildren
   AskGraphRoute: typeof AskGraphRoute
   AuthRoute: typeof AuthRoute
   BacktestRoute: typeof BacktestRoute
   BriefingsRoute: typeof BriefingsRoute
   CompaniesRoute: typeof CompaniesRouteWithChildren
+  CookiesRoute: typeof CookiesRoute
   DigestRoute: typeof DigestRoute
   ExposuresRoute: typeof ExposuresRoute
   InterrogateRoute: typeof InterrogateRoute
   InterrogationsRoute: typeof InterrogationsRoute
   NarrativeDivergenceRoute: typeof NarrativeDivergenceRoute
   OpportunitiesRoute: typeof OpportunitiesRouteWithChildren
+  PricingRoute: typeof PricingRoute
+  PrivacyRoute: typeof PrivacyRoute
   ReviewRoute: typeof ReviewRoute
   ScansRoute: typeof ScansRoute
   SourcesRoute: typeof SourcesRouteWithChildren
+  TermsRoute: typeof TermsRoute
   TrackRecordRoute: typeof TrackRecordRoute
   WatchlistRoute: typeof WatchlistRoute
   AdminRoutingRoute: typeof AdminRoutingRoute
@@ -455,6 +520,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TrackRecordRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/sources': {
       id: '/sources'
       path: '/sources'
@@ -474,6 +546,20 @@ declare module '@tanstack/react-router' {
       path: '/review'
       fullPath: '/review'
       preLoaderRoute: typeof ReviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pricing': {
+      id: '/pricing'
+      path: '/pricing'
+      fullPath: '/pricing'
+      preLoaderRoute: typeof PricingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/opportunities': {
@@ -518,6 +604,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DigestRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/cookies': {
+      id: '/cookies'
+      path: '/cookies'
+      fullPath: '/cookies'
+      preLoaderRoute: typeof CookiesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/companies': {
       id: '/companies'
       path: '/companies'
@@ -558,6 +651,13 @@ declare module '@tanstack/react-router' {
       path: '/arcs'
       fullPath: '/arcs'
       preLoaderRoute: typeof ArcsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/app': {
+      id: '/app'
+      path: '/app'
+      fullPath: '/app'
+      preLoaderRoute: typeof AppRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -717,21 +817,26 @@ const SourcesRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AppRoute: AppRoute,
   ArcsRoute: ArcsRouteWithChildren,
   AskGraphRoute: AskGraphRoute,
   AuthRoute: AuthRoute,
   BacktestRoute: BacktestRoute,
   BriefingsRoute: BriefingsRoute,
   CompaniesRoute: CompaniesRouteWithChildren,
+  CookiesRoute: CookiesRoute,
   DigestRoute: DigestRoute,
   ExposuresRoute: ExposuresRoute,
   InterrogateRoute: InterrogateRoute,
   InterrogationsRoute: InterrogationsRoute,
   NarrativeDivergenceRoute: NarrativeDivergenceRoute,
   OpportunitiesRoute: OpportunitiesRouteWithChildren,
+  PricingRoute: PricingRoute,
+  PrivacyRoute: PrivacyRoute,
   ReviewRoute: ReviewRoute,
   ScansRoute: ScansRoute,
   SourcesRoute: SourcesRouteWithChildren,
+  TermsRoute: TermsRoute,
   TrackRecordRoute: TrackRecordRoute,
   WatchlistRoute: WatchlistRoute,
   AdminRoutingRoute: AdminRoutingRoute,

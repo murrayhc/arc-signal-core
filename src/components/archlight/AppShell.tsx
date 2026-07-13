@@ -12,7 +12,7 @@ export function AppShell({ children, onRunScan, scanning }: { children: ReactNod
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!loading && !user) navigate({ to: "/auth" });
+    if (!loading && !user) navigate({ to: "/auth", search: { mode: "signin" } });
   }, [loading, user, navigate]);
 
   if (loading || !user) {
@@ -41,7 +41,7 @@ function TopNav({ onRunScan, scanning }: { onRunScan?: () => void; scanning?: bo
   return (
     <header className="sticky top-0 z-30 border-b border-border/60 bg-background/70 backdrop-blur-xl">
       <div className="flex items-center gap-6 px-5 h-14">
-        <Link to="/" className="flex items-center gap-3 shrink-0">
+        <Link to="/app" className="flex items-center gap-3 shrink-0">
           <div className="relative h-8 w-8 grid place-items-center rounded-md ring-signal"
                style={{ background: "linear-gradient(135deg, var(--accent), var(--panel-2))" }}>
             <Radar className="h-4 w-4" style={{ color: "var(--signal)" }}/>
@@ -107,7 +107,7 @@ function UserMenu() {
   async function signOut() {
     await supabase.auth.signOut();
     setOpen(false);
-    navigate({ to: "/auth" });
+    navigate({ to: "/" });
   }
 
   return (
@@ -189,7 +189,7 @@ function TopLink({ to, label }: { to: string; label: string }) {
       to={to}
       className="px-3 py-1.5 rounded-md transition-colors text-muted-foreground hover:text-foreground hover:bg-accent/40"
       activeProps={{ className: "px-3 py-1.5 rounded-md bg-accent/60 text-foreground" }}
-      activeOptions={{ exact: to === "/" }}
+      activeOptions={{ exact: to === "/app" }}
     >
       {label}
     </Link>
@@ -257,7 +257,7 @@ function SideNav() {
   };
 
   const groups = [
-    { label: "HOME", items: [{ icon: Gauge, label: "Overview", to: "/" }] },
+    { label: "HOME", items: [{ icon: Gauge, label: "Overview", to: "/app" }] },
     {
       label: "MY BOOK",
       items: [
@@ -324,7 +324,7 @@ function SideNav() {
                             to={to}
                             className="flex items-center gap-2.5 px-2.5 h-8 rounded-md text-xs transition text-muted-foreground hover:text-foreground hover:bg-accent/40"
                             activeProps={{ className: "flex items-center gap-2.5 px-2.5 h-8 rounded-md text-xs bg-accent/60 text-foreground border border-border/60" }}
-                            activeOptions={{ exact: to === "/" }}
+                            activeOptions={{ exact: to === "/app" }}
                           >
                             <Icon className="h-3.5 w-3.5"/>{label}
                           </Link>
@@ -349,7 +349,7 @@ function SideNav() {
                             data-tour-to={to}
                             className="flex items-center gap-2.5 px-2.5 h-8 rounded-md text-xs transition text-muted-foreground hover:text-foreground hover:bg-accent/40"
                             activeProps={{ className: "flex items-center gap-2.5 px-2.5 h-8 rounded-md text-xs bg-accent/60 text-foreground border border-border/60" }}
-                            activeOptions={{ exact: to === "/" }}
+                            activeOptions={{ exact: to === "/app" }}
                           >
                             <Icon className="h-3.5 w-3.5"/><span className="flex-1 truncate">{label}</span>
                             {badge && (
