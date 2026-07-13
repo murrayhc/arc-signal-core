@@ -537,7 +537,7 @@ function Comparison() {
       <SectionHeader
         eyebrow="Arklight vs conventional monitoring"
         title="Built to be answered for."
-        sub="Only defensible distinctions — no straw men. Compare the mechanics."
+        sub="Only defensible distinctions, with no straw men. Compare the mechanics."
       />
       {/* desktop table */}
       <div className="mt-10 hidden md:block rounded-2xl border border-[color:var(--mkt-line)] bg-[color:var(--mkt-panel)] overflow-hidden">
