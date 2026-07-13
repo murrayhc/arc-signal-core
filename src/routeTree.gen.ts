@@ -23,6 +23,7 @@ import { Route as DigestRouteImport } from './routes/digest'
 import { Route as CompaniesRouteImport } from './routes/companies'
 import { Route as BriefingsRouteImport } from './routes/briefings'
 import { Route as BacktestRouteImport } from './routes/backtest'
+import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AskGraphRouteImport } from './routes/ask-graph'
 import { Route as ArcsRouteImport } from './routes/arcs'
 import { Route as IndexRouteImport } from './routes/index'
@@ -109,6 +110,11 @@ const BacktestRoute = BacktestRouteImport.update({
   path: '/backtest',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AskGraphRoute = AskGraphRouteImport.update({
   id: '/ask-graph',
   path: '/ask-graph',
@@ -189,6 +195,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/arcs': typeof ArcsRouteWithChildren
   '/ask-graph': typeof AskGraphRoute
+  '/auth': typeof AuthRoute
   '/backtest': typeof BacktestRoute
   '/briefings': typeof BriefingsRoute
   '/companies': typeof CompaniesRouteWithChildren
@@ -220,6 +227,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/arcs': typeof ArcsRouteWithChildren
   '/ask-graph': typeof AskGraphRoute
+  '/auth': typeof AuthRoute
   '/backtest': typeof BacktestRoute
   '/briefings': typeof BriefingsRoute
   '/companies': typeof CompaniesRouteWithChildren
@@ -251,6 +259,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/arcs': typeof ArcsRouteWithChildren
   '/ask-graph': typeof AskGraphRoute
+  '/auth': typeof AuthRoute
   '/backtest': typeof BacktestRoute
   '/briefings': typeof BriefingsRoute
   '/companies': typeof CompaniesRouteWithChildren
@@ -284,6 +293,7 @@ export interface FileRouteTypes {
     | '/'
     | '/arcs'
     | '/ask-graph'
+    | '/auth'
     | '/backtest'
     | '/briefings'
     | '/companies'
@@ -315,6 +325,7 @@ export interface FileRouteTypes {
     | '/'
     | '/arcs'
     | '/ask-graph'
+    | '/auth'
     | '/backtest'
     | '/briefings'
     | '/companies'
@@ -345,6 +356,7 @@ export interface FileRouteTypes {
     | '/'
     | '/arcs'
     | '/ask-graph'
+    | '/auth'
     | '/backtest'
     | '/briefings'
     | '/companies'
@@ -377,6 +389,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ArcsRoute: typeof ArcsRouteWithChildren
   AskGraphRoute: typeof AskGraphRoute
+  AuthRoute: typeof AuthRoute
   BacktestRoute: typeof BacktestRoute
   BriefingsRoute: typeof BriefingsRoute
   CompaniesRoute: typeof CompaniesRouteWithChildren
@@ -498,6 +511,13 @@ declare module '@tanstack/react-router' {
       path: '/backtest'
       fullPath: '/backtest'
       preLoaderRoute: typeof BacktestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/ask-graph': {
@@ -659,6 +679,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ArcsRoute: ArcsRouteWithChildren,
   AskGraphRoute: AskGraphRoute,
+  AuthRoute: AuthRoute,
   BacktestRoute: BacktestRoute,
   BriefingsRoute: BriefingsRoute,
   CompaniesRoute: CompaniesRouteWithChildren,
