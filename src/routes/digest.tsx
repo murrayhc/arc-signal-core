@@ -59,7 +59,7 @@ function DigestPage() {
           <>
             <header className="glass-panel rounded-xl p-5">
               <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
-                <Newspaper className="h-3.5 w-3.5"/> digest · <span suppressHydrationWarning>{new Date(d.window_start).toLocaleDateString()} → {new Date(d.window_end).toLocaleDateString()}</span> · model {d.model ?? "—"}
+                <Newspaper className="h-3.5 w-3.5"/> digest · <span suppressHydrationWarning>{formatDateUK(d.window_start)} → {formatDateUK(d.window_end)}</span> · model {d.model ?? "—"}
               </div>
               <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mt-2">The week in one line</div>
               <h2 className="font-display text-xl mt-1">{d.headline}</h2>
