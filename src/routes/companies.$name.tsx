@@ -513,7 +513,7 @@ function BeliefStatePanel({ belief }: { belief: BeliefResp }) {
         <Activity className="h-4 w-4" style={{ color }}/>
         <h2 className="font-display text-sm">Belief state</h2>
         <span className="ml-auto text-[10px] font-mono text-muted-foreground">
-          {ent.belief_updated_at ? `updated ${new Date(ent.belief_updated_at).toLocaleString()}` : "never computed"}
+          {ent.belief_updated_at ? `updated ${formatDateTimeUK(ent.belief_updated_at)}` : "never computed"}
         </span>
       </div>
       <div className="grid md:grid-cols-3 gap-3">
