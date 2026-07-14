@@ -64,7 +64,7 @@ function NarrativeDivergencePage() {
               <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mt-2">
                 {featured.n_outlets ?? 0} outlets · {featured.n_with_lean ?? 0} independent voices · updated{" "}
                 <span suppressHydrationWarning>
-                  {featured.computed_at ? new Date(featured.computed_at).toLocaleString() : "—"}
+                  {featured.computed_at ? formatDateTimeUK(featured.computed_at) : "—"}
                 </span>
               </div>
             )}
