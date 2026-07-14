@@ -390,10 +390,13 @@ export const deleteExposureProfile = createServerFn({ method: "POST" }).middlewa
 export const listProfilesWithItems = createServerFn({ method: "GET" }).middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const db = context.supabase;
+    const adb = await admin();
     const [{ data: profiles }, { data: items }, { data: hits }] = await Promise.all([
       db.from("exposure_profiles").select("*").order("created_at", { ascending: false }),
       db.from("exposure_items").select("*"),
-      db.from("exposure_hits").select("exposure_item_id"),
+      // Read hits via service-role filtered by user (the own_hits RLS policy may
+      // not have applied during the Cloud migration issues).
+      adb.from("exposure_hits").select("exposure_item_id").eq("user_id", context.userId),
     ]);
     const hitCounts = new Map<string, number>();
     for (const h of hits ?? []) {
@@ -418,15 +421,19 @@ export const listExposureHits = createServerFn({ method: "GET" }).middleware([re
   .inputValidator((d: unknown) => ListHitsInput.parse(d ?? {}))
   .handler(async ({ data, context }) => {
     const db = context.supabase;
+    const adb = await admin();
     let profileIdFilter: string[] | null = null;
     if (data.activeOnly) {
       const { data: pr } = await db.from("exposure_profiles").select("id").eq("active", true);
       profileIdFilter = (pr ?? []).map((p) => p.id);
       if (profileIdFilter.length === 0) return { hits: [], events: [], items: [], profiles: [] };
     }
-    let q = db.from("exposure_hits").select(
-      "id, profile_id, exposure_item_id, event_candidate_id, relevance, direction, match_kind, rationale, seen, created_at",
-    );
+    let q = adb
+      .from("exposure_hits")
+      .select(
+        "id, profile_id, exposure_item_id, event_candidate_id, relevance, direction, match_kind, rationale, seen, created_at",
+      )
+      .eq("user_id", context.userId);
     if (data.profileId) q = q.eq("profile_id", data.profileId);
     if (profileIdFilter) q = q.in("profile_id", profileIdFilter);
     if (data.unseenOnly) q = q.eq("seen", false);
