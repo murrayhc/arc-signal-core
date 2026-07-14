@@ -17,6 +17,10 @@ async function admin() {
   return supabaseAdmin;
 }
 
+function hasAdminEnvironment() {
+  return Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
+}
+
 export type QuotaAction = "scan_my_items";
 type QuotaWindow = "day" | "month";
 interface TierRule {
@@ -43,6 +47,7 @@ function windowResetIso(w: QuotaWindow): string {
 }
 
 async function countUsage(action: QuotaAction, userId: string, sinceIso: string): Promise<number> {
+  if (!hasAdminEnvironment()) return 0;
   const db = await admin();
   // scan_my_items: this user's member-scoped scan_runs within the window.
   if (action === "scan_my_items") {

@@ -23,9 +23,24 @@ export interface MySubscription {
   is_pro: boolean;
 }
 
+function hasAdminEnvironment() {
+  return Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
+}
+
+function freeSubscription(): MySubscription {
+  return {
+    tier: "free",
+    status: "inactive",
+    current_period_end: null,
+    cancel_at_period_end: false,
+    is_pro: false,
+  };
+}
+
 export const getMySubscription = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<MySubscription> => {
+    if (!hasAdminEnvironment()) return freeSubscription();
     const db = await admin();
     const { data, error } = await db
       .from("subscriptions")
@@ -34,13 +49,7 @@ export const getMySubscription = createServerFn({ method: "GET" })
       .maybeSingle();
     if (error) throw new Error(error.message);
     if (!data) {
-      return {
-        tier: "free",
-        status: "inactive",
-        current_period_end: null,
-        cancel_at_period_end: false,
-        is_pro: false,
-      };
+      return freeSubscription();
     }
     const tier = (data.tier === "pro" ? "pro" : "free") as "free" | "pro";
     return {
@@ -55,6 +64,7 @@ export const getMySubscription = createServerFn({ method: "GET" })
 // Server-side helper — call from other server functions to gate Pro features.
 export async function isProUser(userId: string): Promise<boolean> {
   if (!userId) return false;
+  if (!hasAdminEnvironment()) return false;
   const db = await admin();
   const { data, error } = await db
     .from("subscriptions")
