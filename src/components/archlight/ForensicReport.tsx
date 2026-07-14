@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { formatDateUK } from "@/lib/format-datetime";
 import { getForensicReport, runForensicAnalysis, type ForensicReport } from "@/lib/archlight/forensic.functions";
 import { Loader2, RefreshCw, Sparkles, TrendingDown, TrendingUp, AlertTriangle, Clock, Target, GitBranch, Radar, Scale, History, ShieldQuestion, Info, BookOpen } from "lucide-react";
 import { toast } from "sonner";
