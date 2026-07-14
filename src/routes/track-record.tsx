@@ -42,7 +42,7 @@ export const Route = createFileRoute("/track-record")({
 function LocalDate({ date }: { date: string | null }) {
   const [formatted, setFormatted] = useState("");
   useEffect(() => {
-    if (date) setFormatted(new Date(date).toLocaleString());
+    if (date) setFormatted(formatDateTimeUK(date));
   }, [date]);
   return <span>{formatted}</span>;
 }
