@@ -234,12 +234,7 @@ function EngineFreshness() {
     staleTime: 60_000,
   });
   const iso = data?.lastCompletedAt ?? null;
-  const label = iso
-    ? new Date(iso).toLocaleString("en-GB", {
-        day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit",
-        timeZone: "UTC",
-      }) + " GMT"
-    : "pending first run";
+  const label = iso ? formatDateTimeUK(iso) : "pending first run";
   return (
     <div
       title="Last completed global scan"
