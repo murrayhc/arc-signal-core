@@ -49,6 +49,9 @@ export interface ScoreExposuresOpts {
   scanRunId?: string;
   /** If provided, only score these event ids. Otherwise use events created this scan_run_id. */
   eventIds?: string[];
+  /** If provided, only re-score this user's active profiles (e.g. after they add an
+   *  exposure item). Omit for the global pipeline pass that scores every profile. */
+  userId?: string;
 }
 export interface ScoreExposuresResult {
   events_scored: number;
@@ -62,8 +65,12 @@ export async function scoreExposures(opts: ScoreExposuresOpts): Promise<ScoreExp
   const notes: string[] = [];
   const result: ScoreExposuresResult = { events_scored: 0, hits_created: 0, hits_updated: 0, notes };
 
-  // 1. Active profiles + items (include user_id so hits are stamped with the right owner)
-  const { data: profiles } = await db.from("exposure_profiles").select("id").eq("active", true);
+  // 1. Active profiles + items (include user_id so hits are stamped with the right owner).
+  //    When opts.userId is set, only this user's profiles are re-scored (cheap per-add
+  //    backfill); otherwise every active profile is scored (global pipeline pass).
+  let profQ = db.from("exposure_profiles").select("id").eq("active", true);
+  if (opts.userId) profQ = profQ.eq("user_id", opts.userId);
+  const { data: profiles } = await profQ;
   const profileIds = (profiles ?? []).map((p) => p.id);
   if (profileIds.length === 0) {
     notes.push("Exposure: no active profiles.");
@@ -332,10 +339,11 @@ export const addExposureItem = createServerFn({ method: "POST" }).middleware([re
       notes: data.notes ?? null,
     }).select().single();
     if (error) throw new Error(error.message);
-    // Backfill scoring across recent events. Runs service-role in the pipeline
-    // and stamps the correct user_id on hits from item.user_id.
+    // Backfill scoring across recent events — scoped to THIS user so one add
+    // does not re-score every user's profiles. Runs service-role and stamps the
+    // correct user_id on hits from item.user_id.
     try {
-      await scoreExposures({});
+      await scoreExposures({ userId });
     } catch (e) {
       console.warn("[exposure] backfill scoreExposures failed", e);
     }
