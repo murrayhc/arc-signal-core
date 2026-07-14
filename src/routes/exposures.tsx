@@ -387,9 +387,16 @@ function ScanMyItemsButton() {
       )}
       </div>
       {lastResult && (
-        <p className="text-xs text-muted-foreground max-w-xl leading-relaxed">
-          {scanResultMessage(lastResult)}
-        </p>
+        <div className="max-w-xl">
+          <p className="text-xs text-muted-foreground leading-relaxed">{scanResultMessage(lastResult)}</p>
+          {lastResult.notes.length > 0 && (
+            <ul className="mt-1 text-[10px] font-mono text-muted-foreground/70 space-y-0.5">
+              {lastResult.notes.map((n, i) => (
+                <li key={i}>{n}</li>
+              ))}
+            </ul>
+          )}
+        </div>
       )}
     </div>
   );

@@ -1228,6 +1228,9 @@ export const scanMyItems = createServerFn({ method: "POST" })
         notes.push(`${entity.name}: news fetch failed (${err instanceof Error ? err.message : String(err)}).`);
         continue;
       }
+      notes.push(`${entity.name}: ${items.length} news item(s) fetched`);
+      let entityIngested = 0;
+      let entitySkipped = 0;
       for (const it of items.slice(0, 3)) {
         if (!hasBudget()) break;
         try {
@@ -1246,13 +1249,15 @@ export const scanMyItems = createServerFn({ method: "POST" })
             bodyBudget,
           });
           for (const n of ing.notes) notes.push(n);
-          if (ing.skipped) continue;
+          if (ing.skipped) { entitySkipped++; continue; }
           documentsCollected++;
+          entityIngested++;
           for (const c of ing.newClaims) newClaims.push(c);
         } catch (err) {
           notes.push(`${entity.name}: ingest failed (${err instanceof Error ? err.message : String(err)}).`);
         }
       }
+      notes.push(`${entity.name}: ingested ${entityIngested}, skipped ${entitySkipped}`);
     }
 
     // Fold the collected claims into the shared graph (reuses the global synthesis).
@@ -1294,7 +1299,7 @@ export const scanMyItems = createServerFn({ method: "POST" })
       events_created: evCounts.created,
       hits_created: hitsCreated,
       scans_remaining: Math.max(0, quota.remaining - 1),
-      notes: notes.slice(-10),
+      notes: notes.filter((n) => /news item\(s\) fetched|ingested \d+, skipped/.test(n)).slice(-30),
     };
   });
 
