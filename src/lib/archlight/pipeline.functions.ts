@@ -1207,6 +1207,17 @@ export const scanMyItems = createServerFn({ method: "POST" })
   .handler(async ({ context }): Promise<ScanMyItemsResult> => {
     const userId = context.userId as string;
     const quota = await assertWithinQuota(userId, "scan_my_items"); // throws QUOTA:… if over
+    if (!hasAdminEnvironment()) {
+      return {
+        status: "unavailable",
+        entities_scanned: 0,
+        documents_collected: 0,
+        events_created: 0,
+        hits_created: 0,
+        scans_remaining: quota.remaining,
+        notes: ["Member scans are temporarily unavailable in this preview because privileged backend access is not loaded."],
+      };
+    }
     const db = await admin();
 
     const { data: rawItems } = await db

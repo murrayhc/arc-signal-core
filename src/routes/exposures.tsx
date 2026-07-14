@@ -314,6 +314,8 @@ function ScanMyItemsButton() {
       setConfirming(false);
       if (r.status === "no_items") {
         toast.message("Nothing to scan yet", { description: r.notes[0] ?? "Add items to your book first." });
+      } else if (r.status === "unavailable") {
+        toast.error("Scan unavailable", { description: r.notes[0] ?? "Try again after backend access is available." });
       } else {
         toast.success("Scan complete", {
           description: `${r.events_created} new events · ${r.hits_created} matched to your items · ${r.scans_remaining} scans left today`,
