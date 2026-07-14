@@ -2274,8 +2274,6 @@ export type Database = {
           sources_succeeded: number
           started_at: string
           status: Database["public"]["Enums"]["scan_status"]
-          trigger_kind: string
-          triggered_by: string | null
         }
         Insert: {
           atomic_claims_created?: number
@@ -2290,8 +2288,6 @@ export type Database = {
           sources_succeeded?: number
           started_at?: string
           status?: Database["public"]["Enums"]["scan_status"]
-          trigger_kind?: string
-          triggered_by?: string | null
         }
         Update: {
           atomic_claims_created?: number
@@ -2306,8 +2302,6 @@ export type Database = {
           sources_succeeded?: number
           started_at?: string
           status?: Database["public"]["Enums"]["scan_status"]
-          trigger_kind?: string
-          triggered_by?: string | null
         }
         Relationships: []
       }
