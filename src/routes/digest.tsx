@@ -157,7 +157,7 @@ function DigestPage() {
             <ul className="divide-y divide-border/40 text-xs">
               {history.data!.digests.slice(1).map((h) => (
                 <li key={h.id} className="py-2 flex items-center gap-2">
-                  <span className="font-mono text-[10px] text-muted-foreground w-40 shrink-0" suppressHydrationWarning>{new Date(h.window_start).toLocaleDateString()} → {new Date(h.window_end).toLocaleDateString()}</span>
+                  <span className="font-mono text-[10px] text-muted-foreground w-40 shrink-0" suppressHydrationWarning>{formatDateUK(h.window_start)} → {formatDateUK(h.window_end)}</span>
                   <span className="truncate">{h.headline}</span>
                 </li>
               ))}
