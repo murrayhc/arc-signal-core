@@ -568,6 +568,10 @@ export async function runScanImpl() {
   const settings = await loadScanSettings();
   const startedAtMs = Date.now();
   const deadlineAtMs = startedAtMs + SCAN_RUNTIME_BUDGET_MS;
+  // Reserve the tail ~40% of the budget for synthesis so collection can't
+  // starve the events step. Collection stops at this earlier deadline;
+  // synthesizeClaimsIntoEvents still receives the full deadlineAtMs.
+  const collectionDeadlineAtMs = startedAtMs + Math.floor(SCAN_RUNTIME_BUDGET_MS * 0.6);
   // Timing instrumentation (diagnostic): when each source starts + phase marks.
   const sourceStarts: Array<{ name: string; at: number }> = [];
 
@@ -622,7 +626,7 @@ export async function runScanImpl() {
   const { data: sources } = await db.from("sources").select("*").in("status", ["active", "degraded"]).order("reliability_score", { ascending: false }).limit(settings.sources_per_scan);
   const chosen = sources ?? [];
 
-  const hasBudget = () => Date.now() < deadlineAtMs;
+  const hasBudget = () => Date.now() < collectionDeadlineAtMs;
   const saveProgress = async (extraNote?: string) => {
     const progressSummary = `Progress — docs:${documentsCollected} claims:${atomicClaimsCreated} events:${evCounts.created} skipped:${evCounts.skipped}`;
     const compactNotes = [progressSummary, ...notes.slice(-14), ...(extraNote ? [extraNote] : [])].join(" | ").slice(0, 2000);
