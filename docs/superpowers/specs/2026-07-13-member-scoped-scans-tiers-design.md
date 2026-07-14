@@ -256,8 +256,11 @@ signal, e.g. *"Engine updated: 13 Jul, 06:00 GMT"* (optionally with a relative "
 ---
 
 ## 9. Risks & open items
-1. **Cron `-dev` URL (§1.3)** — verify/repoint to production; may be a current live cause of stale
-   data. High priority to confirm during Part C.
+1. **Cron `-dev` URL (§1.3) — CONFIRMED DEAD + FIXED 2026-07-14.** The `-dev` target returned
+   HTTP 404, so pg_cron's every-6-hours POST never reached the hook and automated global scans
+   were not running. Repointed to `arc-signal-core.lovable.app` (verified HTTP 200) via migration
+   `20260714091655_…`. Confirm scans resume by checking for new `scan_runs` rows after the next
+   6-hour tick; if none, the publishable key in the cron may have rotated and need updating.
 2. **Billing not live** — tiers resolve but nobody is "pro" until subscriptions exist; free caps
    effectively apply to all. Acceptable for launch; revisit when billing ships.
 3. **Cost at scale** — many members × scoped scans × entities. Guardrails in §4.6 mitigate; monitor
