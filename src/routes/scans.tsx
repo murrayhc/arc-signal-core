@@ -68,7 +68,7 @@ function ScansPage() {
                 const dur = r.finished_at ? Math.round((new Date(r.finished_at).getTime() - new Date(r.started_at).getTime()) / 100) / 10 : null;
                 return (
                   <tr key={r.id} className="border-t border-border/40 hover:bg-accent/20">
-                    <Td className="font-mono">{new Date(r.started_at).toLocaleString()}</Td>
+                    <Td className="font-mono">{formatDateTimeUK(r.started_at)}</Td>
                     <Td><StatusBadge s={r.status}/></Td>
                     <Td className="font-mono">{r.sources_succeeded}/{r.sources_attempted}{r.sources_failed ? ` (${r.sources_failed} fail)` : ""}</Td>
                     <Td className="font-mono">{r.documents_collected}</Td>
