@@ -56,6 +56,8 @@ function ScansPage() {
           </button>
         </div>
 
+        <ScanTimingPanel runs={data.runs} />
+
         <section className="glass-panel rounded-xl overflow-hidden">
           <div className="px-4 py-2 text-[10px] font-mono uppercase tracking-widest text-muted-foreground border-b border-border/40">Scan runs</div>
           <table className="w-full text-xs">
@@ -120,4 +122,69 @@ function StatusBadge({ s }: { s: string }) {
     : s === "running" || s === "queued" ? "var(--color-signal)"
     : "var(--color-risk)";
   return <span className="text-[10px] font-mono px-1.5 py-0.5 rounded border uppercase tracking-widest" style={{ borderColor: c, color: c }}>{s}</span>;
+}
+
+type ScanTimings = {
+  total_ms: number;
+  budget_ms: number;
+  rss_collection_ms: number;
+  other_collection_ms: number;
+  synthesis_ms: number;
+  sources: Array<{ name: string; ms: number }>;
+};
+
+const secs = (ms: number) => `${(ms / 1000).toFixed(1)}s`;
+
+function ScanTimingPanel({ runs }: { runs: Array<{ metadata: unknown }> }) {
+  const withTiming = runs.find(
+    (r) => r.metadata && typeof r.metadata === "object" && "total_ms" in (r.metadata as object),
+  );
+  if (!withTiming) return null;
+  const t = withTiming.metadata as unknown as ScanTimings;
+  const total = Math.max(1, t.total_ms);
+  const collection = t.rss_collection_ms + t.other_collection_ms;
+  return (
+    <section className="glass-panel rounded-xl overflow-hidden">
+      <div className="px-4 py-2 text-[10px] font-mono uppercase tracking-widest text-muted-foreground border-b border-border/40">
+        Timing breakdown · latest scan
+      </div>
+      <div className="p-4 space-y-3 text-xs">
+        <div className="flex flex-wrap gap-x-6 gap-y-1 font-mono">
+          <span>Total <span className="text-foreground">{secs(t.total_ms)}</span></span>
+          <span>Budget <span className="text-foreground">{secs(t.budget_ms)}</span></span>
+          <span>Collection <span style={{ color: "var(--color-risk)" }}>{secs(collection)}</span></span>
+          <span>Synthesis <span style={{ color: "var(--color-signal)" }}>{secs(t.synthesis_ms)}</span></span>
+        </div>
+        <div className="space-y-1.5">
+          <TimeRow label="RSS collection" ms={t.rss_collection_ms} total={total} color="var(--color-risk)" />
+          <TimeRow label="Other collection (contracts, companies house)" ms={t.other_collection_ms} total={total} color="var(--color-opportunity)" />
+          <TimeRow label="Synthesis (claims → events)" ms={t.synthesis_ms} total={total} color="var(--color-signal)" />
+        </div>
+        {t.sources?.length > 0 && (
+          <div className="pt-2 border-t border-border/40">
+            <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mb-1.5">Slowest sources</div>
+            <ul className="space-y-1">
+              {t.sources.slice(0, 12).map((src) => (
+                <li key={src.name}>
+                  <TimeRow label={src.name} ms={src.ms} total={total} color="var(--color-muted-foreground)" />
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function TimeRow({ label, ms, total, color }: { label: string; ms: number; total: number; color: string }) {
+  return (
+    <div className="flex items-center gap-3">
+      <span className="w-56 shrink-0 truncate text-muted-foreground">{label}</span>
+      <div className="flex-1 h-2 rounded-full bg-background/40 overflow-hidden">
+        <div className="h-2 rounded-full" style={{ width: `${Math.min(100, (ms / total) * 100)}%`, background: color }} />
+      </div>
+      <span className="w-14 text-right font-mono shrink-0">{secs(ms)}</span>
+    </div>
+  );
 }

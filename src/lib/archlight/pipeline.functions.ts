@@ -568,6 +568,8 @@ export async function runScanImpl() {
   const settings = await loadScanSettings();
   const startedAtMs = Date.now();
   const deadlineAtMs = startedAtMs + SCAN_RUNTIME_BUDGET_MS;
+  // Timing instrumentation (diagnostic): when each source starts + phase marks.
+  const sourceStarts: Array<{ name: string; at: number }> = [];
 
   // Reap stale RUNNING scans (worker was killed mid-run and never finalised
   // the row). Scans self-stop at the runtime budget, so older rows are dead.
@@ -644,6 +646,7 @@ export async function runScanImpl() {
 
 
   for (const src of chosen) {
+    sourceStarts.push({ name: src.name, at: Date.now() });
     if (!hasBudget()) {
       notes.push("Stopped source intake early: scan runtime budget reached; partial results saved.");
       break;
@@ -809,6 +812,7 @@ export async function runScanImpl() {
       await saveProgress();
     }
   }
+  const tRssDone = Date.now();
 
   // ============ CONTRACTS FINDER COLLECTOR ============
   // UK public-sector procurement/award notices (OCDS JSON, no key). Runs
@@ -881,7 +885,25 @@ export async function runScanImpl() {
 
 
 
+  const tCollectionDone = Date.now();
   await synthesizeClaimsIntoEvents(db, newClaims, settings, { runId: run.id, deadlineAtMs, notes, evCounts, saveProgress });
+  const tSynthDone = Date.now();
+
+  // Diagnostic timing breakdown -> scan_runs.metadata (see /scans timing panel).
+  const scanTimings = {
+    total_ms: tSynthDone - startedAtMs,
+    budget_ms: SCAN_RUNTIME_BUDGET_MS,
+    rss_collection_ms: tRssDone - startedAtMs,
+    other_collection_ms: tCollectionDone - tRssDone,
+    synthesis_ms: tSynthDone - tCollectionDone,
+    sources: sourceStarts
+      .map((s, i) => ({
+        name: s.name,
+        ms: (i + 1 < sourceStarts.length ? sourceStarts[i + 1].at : tRssDone) - s.at,
+      }))
+      .sort((a, b) => b.ms - a.ms)
+      .slice(0, 25),
+  };
 
   const status = sourcesFailed > 0 ? "completed_with_errors" : "completed";
   // Prepend a compact summary + skip counters so the truncated `notes` column
@@ -895,6 +917,7 @@ export async function runScanImpl() {
     : joined;
   await db.from("scan_runs").update({
     status, finished_at: new Date().toISOString(),
+    metadata: scanTimings,
     sources_attempted: sourcesAttempted,
     sources_succeeded: sourcesSucceeded,
     sources_failed: sourcesFailed,
