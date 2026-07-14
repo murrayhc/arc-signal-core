@@ -575,7 +575,7 @@ function EvidenceRow({ c, shortId }: { c: SupportingClaim; shortId: (s: string) 
           <ul className="space-y-1">
             {c.lineage.filter((l) => l.relation === "contradiction").map((l, i) => (
               <li key={`ctr-${i}`} className="text-[11px] flex flex-wrap items-baseline gap-x-2">
-                <span className="text-[10px] font-mono text-muted-foreground">{l.published_at ? new Date(l.published_at).toISOString().slice(0, 10) : "—"}</span>
+                <span className="text-[10px] font-mono text-muted-foreground">{l.published_at ? formatDateUK(l.published_at) : "—"}</span>
                 <span className="font-display text-xs">{l.source_name ?? "unknown source"}</span>
                 {l.origin_confidence != null && <span className="text-[10px] font-mono text-muted-foreground">stance {Number(l.origin_confidence).toFixed(2)}</span>}
                 {l.url && (
