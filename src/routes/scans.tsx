@@ -1,4 +1,5 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { formatDateTimeUK, formatTimeUK } from "@/lib/format-datetime";
 import { queryOptions, useMutation, useSuspenseQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/archlight/AppShell";
 import { getScanHistory, runScan } from "@/lib/archlight/pipeline.functions";
