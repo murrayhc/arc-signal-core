@@ -137,7 +137,7 @@ function ReviewPage() {
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-[10px] font-mono px-1.5 py-0.5 rounded border border-border/60 uppercase tracking-widest">{it.item_type}</span>
                       <StatusBadge s={it.status}/>
-                      <span className="text-[10px] font-mono text-muted-foreground">{new Date(it.created_at).toLocaleString()}</span>
+                      <span className="text-[10px] font-mono text-muted-foreground">{formatDateTimeUK(it.created_at)}</span>
                       {currentReviewer && !currentReviewer.accruing && it.status === "pending" && (
                         <span className="text-[10px] font-mono text-muted-foreground ml-auto">
                           your accuracy · {(currentReviewer.accuracy * 100).toFixed(0)}% (n={currentReviewer.n_graded})
