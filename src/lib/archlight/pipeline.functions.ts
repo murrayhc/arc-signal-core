@@ -1187,7 +1187,7 @@ export const scanMyItems = createServerFn({ method: "POST" })
     const settings = await loadScanSettings();
     const { data: run } = await db
       .from("scan_runs")
-      .insert({ status: "running", started_at: new Date().toISOString(), triggered_by: userId, trigger_kind: "member_scoped" } as never)
+      .insert({ status: "running", started_at: new Date().toISOString(), triggered_by: userId, trigger_kind: "member_scoped" })
       .select()
       .single();
     if (!run) throw new Error("Failed to open member scan run");
