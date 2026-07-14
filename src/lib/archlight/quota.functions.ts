@@ -49,8 +49,8 @@ async function countUsage(action: QuotaAction, userId: string, sinceIso: string)
     const { count } = await db
       .from("scan_runs")
       .select("id", { count: "exact", head: true })
-      .filter("triggered_by", "eq", userId)
-      .filter("trigger_kind", "eq", "member_scoped")
+      .eq("triggered_by", userId)
+      .eq("trigger_kind", "member_scoped")
       .gte("started_at", sinceIso);
     return count ?? 0;
   }
