@@ -3,7 +3,8 @@ import { requireAdmin } from "@/lib/archlight/require-admin.server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { IngestSource } from "./ingest.server";
 import { assertWithinQuota } from "./quota.functions";
-import { gdeltSearch, type GdeltArticle } from "./search/gdelt.server";
+import { gdeltSearch } from "./search/gdelt.server";
+import { gnewsSearch, hasGNewsKey } from "./search/gnews.server";
 import { z } from "zod";
 import { callAI, callJson, guardFinancialAdvice, pickModel } from "./ai-gateway.server";
 import { shingles, cosine, centroid, fetchFeed } from "./text.server";
@@ -1225,13 +1226,22 @@ export const scanMyItems = createServerFn({ method: "POST" })
       .filter((s) => s.length > 3)
       .join(" OR ")
       .slice(0, 280);
-    let articles: GdeltArticle[] = [];
+    // Collect via GNews (needs GNEWS_API_KEY); fall back to GDELT if no key / empty.
+    let articles: Array<{ title: string; body: string; url: string; publishedAt: string | null }> = [];
     try {
-      articles = await gdeltSearch(gdeltQuery, { maxRecords: 20, timespan: "1week" });
+      const gn = await gnewsSearch(gdeltQuery, { max: 10 });
+      articles = gn.map((a) => ({ title: a.title, body: a.description || a.title, url: a.url, publishedAt: a.publishedAt }));
+      if (articles.length === 0) {
+        const gd = await gdeltSearch(gdeltQuery, { maxRecords: 20, timespan: "1week" });
+        articles = gd.map((a) => ({ title: a.title, body: a.title, url: a.url, publishedAt: a.seendate }));
+      }
     } catch (err) {
       notes.push(`News search failed (${err instanceof Error ? err.message : String(err)}).`);
     }
-    notes.push(`Found ${articles.length} article(s) across ${entities.length} item(s)`);
+    notes.push(
+      `Found ${articles.length} article(s) across ${entities.length} item(s)` +
+        (hasGNewsKey() ? "" : " (no GNews key set yet - using free fallback)"),
+    );
     let ingestedCount = 0;
     let skippedCount = 0;
     for (const a of articles) {
@@ -1240,9 +1250,9 @@ export const scanMyItems = createServerFn({ method: "POST" })
         const ing = await ingestDocument(db, {
           src: memberSource,
           title: a.title,
-          body: a.title,
+          body: a.body,
           url: a.url,
-          publishedAt: a.seendate,
+          publishedAt: a.publishedAt,
           isSynthetic: false,
           collectedVia: "member_scan",
           recentShingleSets,
