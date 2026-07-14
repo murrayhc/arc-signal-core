@@ -12,7 +12,7 @@ import {
   removeExposureItem,
   updateExposureProfile,
 } from "@/lib/archlight/exposure.functions";
-import { scanMyItems } from "@/lib/archlight/pipeline.functions";
+import { scanMyItems, type ScanMyItemsResult } from "@/lib/archlight/pipeline.functions";
 import { getMyQuotas } from "@/lib/archlight/quota.functions";
 
 export const Route = createFileRoute("/exposures")({
@@ -296,9 +296,26 @@ function ItemRow({ item, onRemoved }: { item: ProfileWithItems["items"][number];
 }
 
 // DRAFT COPY — owner sign-off needed before final (SR4).
+function scanResultMessage(r: ScanMyItemsResult): string {
+  if (r.status === "no_items") return "Add items to your book first, then scan.";
+  if (r.status !== "completed") return r.notes[0] ?? "Scan could not complete.";
+  const docs = r.documents_collected;
+  if (r.hits_created > 0) {
+    return `Found ${r.hits_created} new match${r.hits_created === 1 ? "" : "es"} for your book (from ${r.events_created} fresh signal${r.events_created === 1 ? "" : "s"}). See your "why this matters" rail.`;
+  }
+  if (r.events_created > 0) {
+    return `Checked ${docs} fresh report${docs === 1 ? "" : "s"} and created ${r.events_created} signal${r.events_created === 1 ? "" : "s"}, but none matched your items this time.`;
+  }
+  if (docs > 0) {
+    return `Checked ${docs} fresh report${docs === 1 ? "" : "s"}. Nothing new worth flagging for your items right now.`;
+  }
+  return "No fresh news found for your items right now. Try again later.";
+}
+
 function ScanMyItemsButton() {
   const qc = useQueryClient();
   const [confirming, setConfirming] = useState(false);
+  const [lastResult, setLastResult] = useState<ScanMyItemsResult | null>(null);
   const { data: quotas } = useQuery({
     queryKey: ["quota", "myQuotas"],
     queryFn: () => getMyQuotas(),
@@ -312,13 +329,8 @@ function ScanMyItemsButton() {
     mutationFn: () => scanMyItems(),
     onSuccess: (r) => {
       setConfirming(false);
-      if (r.status === "no_items") {
-        toast.message("Nothing to scan yet", { description: r.notes[0] ?? "Add items to your book first." });
-      } else {
-        toast.success("Scan complete", {
-          description: `${r.events_created} new events · ${r.hits_created} matched to your items · ${r.scans_remaining} scans left today`,
-        });
-      }
+      setLastResult(r);
+      toast.success("Scan complete", { description: scanResultMessage(r) });
       qc.invalidateQueries({ queryKey: ["quota"] });
       qc.invalidateQueries({ queryKey: ["exposures"] });
     },
@@ -357,7 +369,8 @@ function ScanMyItemsButton() {
   }
 
   return (
-    <div className="flex items-center gap-3 flex-wrap">
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center gap-3 flex-wrap">
       <button
         onClick={() => setConfirming(true)}
         disabled={atLimit || scan.isPending}
@@ -371,6 +384,12 @@ function ScanMyItemsButton() {
             ? `No scans left today · resets midnight GMT${scanQuota?.tier === "free" ? " · Pro gets more" : ""}`
             : `${remaining} scan${remaining === 1 ? "" : "s"} left today`}
         </span>
+      )}
+      </div>
+      {lastResult && (
+        <p className="text-xs text-muted-foreground max-w-xl leading-relaxed">
+          {scanResultMessage(lastResult)}
+        </p>
       )}
     </div>
   );
