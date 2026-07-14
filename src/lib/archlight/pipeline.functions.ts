@@ -1,8 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
-import { createClient } from "@supabase/supabase-js";
 import { requireAdmin } from "@/lib/archlight/require-admin.server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import type { Database } from "@/integrations/supabase/types";
 import type { IngestSource } from "./ingest.server";
 import { assertWithinQuota } from "./quota.functions";
 import { z } from "zod";
@@ -18,55 +16,6 @@ const MAX_SYNTHESIS_CLUSTERS_PER_SCAN = 10;
 async function admin() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   return supabaseAdmin;
-}
-
-function isNewSupabaseApiKey(value: string): boolean {
-  return value.startsWith("sb_publishable_") || value.startsWith("sb_secret_");
-}
-
-function createSupabaseFetch(supabaseKey: string): typeof fetch {
-  return (input, init) => {
-    const headers = new Headers(
-      typeof Request !== "undefined" && input instanceof Request ? input.headers : undefined,
-    );
-
-    if (init?.headers) {
-      new Headers(init.headers).forEach((value, key) => headers.set(key, value));
-    }
-
-    if (isNewSupabaseApiKey(supabaseKey) && headers.get("Authorization") === `Bearer ${supabaseKey}`) {
-      headers.delete("Authorization");
-    }
-
-    headers.set("apikey", supabaseKey);
-    return fetch(input, { ...init, headers });
-  };
-}
-
-function publicDb() {
-  const supabaseUrl = process.env.SUPABASE_URL;
-  const publishableKey = process.env.SUPABASE_PUBLISHABLE_KEY;
-
-  if (!supabaseUrl || !publishableKey) {
-    const missing = [
-      ...(!supabaseUrl ? ["SUPABASE_URL"] : []),
-      ...(!publishableKey ? ["SUPABASE_PUBLISHABLE_KEY"] : []),
-    ];
-    throw new Error(`Missing Supabase environment variable(s): ${missing.join(", ")}.`);
-  }
-
-  return createClient<Database>(supabaseUrl, publishableKey, {
-    global: { fetch: createSupabaseFetch(publishableKey) },
-    auth: {
-      storage: undefined,
-      persistSession: false,
-      autoRefreshToken: false,
-    },
-  });
-}
-
-function hasAdminEnvironment() {
-  return Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
 }
 
 async function reapStaleRunningScans(db: Awaited<ReturnType<typeof admin>>) {
@@ -98,10 +47,8 @@ async function loadScanSettings(): Promise<ScanSettings> {
 
 // ============ DASHBOARD READS ============
 export const getDashboard = createServerFn({ method: "GET" }).handler(async () => {
-  const db = publicDb();
-  if (hasAdminEnvironment()) {
-    try { await reapStaleRunningScans(await admin()); } catch { /* best-effort */ }
-  }
+  const db = await admin();
+  await reapStaleRunningScans(db);
   const [sources, events, opps, risks, scan, sysConf, nodes, edges, ticker, positioning, docs, arcs] = await Promise.all([
     db.from("sources").select("status, health_score, reliability_score, is_synthetic"),
     db.from("event_candidates").select("id, title, event_class, status, severity, risk_score, opportunity_score, confidence").order("last_updated_at", { ascending: false }),
@@ -1207,17 +1154,6 @@ export const scanMyItems = createServerFn({ method: "POST" })
   .handler(async ({ context }): Promise<ScanMyItemsResult> => {
     const userId = context.userId as string;
     const quota = await assertWithinQuota(userId, "scan_my_items"); // throws QUOTA:… if over
-    if (!hasAdminEnvironment()) {
-      return {
-        status: "unavailable",
-        entities_scanned: 0,
-        documents_collected: 0,
-        events_created: 0,
-        hits_created: 0,
-        scans_remaining: quota.remaining,
-        notes: ["Member scans are temporarily unavailable in this preview because privileged backend access is not loaded."],
-      };
-    }
     const db = await admin();
 
     const { data: rawItems } = await db
@@ -2221,26 +2157,22 @@ export const getEventDetail = createServerFn({ method: "POST" }).middleware([req
 
 // ============ REGISTRY / HEALTH / SCANS ============
 export const getSourceRegistry = createServerFn({ method: "GET" }).handler(async () => {
-  const db = publicDb();
+  const db = await admin();
   const { data } = await db.from("sources").select("*").order("reliability_score", { ascending: false });
   return { sources: data ?? [] };
 });
 
 export const getReviewQueue = createServerFn({ method: "GET" }).handler(async () => {
-  const db = publicDb();
+  const db = await admin();
   const { data } = await db.from("review_queue").select("*").order("created_at", { ascending: false }).limit(100);
   return { items: data ?? [] };
 });
 
 export const getScanHistory = createServerFn({ method: "GET" }).handler(async () => {
-  const db = publicDb();
+  const db = await admin();
   // Reap stale RUNNING scans so the page doesn't show ghost "running" rows
   // from worker terminations that never got to finalise the row.
-  if (hasAdminEnvironment()) {
-    try {
-      await reapStaleRunningScans(await admin());
-    } catch { /* best-effort */ }
-  }
+  await reapStaleRunningScans(db);
   const [runs, logs] = await Promise.all([
     db.from("scan_runs").select("*").order("started_at", { ascending: false }).limit(30),
     db.from("llm_task_logs").select("id, task_type, provider, model, status, latency_ms, estimated_cost, validation_status, error, created_at").order("created_at", { ascending: false }).limit(60),
@@ -2251,7 +2183,7 @@ export const getScanHistory = createServerFn({ method: "GET" }).handler(async ()
 // Freshness signal for the top nav: when did the most recent global scan finish?
 export const getEngineFreshness = createServerFn({ method: "GET" }).handler(
   async (): Promise<{ lastCompletedAt: string | null }> => {
-    const db = publicDb();
+    const db = await admin();
     const { data } = await db
       .from("scan_runs")
       .select("finished_at, started_at, status")
@@ -2294,7 +2226,7 @@ export const getRoutingInfo = createServerFn({ method: "GET" }).handler(async ()
 
 // ============ COMPANIES ============
 export const getCompanies = createServerFn({ method: "GET" }).handler(async () => {
-  const db = publicDb();
+  const db = await admin();
   const { data } = await db.from("company_impacts").select("company_name, impact_type, risk_score, opportunity_score, confidence, event_candidate_id, updated_at").order("updated_at", { ascending: false }).limit(300);
   const map = new Map<string, { name: string; events: Set<string>; benefit: number; harm: number; mixed: number; risk: number; opp: number; conf: number; count: number; last: string }>();
   for (const r of data ?? []) {
@@ -2342,7 +2274,7 @@ export const getCompanyDetail = createServerFn({ method: "POST" }).middleware([r
 
 // ============ OPPORTUNITIES ============
 export const getOpportunities = createServerFn({ method: "GET" }).handler(async () => {
-  const db = publicDb();
+  const db = await admin();
   const { data } = await db.from("opportunity_cards").select("*").order("commercial_value_score", { ascending: false }).limit(60);
   return { opportunities: data ?? [] };
 });
@@ -2376,7 +2308,7 @@ export const getSourceDetail = createServerFn({ method: "POST" }).middleware([re
 
 // ============ EVIDENCE ARCS ============
 export const getEvidenceArcs = createServerFn({ method: "GET" }).handler(async () => {
-  const db = publicDb();
+  const db = await admin();
   const { data } = await db.from("evidence_arcs").select("*").order("updated_at", { ascending: false }).limit(80);
   return { arcs: data ?? [] };
 });
