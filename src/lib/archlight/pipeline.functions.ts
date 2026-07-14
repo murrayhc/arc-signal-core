@@ -1185,6 +1185,21 @@ export const scanMyItems = createServerFn({ method: "POST" })
       is_synthetic: false,
       independence_group: null,
     };
+    // Ensure the member-scan source row exists (documents.source_id FK); the
+    // seed migration may not have applied. Idempotent, runs service-role.
+    await db.from("sources").upsert(
+      {
+        id: MEMBER_SCAN_SOURCE_ID,
+        name: "Member on-demand scan",
+        source_type: "news",
+        access_method: "api",
+        reliability_score: 0.5,
+        health_score: 0.5,
+        status: "active",
+        is_synthetic: false,
+      },
+      { onConflict: "id" },
+    );
 
     const settings = await loadScanSettings();
     const { data: run } = await db
@@ -1311,7 +1326,7 @@ export const scanMyItems = createServerFn({ method: "POST" })
       events_created: evCounts.created,
       hits_created: hitsCreated,
       scans_remaining: Math.max(0, quota.remaining - 1),
-      notes: notes.filter((n) => /Found \d+ article|Ingested \d+, skipped|News search failed/.test(n)).slice(-8),
+      notes: notes.filter((n) => /Found \d+ article|Ingested \d+, skipped|News search failed|insert doc failed|forbidden language/.test(n)).slice(-8),
     };
   });
 
