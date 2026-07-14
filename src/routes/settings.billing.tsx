@@ -116,7 +116,7 @@ function BillingPage() {
                   {" · "}
                   {sub?.cancel_at_period_end ? "ends on " : "renews on "}
                   <span className="text-foreground">
-                    {periodEnd.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}
+                    {formatDateUK(periodEnd)}
                   </span>
                 </>
               )}
