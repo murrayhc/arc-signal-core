@@ -1,4 +1,5 @@
 import { Link, useNavigate } from "@tanstack/react-router";
+import { formatDateTimeUK } from "@/lib/format-datetime";
 import { useQuery } from "@tanstack/react-query";
 import { Bell, Building2, ChevronDown, Command, Compass, CreditCard, Crosshair, Database, Download, Eye, FlaskConical, Flame, Gauge, GitBranch, HelpCircle, Layers, LogOut, Moon, Radar, Search, Settings, Shield, Sparkles, Sun, Target } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
@@ -233,12 +234,7 @@ function EngineFreshness() {
     staleTime: 60_000,
   });
   const iso = data?.lastCompletedAt ?? null;
-  const label = iso
-    ? new Date(iso).toLocaleString("en-GB", {
-        day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit",
-        timeZone: "UTC",
-      }) + " GMT"
-    : "pending first run";
+  const label = iso ? formatDateTimeUK(iso) : "pending first run";
   return (
     <div
       title="Last completed global scan"

@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { formatDateTimeUK } from "@/lib/format-datetime";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/archlight/AppShell";
 import { computeTrackRecord, recentResolutions, recentTrackRecordSnapshots } from "@/lib/archlight/track-record.functions";
@@ -41,7 +42,7 @@ export const Route = createFileRoute("/track-record")({
 function LocalDate({ date }: { date: string | null }) {
   const [formatted, setFormatted] = useState("");
   useEffect(() => {
-    if (date) setFormatted(new Date(date).toLocaleString());
+    if (date) setFormatted(formatDateTimeUK(date));
   }, [date]);
   return <span>{formatted}</span>;
 }

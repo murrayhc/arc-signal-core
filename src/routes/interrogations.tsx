@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { formatDateTimeUK } from "@/lib/format-datetime";
 import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/archlight/AppShell";
 import { getInterrogations } from "@/lib/archlight/pipeline.functions";
@@ -63,7 +64,7 @@ function InterrogationsPage() {
                     <div>
                       <div className="font-display text-sm">“{q.query_text}”</div>
                       <div className="mt-1 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
-                        {new Date(q.created_at).toISOString().slice(0, 16).replace("T", " ")} · {q.query_class} · {q.status} · {q.result_count} matches · evidence {(q.evidence_ids ?? []).length}
+                        {formatDateTimeUK(q.created_at)} · {q.query_class} · {q.status} · {q.result_count} matches · evidence {(q.evidence_ids ?? []).length}
                       </div>
                     </div>
                     <Link to="/interrogate" search={{ q: q.query_text }} className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground hover:text-foreground border border-border/50 rounded px-2 py-1">re-run</Link>

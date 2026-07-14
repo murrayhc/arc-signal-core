@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
+import { formatDateTimeUK } from "@/lib/format-datetime";
 import { queryOptions, useMutation, useSuspenseQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/archlight/AppShell";
 import { getSourceRegistry } from "@/lib/archlight/pipeline.functions";
@@ -139,8 +140,8 @@ function SourcesPage() {
                   <Td><Bar v={Number(s.reliability_score)} c="var(--color-signal)"/></Td>
                   <Td><Bar v={Number(s.health_score)} c="var(--color-growth)"/></Td>
                   <Td className="font-mono">{s.refresh_cadence_minutes}m</Td>
-                  <Td className="text-muted-foreground">{s.last_success_at ? new Date(s.last_success_at).toLocaleString() : "—"}</Td>
-                  <Td className="text-muted-foreground">{s.last_failure_at ? new Date(s.last_failure_at).toLocaleString() : "—"}</Td>
+                  <Td className="text-muted-foreground">{s.last_success_at ? formatDateTimeUK(s.last_success_at) : "—"}</Td>
+                  <Td className="text-muted-foreground">{s.last_failure_at ? formatDateTimeUK(s.last_failure_at) : "—"}</Td>
                 </tr>
               ))}
             </tbody>

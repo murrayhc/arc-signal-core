@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
+import { formatDateUK, formatDateTimeUK } from "@/lib/format-datetime";
 import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/archlight/AppShell";
 import { getCompanyDeep } from "@/lib/archlight/precognition.functions";
@@ -200,7 +201,7 @@ function CompanyDetailPage() {
                       <Fingerprint className="h-4 w-4" style={{ color: "var(--color-risk)" }}/>
                       <h2 className="font-display text-sm">Distress signal profile</h2>
                       <span className="ml-auto text-[10px] font-mono text-muted-foreground">
-                        updated {new Date(distress.profile.computed_at).toLocaleDateString()}
+                        updated {formatDateUK(distress.profile.computed_at)}
                       </span>
                     </div>
                     {(() => {
@@ -512,7 +513,7 @@ function BeliefStatePanel({ belief }: { belief: BeliefResp }) {
         <Activity className="h-4 w-4" style={{ color }}/>
         <h2 className="font-display text-sm">Belief state</h2>
         <span className="ml-auto text-[10px] font-mono text-muted-foreground">
-          {ent.belief_updated_at ? `updated ${new Date(ent.belief_updated_at).toLocaleString()}` : "never computed"}
+          {ent.belief_updated_at ? `updated ${formatDateTimeUK(ent.belief_updated_at)}` : "never computed"}
         </span>
       </div>
       <div className="grid md:grid-cols-3 gap-3">

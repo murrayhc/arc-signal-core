@@ -1,4 +1,5 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { formatDateTimeUK, formatTimeUK } from "@/lib/format-datetime";
 import { queryOptions, useMutation, useSuspenseQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/archlight/AppShell";
 import { getScanHistory, runScan } from "@/lib/archlight/pipeline.functions";
@@ -67,7 +68,7 @@ function ScansPage() {
                 const dur = r.finished_at ? Math.round((new Date(r.finished_at).getTime() - new Date(r.started_at).getTime()) / 100) / 10 : null;
                 return (
                   <tr key={r.id} className="border-t border-border/40 hover:bg-accent/20">
-                    <Td className="font-mono">{new Date(r.started_at).toLocaleString()}</Td>
+                    <Td className="font-mono">{formatDateTimeUK(r.started_at)}</Td>
                     <Td><StatusBadge s={r.status}/></Td>
                     <Td className="font-mono">{r.sources_succeeded}/{r.sources_attempted}{r.sources_failed ? ` (${r.sources_failed} fail)` : ""}</Td>
                     <Td className="font-mono">{r.documents_collected}</Td>
@@ -92,7 +93,7 @@ function ScansPage() {
               {data.logs.length === 0 && <tr><td colSpan={8} className="text-center py-6 text-muted-foreground italic text-xs">No LLM calls logged.</td></tr>}
               {data.logs.map((l) => (
                 <tr key={l.id} className="border-t border-border/40 hover:bg-accent/20">
-                  <Td className="font-mono">{new Date(l.created_at).toLocaleTimeString()}</Td>
+                  <Td className="font-mono">{formatTimeUK(l.created_at)}</Td>
                   <Td className="font-mono">{l.task_type}</Td>
                   <Td className="font-mono text-muted-foreground">{l.model}</Td>
                   <Td><StatusBadge s={l.status}/></Td>

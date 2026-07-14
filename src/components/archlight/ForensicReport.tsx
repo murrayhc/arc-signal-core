@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { formatDateUK } from "@/lib/format-datetime";
 import { getForensicReport, runForensicAnalysis, type ForensicReport } from "@/lib/archlight/forensic.functions";
 import { Loader2, RefreshCw, Sparkles, TrendingDown, TrendingUp, AlertTriangle, Clock, Target, GitBranch, Radar, Scale, History, ShieldQuestion, Info, BookOpen } from "lucide-react";
 import { toast } from "sonner";
@@ -300,7 +301,7 @@ function positioningAt(value: unknown): ForensicReport["positioning_plays"] {
 }
 
 function ReportBody({ r, updatedAt }: { r: ForensicReport; updatedAt?: string }) {
-  const generatedOn = updatedAt ? new Date(updatedAt).toISOString().slice(0, 10) : null;
+  const generatedOn = updatedAt ? formatDateUK(updatedAt) : null;
   const referenceDate = r.timeline?.reference_date ?? generatedOn ?? "";
   const dataAsOf = r.timeline?.data_as_of ?? "";
   const staleRef = referenceDate && generatedOn && referenceDate !== generatedOn;

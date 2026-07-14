@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { formatDateUK, formatDateTimeUK } from "@/lib/format-datetime";
 import { queryOptions, useSuspenseQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { AppShell } from "@/components/archlight/AppShell";
@@ -238,7 +239,7 @@ function BacktestPage() {
                     <Td className="font-mono">{Math.round(Number(s.prevalence_in_failures) * 100)}%</Td>
                     <Td className="font-mono">{s.median_lead_days == null ? "—" : `${Math.round(Number(s.median_lead_days))}d`}</Td>
                     <Td className="font-mono">n={s.sample_size}</Td>
-                    <Td className="font-mono text-muted-foreground">{new Date(s.mined_at).toLocaleDateString()}</Td>
+                    <Td className="font-mono text-muted-foreground">{formatDateUK(s.mined_at)}</Td>
                   </tr>
                 ))}
               </tbody>
@@ -287,7 +288,7 @@ function BacktestPage() {
                           ))}
                         </div>
                       </Td>
-                      <Td className="font-mono text-muted-foreground">{c.signals_computed_at ? new Date(c.signals_computed_at).toLocaleDateString() : "pending"}</Td>
+                      <Td className="font-mono text-muted-foreground">{c.signals_computed_at ? formatDateUK(c.signals_computed_at) : "pending"}</Td>
                     </tr>
                   ))}
                 </tbody>
@@ -307,7 +308,7 @@ function BacktestPage() {
               <tbody>
                 {runs.map((r) => (
                   <tr key={r.id} className="border-t border-border/40">
-                    <Td className="font-mono">{new Date(r.ran_at).toLocaleString()}</Td>
+                    <Td className="font-mono">{formatDateTimeUK(r.ran_at)}</Td>
                     <Td className="font-mono">{r.cases_total ?? 0}</Td>
                     <Td className="font-mono">{r.cases_with_signal ?? 0}</Td>
                     <Td className="font-mono">{r.median_lead_days == null ? "—" : `${Math.round(Number(r.median_lead_days))}d`}</Td>

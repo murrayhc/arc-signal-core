@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { formatDateUK } from "@/lib/format-datetime";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AppShell } from "@/components/archlight/AppShell";
 import { generateDigest, getLatestDigest, getDigestHistory } from "@/lib/archlight/precognition.functions";
@@ -58,7 +59,7 @@ function DigestPage() {
           <>
             <header className="glass-panel rounded-xl p-5">
               <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
-                <Newspaper className="h-3.5 w-3.5"/> digest · <span suppressHydrationWarning>{new Date(d.window_start).toLocaleDateString()} → {new Date(d.window_end).toLocaleDateString()}</span> · model {d.model ?? "—"}
+                <Newspaper className="h-3.5 w-3.5"/> digest · <span suppressHydrationWarning>{formatDateUK(d.window_start)} → {formatDateUK(d.window_end)}</span> · model {d.model ?? "—"}
               </div>
               <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mt-2">The week in one line</div>
               <h2 className="font-display text-xl mt-1">{d.headline}</h2>
@@ -156,7 +157,7 @@ function DigestPage() {
             <ul className="divide-y divide-border/40 text-xs">
               {history.data!.digests.slice(1).map((h) => (
                 <li key={h.id} className="py-2 flex items-center gap-2">
-                  <span className="font-mono text-[10px] text-muted-foreground w-40 shrink-0" suppressHydrationWarning>{new Date(h.window_start).toLocaleDateString()} → {new Date(h.window_end).toLocaleDateString()}</span>
+                  <span className="font-mono text-[10px] text-muted-foreground w-40 shrink-0" suppressHydrationWarning>{formatDateUK(h.window_start)} → {formatDateUK(h.window_end)}</span>
                   <span className="truncate">{h.headline}</span>
                 </li>
               ))}

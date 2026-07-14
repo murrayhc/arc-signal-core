@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
+import { formatDateUK } from "@/lib/format-datetime";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AppShell } from "@/components/archlight/AppShell";
 import { getEventDetail } from "@/lib/archlight/pipeline.functions";
@@ -496,7 +497,7 @@ function EventDetailPage() {
                           <div className="flex items-center gap-2 shrink-0 text-[10px] font-mono">
                             <span className="px-1.5 py-0.5 rounded border border-border/60 text-muted-foreground">stated {pct(p.predicted_probability)}%</span>
                             <span className="px-1.5 py-0.5 rounded border border-border/60 text-muted-foreground">live {pct(p.final_probability)}%</span>
-                            <span className="text-muted-foreground">by {new Date(p.deadline).toISOString().slice(0, 10)}</span>
+                            <span className="text-muted-foreground">by {formatDateUK(p.deadline)}</span>
                           </div>
                         </div>
                         <p className="text-sm mt-2">{p.prediction_text}</p>
@@ -574,7 +575,7 @@ function EvidenceRow({ c, shortId }: { c: SupportingClaim; shortId: (s: string) 
           <ul className="space-y-1">
             {c.lineage.filter((l) => l.relation === "contradiction").map((l, i) => (
               <li key={`ctr-${i}`} className="text-[11px] flex flex-wrap items-baseline gap-x-2">
-                <span className="text-[10px] font-mono text-muted-foreground">{l.published_at ? new Date(l.published_at).toISOString().slice(0, 10) : "—"}</span>
+                <span className="text-[10px] font-mono text-muted-foreground">{l.published_at ? formatDateUK(l.published_at) : "—"}</span>
                 <span className="font-display text-xs">{l.source_name ?? "unknown source"}</span>
                 {l.origin_confidence != null && <span className="text-[10px] font-mono text-muted-foreground">stance {Number(l.origin_confidence).toFixed(2)}</span>}
                 {l.url && (
@@ -595,7 +596,7 @@ function EvidenceRow({ c, shortId }: { c: SupportingClaim; shortId: (s: string) 
           <ol className="space-y-1.5">
             {c.lineage.map((l, i) => (
               <li key={i} className="text-[11px] flex flex-wrap items-baseline gap-x-2">
-                <span className="text-[10px] font-mono text-muted-foreground">{l.published_at ? new Date(l.published_at).toISOString().slice(0, 10) : "—"}</span>
+                <span className="text-[10px] font-mono text-muted-foreground">{l.published_at ? formatDateUK(l.published_at) : "—"}</span>
                 <span className="font-display text-xs">{l.source_name ?? "unknown source"}</span>
                 <span className="text-[10px] font-mono uppercase tracking-widest" style={{ color: l.relation === "origin_candidate" ? "var(--color-opportunity)" : l.is_likely_copy ? "var(--color-risk)" : "var(--color-muted-foreground)" }}>
                   {l.relation ?? "unknown"}{l.is_likely_copy ? " · likely copy" : ""}

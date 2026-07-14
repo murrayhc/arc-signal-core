@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
+import { formatDateUK, formatDateTimeUK } from "@/lib/format-datetime";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { AppShell } from "@/components/archlight/AppShell";
@@ -198,9 +199,7 @@ function formatUtcDateTime(value: string | null | undefined, withTime = true): s
   if (!value) return "recently";
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return "recently";
-  const date = d.toISOString().slice(0, 10);
-  if (!withTime) return date;
-  return `${date} ${d.toISOString().slice(11, 16)} UTC`;
+  return withTime ? formatDateTimeUK(d) : formatDateUK(d);
 }
 
 function DeepReportView({ result, query, onRefresh }: { result: InterrogationResult; query: string; onRefresh: () => void }) {
