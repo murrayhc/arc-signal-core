@@ -573,7 +573,7 @@ export async function runScanImpl() {
   // synthesizeClaimsIntoEvents still receives the full deadlineAtMs.
   const collectionDeadlineAtMs = startedAtMs + Math.floor(SCAN_RUNTIME_BUDGET_MS * 0.6);
   // Timing instrumentation (diagnostic): when each source starts + phase marks.
-  const sourceStarts: Array<{ name: string; at: number }> = [];
+  const sourceTimings: Array<{ name: string; ms: number }> = [];
 
   // Reap stale RUNNING scans (worker was killed mid-run and never finalised
   // the row). Scans self-stop at the runtime budget, so older rows are dead.
@@ -649,12 +649,9 @@ export async function runScanImpl() {
   const recentShingleSets = (recentDocs ?? []).map((d) => ({ id: d.id, s: shingles(`${d.title ?? ""} ${(d.full_text ?? d.body) ?? ""}`, 5), sig: d.shingle_signature as string | null }));
 
 
-  for (const src of chosen) {
-    sourceStarts.push({ name: src.name, at: Date.now() });
-    if (!hasBudget()) {
-      notes.push("Stopped source intake early: scan runtime budget reached; partial results saved.");
-      break;
-    }
+  const processOneSource = async (src: (typeof chosen)[number]) => {
+    const _t0 = Date.now();
+    try {
 
     // Backoff: skip degraded/failing sources unless overdue by refresh_cadence_minutes.
     const consecFailures = Number(src.consecutive_failures ?? 0);
@@ -666,7 +663,7 @@ export async function runScanImpl() {
       const overdue = !lastAnyMs || (Date.now() - lastAnyMs) >= cadenceMin * 60 * 1000;
       if (!overdue) {
         notes.push(`${src.name}: skipped (backoff, ${consecFailures} consecutive failures, not yet overdue).`);
-        continue;
+        return;
       }
     }
 
@@ -724,7 +721,7 @@ export async function runScanImpl() {
         }).eq("id", src.id);
         sourcesSucceeded++;
         await saveProgress();
-        continue;
+        return;
       }
 
       // If RSS produced nothing, fall back to a single synthetic slot (title/body filled below).
@@ -815,6 +812,19 @@ export async function runScanImpl() {
       }).eq("id", src.id);
       await saveProgress();
     }
+    } finally {
+      sourceTimings.push({ name: src.name, ms: Date.now() - _t0 });
+    }
+  };
+  // Fetch/process sources in bounded-concurrency batches so slow sources
+  // (network + per-doc AI calls) run in parallel instead of end to end.
+  const COLLECT_CONCURRENCY = 4;
+  for (let _i = 0; _i < chosen.length; _i += COLLECT_CONCURRENCY) {
+    if (!hasBudget()) {
+      notes.push("Stopped source intake early: scan runtime budget reached; partial results saved.");
+      break;
+    }
+    await Promise.all(chosen.slice(_i, _i + COLLECT_CONCURRENCY).map((src) => processOneSource(src)));
   }
   const tRssDone = Date.now();
 
@@ -900,11 +910,7 @@ export async function runScanImpl() {
     rss_collection_ms: tRssDone - startedAtMs,
     other_collection_ms: tCollectionDone - tRssDone,
     synthesis_ms: tSynthDone - tCollectionDone,
-    sources: sourceStarts
-      .map((s, i) => ({
-        name: s.name,
-        ms: (i + 1 < sourceStarts.length ? sourceStarts[i + 1].at : tRssDone) - s.at,
-      }))
+    sources: sourceTimings
       .sort((a, b) => b.ms - a.ms)
       .slice(0, 25),
   };
