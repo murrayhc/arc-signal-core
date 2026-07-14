@@ -308,7 +308,7 @@ function BacktestPage() {
               <tbody>
                 {runs.map((r) => (
                   <tr key={r.id} className="border-t border-border/40">
-                    <Td className="font-mono">{new Date(r.ran_at).toLocaleString()}</Td>
+                    <Td className="font-mono">{formatDateTimeUK(r.ran_at)}</Td>
                     <Td className="font-mono">{r.cases_total ?? 0}</Td>
                     <Td className="font-mono">{r.cases_with_signal ?? 0}</Td>
                     <Td className="font-mono">{r.median_lead_days == null ? "—" : `${Math.round(Number(r.median_lead_days))}d`}</Td>
