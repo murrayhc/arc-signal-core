@@ -8,6 +8,10 @@ async function admin() {
   return supabaseAdmin;
 }
 
+function hasAdminEnvironment() {
+  return Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
+}
+
 async function loadOrSeed(): Promise<ScanSettings> {
   const db = await admin();
   const { data } = await db.from("scan_settings").select("*").eq("singleton", true).maybeSingle();
@@ -30,6 +34,7 @@ async function loadOrSeed(): Promise<ScanSettings> {
 }
 
 export const getScanSettings = createServerFn({ method: "GET" }).handler(async () => {
+  if (!hasAdminEnvironment()) return { ...DEFAULT_SCAN_SETTINGS };
   return await loadOrSeed();
 });
 
