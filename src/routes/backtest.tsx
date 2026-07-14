@@ -288,7 +288,7 @@ function BacktestPage() {
                           ))}
                         </div>
                       </Td>
-                      <Td className="font-mono text-muted-foreground">{c.signals_computed_at ? new Date(c.signals_computed_at).toLocaleDateString() : "pending"}</Td>
+                      <Td className="font-mono text-muted-foreground">{c.signals_computed_at ? formatDateUK(c.signals_computed_at) : "pending"}</Td>
                     </tr>
                   ))}
                 </tbody>
