@@ -596,7 +596,7 @@ function EvidenceRow({ c, shortId }: { c: SupportingClaim; shortId: (s: string) 
           <ol className="space-y-1.5">
             {c.lineage.map((l, i) => (
               <li key={i} className="text-[11px] flex flex-wrap items-baseline gap-x-2">
-                <span className="text-[10px] font-mono text-muted-foreground">{l.published_at ? new Date(l.published_at).toISOString().slice(0, 10) : "—"}</span>
+                <span className="text-[10px] font-mono text-muted-foreground">{l.published_at ? formatDateUK(l.published_at) : "—"}</span>
                 <span className="font-display text-xs">{l.source_name ?? "unknown source"}</span>
                 <span className="text-[10px] font-mono uppercase tracking-widest" style={{ color: l.relation === "origin_candidate" ? "var(--color-opportunity)" : l.is_likely_copy ? "var(--color-risk)" : "var(--color-muted-foreground)" }}>
                   {l.relation ?? "unknown"}{l.is_likely_copy ? " · likely copy" : ""}
