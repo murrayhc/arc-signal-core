@@ -25,9 +25,9 @@ interface TierRule {
 }
 
 export const QUOTA_LIMITS: Record<QuotaAction, { free: TierRule; pro: TierRule }> = {
-  // TEMP 2026-07-14: free bumped 3 -> 25 for debugging member-scan collection.
-  // REVERT free.limit back to 3 once the Google-News fetch issue is resolved.
-  scan_my_items: { free: { limit: 25, window: "day" }, pro: { limit: 10, window: "day" } },
+  // TEMP 2026-07-14: both bumped to 20 for debugging member-scan collection.
+  // REVERT to free 3 / pro 10 once the collection (GDELT) issue is resolved.
+  scan_my_items: { free: { limit: 20, window: "day" }, pro: { limit: 20, window: "day" } },
 };
 
 // Window boundaries in UTC (quotas reset at 00:00 GMT daily / 1st of month).
