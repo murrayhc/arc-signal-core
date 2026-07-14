@@ -107,6 +107,462 @@ export const getDashboard = createServerFn({ method: "GET" }).handler(async () =
 });
 
 // ============ RUN SCAN (full pipeline: collect → extract → cluster → synthesize) ============
+// Atomic claim collected during a scan, carried into synthesis/clustering.
+interface NewClaim {
+  id: string;
+  text: string;
+  type: string;
+  sectors: string[];
+  regions: string[];
+  entities: string[];
+  commodities: string[];
+  canonical_id: string | null;
+  source_id: string;
+  source_name: string;
+  source_group: string;
+  reliability: number;
+  doc_id: string;
+  doc_url: string;
+  embedding: number[] | null;
+}
+
+// Cluster the scan's new atomic claims, synthesize event candidates (+ graph,
+// impacts, opportunities, evidence arcs, watchlist alerts), and record counts.
+// Extracted verbatim from runScanImpl (2026-07-14) so member scoped scans can
+// reuse it; behaviour-neutral (counters passed by reference via evCounts).
+async function synthesizeClaimsIntoEvents(
+  db: Awaited<ReturnType<typeof admin>>,
+  newClaims: NewClaim[],
+  settings: Awaited<ReturnType<typeof loadScanSettings>>,
+  deps: {
+    runId: string;
+    deadlineAtMs: number;
+    notes: string[];
+    evCounts: { created: number; skipped: number };
+    saveProgress: (extraNote?: string) => Promise<void>;
+  },
+): Promise<void> {
+  const { runId, deadlineAtMs, notes, evCounts, saveProgress } = deps;
+  const hasBudget = () => Date.now() < deadlineAtMs;
+  // ============ SYNTHESIS PHASE ============
+  // Semantic clustering: seed buckets by configurable strategy, then merge
+  // buckets whose embedding centroids exceed the configured cosine threshold.
+  const seedClusters = new Map<string, NewClaim[]>();
+  for (const c of newClaims) {
+    const sector = (c.sectors[0] ?? "general").toLowerCase();
+    let key: string;
+    if (settings.bucketing_strategy === "type") key = c.type;
+    else if (settings.bucketing_strategy === "sector") key = sector;
+    else key = `${c.type}::${sector}`;
+    const bucket = seedClusters.get(key) ?? [];
+    bucket.push(c);
+    seedClusters.set(key, bucket);
+  }
+  const clusterEntries: Array<{ key: string; members: NewClaim[]; centroid: number[] | null }> = [];
+  for (const [key, members] of seedClusters) {
+    const vecs = members.map((m) => m.embedding).filter((v): v is number[] => Array.isArray(v));
+    clusterEntries.push({ key, members, centroid: centroid(vecs) });
+  }
+  const mergeThreshold = settings.cluster_merge_cosine;
+  const preMerge: typeof clusterEntries = [];
+  for (const cluster of clusterEntries) {
+    const target = preMerge.find((m) => m.centroid && cluster.centroid && cosine(m.centroid, cluster.centroid) >= mergeThreshold);
+    if (target) {
+      target.members = target.members.concat(cluster.members);
+      const vecs = target.members.map((m) => m.embedding).filter((v): v is number[] => Array.isArray(v));
+      target.centroid = centroid(vecs);
+      target.key = `${target.key}+${cluster.key}`;
+    } else {
+      preMerge.push({ ...cluster });
+    }
+  }
+
+  // Optional: split oversized clusters by region-then-entity so one big bucket
+  // can produce multiple events instead of collapsing into one.
+  const merged: typeof clusterEntries = [];
+  const maxPer = settings.max_claims_per_cluster;
+  for (const cluster of preMerge) {
+    if (!maxPer || cluster.members.length <= maxPer) { merged.push(cluster); continue; }
+    const byRegion = new Map<string, NewClaim[]>();
+    for (const m of cluster.members) {
+      const rk = (m.regions[0] ?? m.entities[0] ?? "global").toLowerCase();
+      const list = byRegion.get(rk) ?? [];
+      list.push(m);
+      byRegion.set(rk, list);
+    }
+    let idx = 0;
+    for (const [rk, members] of byRegion) {
+      const vecs = members.map((m) => m.embedding).filter((v): v is number[] => Array.isArray(v));
+      merged.push({ key: `${cluster.key}#${rk}`, members, centroid: centroid(vecs) });
+      idx++;
+    }
+    notes.push(`Split oversized cluster ${cluster.key} (${cluster.members.length} claims) into ${idx} sub-clusters.`);
+  }
+
+  const prioritisedClusters = merged
+    .map((cluster) => {
+      const sourceCount = new Set(cluster.members.map((m) => m.source_group || m.source_id)).size;
+      const avgReliability = cluster.members.reduce((a, m) => a + m.reliability, 0) / Math.max(1, cluster.members.length);
+      return { ...cluster, score: (sourceCount * 4) + cluster.members.length + avgReliability };
+    })
+    .sort((a, b) => b.score - a.score)
+    .slice(0, MAX_SYNTHESIS_CLUSTERS_PER_SCAN);
+  if (merged.length > prioritisedClusters.length) {
+    notes.push(`Prioritised ${prioritisedClusters.length}/${merged.length} clusters for this scan to keep runtime bounded.`);
+  }
+
+  for (const { key, members: group } of prioritisedClusters) {
+    if (!hasBudget()) {
+      notes.push("Stopped synthesis early: scan runtime budget reached; partial results saved.");
+      break;
+    }
+    try {
+      const primaryType = group[0].type;
+      const primarySector = (group[0].sectors[0] ?? "general").toLowerCase();
+      const region = group.find((g) => g.regions.length)?.regions[0] ?? "global";
+      const entities = Array.from(new Set(group.flatMap((g) => g.entities))).slice(0, 6);
+      const commodities = Array.from(new Set(group.flatMap((g) => g.commodities))).slice(0, 4);
+      const avgRel = group.reduce((a, g) => a + g.reliability, 0) / group.length;
+      const sourceDiv = new Set(group.map((g) => g.source_group || g.source_id)).size;
+      const type = primaryType;
+      const sector = primarySector;
+
+      // Ask model to synthesize an event candidate + impacts + opportunity + positioning
+      const synth = await callJson<{
+        event: { title: string; event_type: string; event_class: "risk"|"opportunity"|"mixed"|"watch"|"unknown"; summary: string; severity: "low"|"moderate"|"high"|"critical"; probability: number; confidence: number; risk_score: number; opportunity_score: number };
+        impacts: Array<{ company: string; impact_type: "beneficiary"|"harmed"|"mixed"|"exposed"|"watch_only"|"unknown"; pathway: string; risk_score: number; opportunity_score: number; watch_signals: string[]; confidence: number }>;
+        opportunity: { title: string; opportunity_type: string; summary: string; buyer_pain: string; likely_buyers: string[]; suggested_offer: string; urgency_score: number; commercial_value_score: number; confidence: number; opportunity_logic: string; next_best_action: string } | null;
+        positioning: { title: string; user_type: string; positioning_angle: string; how_it_could_be_used: string; why_it_may_matter: string; constraints: string; confidence: number } | null;
+        contradictions: string[];
+      }>({
+        task: "company_impact_analysis",
+        model: "google/gemini-2.5-flash",
+        maxTokens: 2200,
+        system: "You are Arklight scan synthesis. Return ONLY strict JSON. Required shape: {\"event\":{\"title\":string,\"event_type\":string,\"event_class\":\"risk\"|\"opportunity\"|\"mixed\"|\"watch\"|\"unknown\",\"summary\":string,\"severity\":\"low\"|\"moderate\"|\"high\"|\"critical\",\"probability\":number,\"confidence\":number,\"risk_score\":number,\"opportunity_score\":number},\"impacts\":[{\"company\":string,\"impact_type\":\"beneficiary\"|\"harmed\"|\"mixed\"|\"exposed\"|\"watch_only\"|\"unknown\",\"pathway\":string,\"risk_score\":number,\"opportunity_score\":number,\"watch_signals\":string[],\"confidence\":number}],\"opportunity\":object|null,\"positioning\":object|null,\"contradictions\":string[]}. Be hedged (may, could, appears). NEVER give financial advice: no buy/sell/hold, no target price, no portfolio allocation.",
+        user: `Cluster type: ${type}. Sector: ${sector}. Region: ${region}. Entities: ${entities.join(", ") || "n/a"}. Commodities: ${commodities.join(", ") || "n/a"}. Sources: ${group.length} claims from ${sourceDiv} distinct publisher(s), avg reliability ${avgRel.toFixed(2)}.\n\nClaims:\n${group.map((g, i) => `[${i+1}] (${g.source_name}) ${g.text}`).join("\n")}\n\nReturn JSON with keys: event, impacts (array), opportunity (or null), positioning (or null), contradictions (array of strings).`,
+      });
+      await logTask(db, "company_impact_analysis", synth, `cluster:${key}`);
+
+      if (!synth.ok || !synth.data?.event) {
+        const reason = !synth.ok
+          ? `synth call failed (${synth.error ?? "unknown"})`
+          : "synth returned no event object";
+        notes.push(`Synthesis dropped (${key}, ${group.length} claims / ${new Set(group.map((g) => g.source_group || g.source_id)).size} publisher(s)): ${reason}`);
+        evCounts.skipped++;
+        continue;
+      }
+      const guardE = guardFinancialAdvice(JSON.stringify(synth.data));
+      if (!guardE.ok) {
+        notes.push(`Synthesis rejected (${key}): ${guardE.violations.join(", ")}`);
+        evCounts.skipped++;
+        continue;
+      }
+      const normalised = normaliseSynthesis(synth.data, {
+        key,
+        type,
+        sector,
+        region,
+        entities,
+        commodities,
+        claimCount: group.length,
+        sourceCount: sourceDiv,
+        avgReliability: avgRel,
+      });
+      if (!normalised) {
+        notes.push(`Synthesis dropped (${key}, ${group.length} claims / ${sourceDiv} src): unusable model shape`);
+        evCounts.skipped++;
+        continue;
+      }
+
+      const ev = normalised.event;
+      const diversity = Math.min(1, sourceDiv / 3);
+      const evConf = clamp01(ev.confidence);
+      if (group.length < settings.min_evidence_count) {
+        notes.push(`Skipped event (${key}): evidence_count ${group.length} < min ${settings.min_evidence_count}`);
+        evCounts.skipped++;
+        continue;
+      }
+      if (diversity < settings.min_source_diversity) {
+        notes.push(`Skipped event (${key}): source_diversity ${diversity.toFixed(2)} < min ${settings.min_source_diversity}`);
+        evCounts.skipped++;
+        continue;
+      }
+      if (evConf < settings.min_confidence) {
+        notes.push(`Skipped event (${key}): confidence ${evConf.toFixed(2)} < min ${settings.min_confidence}`);
+        evCounts.skipped++;
+        continue;
+      }
+      const { data: eventRow } = await db.from("event_candidates").insert({
+        title: ev.title.slice(0, 240),
+        event_type: ev.event_type,
+        event_class: ev.event_class,
+        summary: ev.summary,
+        status: "new",
+        severity: ev.severity,
+        probability: clamp01(ev.probability),
+        confidence: clamp01(ev.confidence),
+        affected_sector: sector,
+        affected_region: region,
+        evidence_count: group.length,
+        source_diversity_score: Math.min(1, sourceDiv / 3),
+        signal_strength: Math.min(1, group.length / 5),
+        novelty_score: 0.6,
+        opportunity_score: clamp01(ev.opportunity_score),
+        risk_score: clamp01(ev.risk_score),
+        created_from_scan_run_id: runId,
+      }).select().single();
+      if (!eventRow) continue;
+      evCounts.created++;
+
+      // Graph: event node
+      const { data: eventNode } = await db.from("graph_nodes").insert({
+        node_type: "event", ref_type: "event_candidate", ref_id: eventRow.id,
+        title: ev.title.slice(0, 120), summary: ev.summary?.slice(0, 400) ?? null,
+        confidence: clamp01(ev.confidence),
+        risk_score: clamp01(ev.risk_score),
+        opportunity_score: clamp01(ev.opportunity_score),
+        impact_score: (clamp01(ev.risk_score) + clamp01(ev.opportunity_score)) / 2,
+      }).select().single();
+
+      // Source nodes + edges to event
+      const uniqueSources = new Map<string, string>();
+      for (const g of group) uniqueSources.set(g.source_id, g.source_name);
+      for (const [sid, sname] of uniqueSources) {
+        const { data: srcNode } = await db.from("graph_nodes").insert({
+          node_type: "source", ref_type: "source", ref_id: sid,
+          title: sname.slice(0, 120), confidence: 0.7,
+        }).select().single();
+        if (srcNode && eventNode) {
+          await db.from("graph_edges").insert({
+            source_node_id: srcNode.id, target_node_id: eventNode.id,
+            edge_type: "reported_by", label: "reported", weight: 0.6, confidence: 0.7, evidence_count: group.filter((g) => g.source_id === sid).length,
+          });
+        }
+      }
+
+      // Claim nodes + edges
+      for (const g of group.slice(0, 5)) {
+        if (!g.canonical_id) continue;
+        const { data: claimNode } = await db.from("graph_nodes").insert({
+          node_type: "claim", ref_type: "canonical_claim", ref_id: g.canonical_id,
+          title: g.text.slice(0, 120), confidence: g.reliability,
+        }).select().single();
+        if (claimNode && eventNode) {
+          await db.from("graph_edges").insert({
+            source_node_id: claimNode.id, target_node_id: eventNode.id,
+            edge_type: "supports", label: "supports", weight: g.reliability, confidence: g.reliability, evidence_count: 1,
+          });
+        }
+      }
+
+      // Company impacts
+      for (const im of normalised.impacts.slice(0, 8)) {
+        const g3 = guardFinancialAdvice(im.pathway);
+        if (!g3.ok) continue;
+        const { data: impactRow } = await db.from("company_impacts").insert({
+          event_candidate_id: eventRow.id,
+          company_name: im.company.slice(0, 200),
+          impact_type: im.impact_type,
+          impact_pathway: im.pathway,
+          confidence: clamp01(im.confidence),
+          risk_score: clamp01(im.risk_score),
+          opportunity_score: clamp01(im.opportunity_score),
+          watch_signals: (im.watch_signals ?? []).slice(0, 6),
+          evidence_ids: group.map((g) => g.id).slice(0, 10),
+        }).select().single();
+
+        // Company graph node + edge
+        const { data: coNode } = await db.from("graph_nodes").insert({
+          node_type: "company", ref_type: "company_impact", ref_id: impactRow?.id ?? null,
+          title: im.company.slice(0, 120), summary: im.pathway.slice(0, 300),
+          confidence: clamp01(im.confidence),
+          risk_score: clamp01(im.risk_score),
+          opportunity_score: clamp01(im.opportunity_score),
+        }).select().single();
+        if (coNode && eventNode) {
+          const edgeType = im.impact_type === "beneficiary" ? "creates_opportunity" : im.impact_type === "harmed" ? "exposes" : "affects";
+          await db.from("graph_edges").insert({
+            source_node_id: eventNode.id, target_node_id: coNode.id,
+            edge_type: edgeType, label: im.impact_type, weight: 0.7, confidence: clamp01(im.confidence), evidence_count: 1,
+          });
+        }
+      }
+
+      // Opportunity card
+      let oppCard: { id: string } | null = null;
+      if (normalised.opportunity) {
+        const o = normalised.opportunity;
+        const g4 = guardFinancialAdvice(`${o.title} ${o.summary} ${o.suggested_offer} ${o.next_best_action}`);
+        if (g4.ok) {
+          const res = await db.from("opportunity_cards").insert({
+            event_candidate_id: eventRow.id,
+            title: o.title.slice(0, 240),
+            opportunity_type: o.opportunity_type,
+            summary: o.summary,
+            buyer_pain: o.buyer_pain,
+            likely_buyers: (o.likely_buyers ?? []).slice(0, 6),
+            affected_sectors: [sector],
+            affected_regions: [region],
+            suggested_offer: o.suggested_offer,
+            urgency_score: clamp01(o.urgency_score),
+            commercial_value_score: clamp01(o.commercial_value_score),
+            confidence: clamp01(o.confidence),
+            evidence_score: Math.min(1, group.length / 5),
+            actionability_score: 0.6,
+            opportunity_logic: o.opportunity_logic,
+            next_best_action: o.next_best_action,
+          }).select().single();
+          oppCard = res.data;
+          if (oppCard && eventNode) {
+            const { data: oppNode } = await db.from("graph_nodes").insert({
+              node_type: "opportunity", ref_type: "opportunity_card", ref_id: oppCard.id,
+              title: o.title.slice(0, 120), summary: o.summary.slice(0, 300),
+              confidence: clamp01(o.confidence),
+              opportunity_score: clamp01(o.commercial_value_score),
+            }).select().single();
+            if (oppNode) {
+              await db.from("graph_edges").insert({
+                source_node_id: eventNode.id, target_node_id: oppNode.id,
+                edge_type: "creates_opportunity", label: "opens", weight: 0.75, confidence: clamp01(o.confidence), evidence_count: 1,
+              });
+            }
+          }
+        }
+      }
+
+      // Strategic positioning example
+      if (normalised.positioning) {
+        const p = normalised.positioning;
+        const g5 = guardFinancialAdvice(`${p.title} ${p.positioning_angle} ${p.how_it_could_be_used} ${p.why_it_may_matter} ${p.constraints}`);
+        if (g5.ok) {
+          await db.from("strategic_positioning").insert({
+            event_candidate_id: eventRow.id,
+            opportunity_card_id: oppCard?.id ?? null,
+            title: p.title.slice(0, 240),
+            user_type: p.user_type,
+            positioning_angle: p.positioning_angle,
+            how_it_could_be_used: p.how_it_could_be_used,
+            why_it_may_matter: p.why_it_may_matter,
+            evidence_summary: `${group.length} atomic claims across ${sourceDiv} source(s); avg reliability ${avgRel.toFixed(2)}.`,
+            confidence: clamp01(p.confidence),
+            constraints: p.constraints,
+          });
+        }
+      }
+
+      // Contradictions surfaced by the model → review queue
+      const contradictionCount = normalised.contradictions.length;
+      for (const c of normalised.contradictions.slice(0, 3)) {
+        await db.from("review_queue").insert({
+          item_type: "contradiction",
+          item_id: eventRow.id,
+          reason: c.slice(0, 400),
+          status: "pending",
+        });
+      }
+
+      // ============ EVIDENCE ARC PERSISTENCE ============
+      // Persist the story-line as an evidence_arc: source(s) → claims → event → impact/opportunity.
+      if (eventNode) {
+        const originStrength = Math.min(1, sourceDiv / 3);
+        const truePotential = clamp01((0.35 * clamp01(ev.risk_score + ev.opportunity_score) / 2) + (0.25 * originStrength) + (0.2 * clamp01(ev.confidence)) + (0.2 * (contradictionCount ? 0 : 0.8)));
+        const { data: arcRow } = await db.from("evidence_arcs").insert({
+          root_node_id: eventNode.id,
+          root_event_candidate_id: eventRow.id,
+          title: ev.title.slice(0, 240),
+          summary: ev.summary?.slice(0, 800) ?? null,
+          max_degrees: 6,
+          true_potential_score: truePotential,
+          confidence: clamp01(ev.confidence),
+          origin_strength: originStrength,
+          source_diversity: Math.min(1, sourceDiv / 4),
+          contradiction_score: Math.min(1, contradictionCount / 3),
+          momentum_score: Math.min(1, group.length / 6),
+        }).select().single();
+
+        if (arcRow) {
+          let degree = 0;
+          for (const [sid, sname] of uniqueSources) {
+            await db.from("evidence_arc_steps").insert({
+              evidence_arc_id: arcRow.id, degree, node_type: "source", node_id: null,
+              relationship_type: "reported_by",
+              explanation: `Reported by ${sname}`,
+              confidence: 0.7, source_count: group.filter((g) => g.source_id === sid).length,
+            });
+          }
+          degree = 1;
+          for (const g of group.slice(0, 6)) {
+            await db.from("evidence_arc_steps").insert({
+              evidence_arc_id: arcRow.id, degree, node_type: "claim", node_id: null,
+              relationship_type: "supports",
+              explanation: g.text.slice(0, 240),
+              confidence: g.reliability, source_count: 1,
+            });
+          }
+          degree = 2;
+          await db.from("evidence_arc_steps").insert({
+            evidence_arc_id: arcRow.id, degree, node_type: "event", node_id: eventNode.id,
+            relationship_type: "supports",
+            explanation: `Event candidate: ${ev.title}`,
+            confidence: clamp01(ev.confidence), source_count: sourceDiv,
+          });
+          degree = 3;
+          for (const im of normalised.impacts.slice(0, 4)) {
+            await db.from("evidence_arc_steps").insert({
+              evidence_arc_id: arcRow.id, degree, node_type: "company", node_id: null,
+              relationship_type: im.impact_type === "beneficiary" ? "creates_opportunity" : (im.impact_type === "harmed" ? "exposes" : "affects"),
+              explanation: `${im.company}: ${im.pathway}`.slice(0, 240),
+              confidence: clamp01(im.confidence), source_count: 1,
+            });
+          }
+          if (normalised.opportunity) {
+            await db.from("evidence_arc_steps").insert({
+              evidence_arc_id: arcRow.id, degree: 4, node_type: "opportunity", node_id: null,
+              relationship_type: "creates_opportunity",
+              explanation: `${normalised.opportunity.title}: ${normalised.opportunity.summary ?? ""}`.slice(0, 240),
+              confidence: clamp01(normalised.opportunity.confidence), source_count: 1,
+            });
+          }
+        }
+      }
+
+      // ============ WATCHLIST → ALERT MATCHING ============
+      const { data: watchlists } = await db.from("watchlists").select("*");
+      for (const w of watchlists ?? []) {
+        const sectorMatch = !w.sectors?.length || w.sectors.map((x: string) => x.toLowerCase()).includes(sector);
+        const regionMatch = !w.regions?.length || w.regions.map((x: string) => x.toLowerCase()).includes((region ?? "").toLowerCase());
+        const kw = (w.keywords ?? []) as string[];
+        const hay = `${ev.title} ${ev.summary} ${sector} ${region}`.toLowerCase();
+        const kwMatch = !kw.length || kw.some((k) => hay.includes(k.toLowerCase()));
+        const scoreMatch =
+          Number(ev.risk_score) >= Number(w.min_risk ?? 0) &&
+          Number(ev.opportunity_score) >= Number(w.min_opportunity ?? 0) &&
+          Number(ev.confidence) >= Number(w.min_confidence ?? 0);
+        if (sectorMatch && regionMatch && kwMatch && scoreMatch) {
+          const parts: string[] = [];
+          if (kw.length) parts.push(`keywords: ${kw.filter((k) => hay.includes(k.toLowerCase())).join(", ")}`);
+          if (w.sectors?.length) parts.push(`sector ${sector}`);
+          if (w.regions?.length) parts.push(`region ${region}`);
+          await db.from("alerts").upsert({
+            user_id: w.user_id,
+            watchlist_id: w.id,
+            event_candidate_id: eventRow.id,
+            reason: `Matched watchlist "${w.name}" · ${parts.join(" · ") || "score thresholds"}`,
+            severity: Number(ev.risk_score) >= 0.7 ? "high" : (Number(ev.opportunity_score) >= 0.7 ? "info" : "low"),
+            seen: false,
+          }, { onConflict: "watchlist_id,event_candidate_id" });
+        }
+      }
+
+      await saveProgress(`Synthesised event from cluster ${key}.`);
+    } catch (err) {
+      notes.push(`Synthesis cluster ${key} failed: ${err instanceof Error ? err.message : String(err)}`);
+      evCounts.skipped++;
+      await saveProgress();
+    }
+  }
+}
+
 export async function runScanImpl() {
   const db = await admin();
   const settings = await loadScanSettings();
@@ -151,8 +607,7 @@ export async function runScanImpl() {
   notes.push(`Scan settings — sources:${settings.sources_per_scan} items/feed:${settings.items_per_feed} bucketing:${settings.bucketing_strategy} merge_cos:${settings.cluster_merge_cosine} copy_j:${settings.copy_loop_jaccard} min_evidence:${settings.min_evidence_count} min_diversity:${settings.min_source_diversity} min_conf:${settings.min_confidence}${settings.max_claims_per_cluster ? ` max_claims:${settings.max_claims_per_cluster}` : ""}`);
   let documentsCollected = 0;
   let atomicClaimsCreated = 0;
-  let eventsCreated = 0;
-  let eventsSkipped = 0;
+  const evCounts = { created: 0, skipped: 0 };
   let sourcesAttempted = 0;
   let sourcesSucceeded = 0;
   let sourcesFailed = 0;
@@ -167,7 +622,7 @@ export async function runScanImpl() {
 
   const hasBudget = () => Date.now() < deadlineAtMs;
   const saveProgress = async (extraNote?: string) => {
-    const progressSummary = `Progress — docs:${documentsCollected} claims:${atomicClaimsCreated} events:${eventsCreated} skipped:${eventsSkipped}`;
+    const progressSummary = `Progress — docs:${documentsCollected} claims:${atomicClaimsCreated} events:${evCounts.created} skipped:${evCounts.skipped}`;
     const compactNotes = [progressSummary, ...notes.slice(-14), ...(extraNote ? [extraNote] : [])].join(" | ").slice(0, 2000);
     await db.from("scan_runs").update({
       sources_attempted: sourcesAttempted,
@@ -175,29 +630,12 @@ export async function runScanImpl() {
       sources_failed: sourcesFailed,
       documents_collected: documentsCollected,
       atomic_claims_created: atomicClaimsCreated,
-      events_created: eventsCreated,
+      events_created: evCounts.created,
       notes: compactNotes,
     }).eq("id", run.id);
   };
 
   // Track new atomic claims collected this scan for downstream clustering
-  interface NewClaim {
-    id: string;
-    text: string;
-    type: string;
-    sectors: string[];
-    regions: string[];
-    entities: string[];
-    commodities: string[];
-    canonical_id: string | null;
-    source_id: string;
-    source_name: string;
-    source_group: string;
-    reliability: number;
-    doc_id: string;
-    doc_url: string;
-    embedding: number[] | null;
-  }
   const newClaims: NewClaim[] = [];
 
   // Load a small window of recent doc signatures for copy-loop detection.
@@ -443,428 +881,12 @@ export async function runScanImpl() {
 
 
 
-  // ============ SYNTHESIS PHASE ============
-  // Semantic clustering: seed buckets by configurable strategy, then merge
-  // buckets whose embedding centroids exceed the configured cosine threshold.
-  const seedClusters = new Map<string, NewClaim[]>();
-  for (const c of newClaims) {
-    const sector = (c.sectors[0] ?? "general").toLowerCase();
-    let key: string;
-    if (settings.bucketing_strategy === "type") key = c.type;
-    else if (settings.bucketing_strategy === "sector") key = sector;
-    else key = `${c.type}::${sector}`;
-    const bucket = seedClusters.get(key) ?? [];
-    bucket.push(c);
-    seedClusters.set(key, bucket);
-  }
-  const clusterEntries: Array<{ key: string; members: NewClaim[]; centroid: number[] | null }> = [];
-  for (const [key, members] of seedClusters) {
-    const vecs = members.map((m) => m.embedding).filter((v): v is number[] => Array.isArray(v));
-    clusterEntries.push({ key, members, centroid: centroid(vecs) });
-  }
-  const mergeThreshold = settings.cluster_merge_cosine;
-  const preMerge: typeof clusterEntries = [];
-  for (const cluster of clusterEntries) {
-    const target = preMerge.find((m) => m.centroid && cluster.centroid && cosine(m.centroid, cluster.centroid) >= mergeThreshold);
-    if (target) {
-      target.members = target.members.concat(cluster.members);
-      const vecs = target.members.map((m) => m.embedding).filter((v): v is number[] => Array.isArray(v));
-      target.centroid = centroid(vecs);
-      target.key = `${target.key}+${cluster.key}`;
-    } else {
-      preMerge.push({ ...cluster });
-    }
-  }
-
-  // Optional: split oversized clusters by region-then-entity so one big bucket
-  // can produce multiple events instead of collapsing into one.
-  const merged: typeof clusterEntries = [];
-  const maxPer = settings.max_claims_per_cluster;
-  for (const cluster of preMerge) {
-    if (!maxPer || cluster.members.length <= maxPer) { merged.push(cluster); continue; }
-    const byRegion = new Map<string, NewClaim[]>();
-    for (const m of cluster.members) {
-      const rk = (m.regions[0] ?? m.entities[0] ?? "global").toLowerCase();
-      const list = byRegion.get(rk) ?? [];
-      list.push(m);
-      byRegion.set(rk, list);
-    }
-    let idx = 0;
-    for (const [rk, members] of byRegion) {
-      const vecs = members.map((m) => m.embedding).filter((v): v is number[] => Array.isArray(v));
-      merged.push({ key: `${cluster.key}#${rk}`, members, centroid: centroid(vecs) });
-      idx++;
-    }
-    notes.push(`Split oversized cluster ${cluster.key} (${cluster.members.length} claims) into ${idx} sub-clusters.`);
-  }
-
-  const prioritisedClusters = merged
-    .map((cluster) => {
-      const sourceCount = new Set(cluster.members.map((m) => m.source_group || m.source_id)).size;
-      const avgReliability = cluster.members.reduce((a, m) => a + m.reliability, 0) / Math.max(1, cluster.members.length);
-      return { ...cluster, score: (sourceCount * 4) + cluster.members.length + avgReliability };
-    })
-    .sort((a, b) => b.score - a.score)
-    .slice(0, MAX_SYNTHESIS_CLUSTERS_PER_SCAN);
-  if (merged.length > prioritisedClusters.length) {
-    notes.push(`Prioritised ${prioritisedClusters.length}/${merged.length} clusters for this scan to keep runtime bounded.`);
-  }
-
-  for (const { key, members: group } of prioritisedClusters) {
-    if (!hasBudget()) {
-      notes.push("Stopped synthesis early: scan runtime budget reached; partial results saved.");
-      break;
-    }
-    try {
-      const primaryType = group[0].type;
-      const primarySector = (group[0].sectors[0] ?? "general").toLowerCase();
-      const region = group.find((g) => g.regions.length)?.regions[0] ?? "global";
-      const entities = Array.from(new Set(group.flatMap((g) => g.entities))).slice(0, 6);
-      const commodities = Array.from(new Set(group.flatMap((g) => g.commodities))).slice(0, 4);
-      const avgRel = group.reduce((a, g) => a + g.reliability, 0) / group.length;
-      const sourceDiv = new Set(group.map((g) => g.source_group || g.source_id)).size;
-      const type = primaryType;
-      const sector = primarySector;
-
-      // Ask model to synthesize an event candidate + impacts + opportunity + positioning
-      const synth = await callJson<{
-        event: { title: string; event_type: string; event_class: "risk"|"opportunity"|"mixed"|"watch"|"unknown"; summary: string; severity: "low"|"moderate"|"high"|"critical"; probability: number; confidence: number; risk_score: number; opportunity_score: number };
-        impacts: Array<{ company: string; impact_type: "beneficiary"|"harmed"|"mixed"|"exposed"|"watch_only"|"unknown"; pathway: string; risk_score: number; opportunity_score: number; watch_signals: string[]; confidence: number }>;
-        opportunity: { title: string; opportunity_type: string; summary: string; buyer_pain: string; likely_buyers: string[]; suggested_offer: string; urgency_score: number; commercial_value_score: number; confidence: number; opportunity_logic: string; next_best_action: string } | null;
-        positioning: { title: string; user_type: string; positioning_angle: string; how_it_could_be_used: string; why_it_may_matter: string; constraints: string; confidence: number } | null;
-        contradictions: string[];
-      }>({
-        task: "company_impact_analysis",
-        model: "google/gemini-2.5-flash",
-        maxTokens: 2200,
-        system: "You are Arklight scan synthesis. Return ONLY strict JSON. Required shape: {\"event\":{\"title\":string,\"event_type\":string,\"event_class\":\"risk\"|\"opportunity\"|\"mixed\"|\"watch\"|\"unknown\",\"summary\":string,\"severity\":\"low\"|\"moderate\"|\"high\"|\"critical\",\"probability\":number,\"confidence\":number,\"risk_score\":number,\"opportunity_score\":number},\"impacts\":[{\"company\":string,\"impact_type\":\"beneficiary\"|\"harmed\"|\"mixed\"|\"exposed\"|\"watch_only\"|\"unknown\",\"pathway\":string,\"risk_score\":number,\"opportunity_score\":number,\"watch_signals\":string[],\"confidence\":number}],\"opportunity\":object|null,\"positioning\":object|null,\"contradictions\":string[]}. Be hedged (may, could, appears). NEVER give financial advice: no buy/sell/hold, no target price, no portfolio allocation.",
-        user: `Cluster type: ${type}. Sector: ${sector}. Region: ${region}. Entities: ${entities.join(", ") || "n/a"}. Commodities: ${commodities.join(", ") || "n/a"}. Sources: ${group.length} claims from ${sourceDiv} distinct publisher(s), avg reliability ${avgRel.toFixed(2)}.\n\nClaims:\n${group.map((g, i) => `[${i+1}] (${g.source_name}) ${g.text}`).join("\n")}\n\nReturn JSON with keys: event, impacts (array), opportunity (or null), positioning (or null), contradictions (array of strings).`,
-      });
-      await logTask(db, "company_impact_analysis", synth, `cluster:${key}`);
-
-      if (!synth.ok || !synth.data?.event) {
-        const reason = !synth.ok
-          ? `synth call failed (${synth.error ?? "unknown"})`
-          : "synth returned no event object";
-        notes.push(`Synthesis dropped (${key}, ${group.length} claims / ${new Set(group.map((g) => g.source_group || g.source_id)).size} publisher(s)): ${reason}`);
-        eventsSkipped++;
-        continue;
-      }
-      const guardE = guardFinancialAdvice(JSON.stringify(synth.data));
-      if (!guardE.ok) {
-        notes.push(`Synthesis rejected (${key}): ${guardE.violations.join(", ")}`);
-        eventsSkipped++;
-        continue;
-      }
-      const normalised = normaliseSynthesis(synth.data, {
-        key,
-        type,
-        sector,
-        region,
-        entities,
-        commodities,
-        claimCount: group.length,
-        sourceCount: sourceDiv,
-        avgReliability: avgRel,
-      });
-      if (!normalised) {
-        notes.push(`Synthesis dropped (${key}, ${group.length} claims / ${sourceDiv} src): unusable model shape`);
-        eventsSkipped++;
-        continue;
-      }
-
-      const ev = normalised.event;
-      const diversity = Math.min(1, sourceDiv / 3);
-      const evConf = clamp01(ev.confidence);
-      if (group.length < settings.min_evidence_count) {
-        notes.push(`Skipped event (${key}): evidence_count ${group.length} < min ${settings.min_evidence_count}`);
-        eventsSkipped++;
-        continue;
-      }
-      if (diversity < settings.min_source_diversity) {
-        notes.push(`Skipped event (${key}): source_diversity ${diversity.toFixed(2)} < min ${settings.min_source_diversity}`);
-        eventsSkipped++;
-        continue;
-      }
-      if (evConf < settings.min_confidence) {
-        notes.push(`Skipped event (${key}): confidence ${evConf.toFixed(2)} < min ${settings.min_confidence}`);
-        eventsSkipped++;
-        continue;
-      }
-      const { data: eventRow } = await db.from("event_candidates").insert({
-        title: ev.title.slice(0, 240),
-        event_type: ev.event_type,
-        event_class: ev.event_class,
-        summary: ev.summary,
-        status: "new",
-        severity: ev.severity,
-        probability: clamp01(ev.probability),
-        confidence: clamp01(ev.confidence),
-        affected_sector: sector,
-        affected_region: region,
-        evidence_count: group.length,
-        source_diversity_score: Math.min(1, sourceDiv / 3),
-        signal_strength: Math.min(1, group.length / 5),
-        novelty_score: 0.6,
-        opportunity_score: clamp01(ev.opportunity_score),
-        risk_score: clamp01(ev.risk_score),
-        created_from_scan_run_id: run.id,
-      }).select().single();
-      if (!eventRow) continue;
-      eventsCreated++;
-
-      // Graph: event node
-      const { data: eventNode } = await db.from("graph_nodes").insert({
-        node_type: "event", ref_type: "event_candidate", ref_id: eventRow.id,
-        title: ev.title.slice(0, 120), summary: ev.summary?.slice(0, 400) ?? null,
-        confidence: clamp01(ev.confidence),
-        risk_score: clamp01(ev.risk_score),
-        opportunity_score: clamp01(ev.opportunity_score),
-        impact_score: (clamp01(ev.risk_score) + clamp01(ev.opportunity_score)) / 2,
-      }).select().single();
-
-      // Source nodes + edges to event
-      const uniqueSources = new Map<string, string>();
-      for (const g of group) uniqueSources.set(g.source_id, g.source_name);
-      for (const [sid, sname] of uniqueSources) {
-        const { data: srcNode } = await db.from("graph_nodes").insert({
-          node_type: "source", ref_type: "source", ref_id: sid,
-          title: sname.slice(0, 120), confidence: 0.7,
-        }).select().single();
-        if (srcNode && eventNode) {
-          await db.from("graph_edges").insert({
-            source_node_id: srcNode.id, target_node_id: eventNode.id,
-            edge_type: "reported_by", label: "reported", weight: 0.6, confidence: 0.7, evidence_count: group.filter((g) => g.source_id === sid).length,
-          });
-        }
-      }
-
-      // Claim nodes + edges
-      for (const g of group.slice(0, 5)) {
-        if (!g.canonical_id) continue;
-        const { data: claimNode } = await db.from("graph_nodes").insert({
-          node_type: "claim", ref_type: "canonical_claim", ref_id: g.canonical_id,
-          title: g.text.slice(0, 120), confidence: g.reliability,
-        }).select().single();
-        if (claimNode && eventNode) {
-          await db.from("graph_edges").insert({
-            source_node_id: claimNode.id, target_node_id: eventNode.id,
-            edge_type: "supports", label: "supports", weight: g.reliability, confidence: g.reliability, evidence_count: 1,
-          });
-        }
-      }
-
-      // Company impacts
-      for (const im of normalised.impacts.slice(0, 8)) {
-        const g3 = guardFinancialAdvice(im.pathway);
-        if (!g3.ok) continue;
-        const { data: impactRow } = await db.from("company_impacts").insert({
-          event_candidate_id: eventRow.id,
-          company_name: im.company.slice(0, 200),
-          impact_type: im.impact_type,
-          impact_pathway: im.pathway,
-          confidence: clamp01(im.confidence),
-          risk_score: clamp01(im.risk_score),
-          opportunity_score: clamp01(im.opportunity_score),
-          watch_signals: (im.watch_signals ?? []).slice(0, 6),
-          evidence_ids: group.map((g) => g.id).slice(0, 10),
-        }).select().single();
-
-        // Company graph node + edge
-        const { data: coNode } = await db.from("graph_nodes").insert({
-          node_type: "company", ref_type: "company_impact", ref_id: impactRow?.id ?? null,
-          title: im.company.slice(0, 120), summary: im.pathway.slice(0, 300),
-          confidence: clamp01(im.confidence),
-          risk_score: clamp01(im.risk_score),
-          opportunity_score: clamp01(im.opportunity_score),
-        }).select().single();
-        if (coNode && eventNode) {
-          const edgeType = im.impact_type === "beneficiary" ? "creates_opportunity" : im.impact_type === "harmed" ? "exposes" : "affects";
-          await db.from("graph_edges").insert({
-            source_node_id: eventNode.id, target_node_id: coNode.id,
-            edge_type: edgeType, label: im.impact_type, weight: 0.7, confidence: clamp01(im.confidence), evidence_count: 1,
-          });
-        }
-      }
-
-      // Opportunity card
-      let oppCard: { id: string } | null = null;
-      if (normalised.opportunity) {
-        const o = normalised.opportunity;
-        const g4 = guardFinancialAdvice(`${o.title} ${o.summary} ${o.suggested_offer} ${o.next_best_action}`);
-        if (g4.ok) {
-          const res = await db.from("opportunity_cards").insert({
-            event_candidate_id: eventRow.id,
-            title: o.title.slice(0, 240),
-            opportunity_type: o.opportunity_type,
-            summary: o.summary,
-            buyer_pain: o.buyer_pain,
-            likely_buyers: (o.likely_buyers ?? []).slice(0, 6),
-            affected_sectors: [sector],
-            affected_regions: [region],
-            suggested_offer: o.suggested_offer,
-            urgency_score: clamp01(o.urgency_score),
-            commercial_value_score: clamp01(o.commercial_value_score),
-            confidence: clamp01(o.confidence),
-            evidence_score: Math.min(1, group.length / 5),
-            actionability_score: 0.6,
-            opportunity_logic: o.opportunity_logic,
-            next_best_action: o.next_best_action,
-          }).select().single();
-          oppCard = res.data;
-          if (oppCard && eventNode) {
-            const { data: oppNode } = await db.from("graph_nodes").insert({
-              node_type: "opportunity", ref_type: "opportunity_card", ref_id: oppCard.id,
-              title: o.title.slice(0, 120), summary: o.summary.slice(0, 300),
-              confidence: clamp01(o.confidence),
-              opportunity_score: clamp01(o.commercial_value_score),
-            }).select().single();
-            if (oppNode) {
-              await db.from("graph_edges").insert({
-                source_node_id: eventNode.id, target_node_id: oppNode.id,
-                edge_type: "creates_opportunity", label: "opens", weight: 0.75, confidence: clamp01(o.confidence), evidence_count: 1,
-              });
-            }
-          }
-        }
-      }
-
-      // Strategic positioning example
-      if (normalised.positioning) {
-        const p = normalised.positioning;
-        const g5 = guardFinancialAdvice(`${p.title} ${p.positioning_angle} ${p.how_it_could_be_used} ${p.why_it_may_matter} ${p.constraints}`);
-        if (g5.ok) {
-          await db.from("strategic_positioning").insert({
-            event_candidate_id: eventRow.id,
-            opportunity_card_id: oppCard?.id ?? null,
-            title: p.title.slice(0, 240),
-            user_type: p.user_type,
-            positioning_angle: p.positioning_angle,
-            how_it_could_be_used: p.how_it_could_be_used,
-            why_it_may_matter: p.why_it_may_matter,
-            evidence_summary: `${group.length} atomic claims across ${sourceDiv} source(s); avg reliability ${avgRel.toFixed(2)}.`,
-            confidence: clamp01(p.confidence),
-            constraints: p.constraints,
-          });
-        }
-      }
-
-      // Contradictions surfaced by the model → review queue
-      const contradictionCount = normalised.contradictions.length;
-      for (const c of normalised.contradictions.slice(0, 3)) {
-        await db.from("review_queue").insert({
-          item_type: "contradiction",
-          item_id: eventRow.id,
-          reason: c.slice(0, 400),
-          status: "pending",
-        });
-      }
-
-      // ============ EVIDENCE ARC PERSISTENCE ============
-      // Persist the story-line as an evidence_arc: source(s) → claims → event → impact/opportunity.
-      if (eventNode) {
-        const originStrength = Math.min(1, sourceDiv / 3);
-        const truePotential = clamp01((0.35 * clamp01(ev.risk_score + ev.opportunity_score) / 2) + (0.25 * originStrength) + (0.2 * clamp01(ev.confidence)) + (0.2 * (contradictionCount ? 0 : 0.8)));
-        const { data: arcRow } = await db.from("evidence_arcs").insert({
-          root_node_id: eventNode.id,
-          root_event_candidate_id: eventRow.id,
-          title: ev.title.slice(0, 240),
-          summary: ev.summary?.slice(0, 800) ?? null,
-          max_degrees: 6,
-          true_potential_score: truePotential,
-          confidence: clamp01(ev.confidence),
-          origin_strength: originStrength,
-          source_diversity: Math.min(1, sourceDiv / 4),
-          contradiction_score: Math.min(1, contradictionCount / 3),
-          momentum_score: Math.min(1, group.length / 6),
-        }).select().single();
-
-        if (arcRow) {
-          let degree = 0;
-          for (const [sid, sname] of uniqueSources) {
-            await db.from("evidence_arc_steps").insert({
-              evidence_arc_id: arcRow.id, degree, node_type: "source", node_id: null,
-              relationship_type: "reported_by",
-              explanation: `Reported by ${sname}`,
-              confidence: 0.7, source_count: group.filter((g) => g.source_id === sid).length,
-            });
-          }
-          degree = 1;
-          for (const g of group.slice(0, 6)) {
-            await db.from("evidence_arc_steps").insert({
-              evidence_arc_id: arcRow.id, degree, node_type: "claim", node_id: null,
-              relationship_type: "supports",
-              explanation: g.text.slice(0, 240),
-              confidence: g.reliability, source_count: 1,
-            });
-          }
-          degree = 2;
-          await db.from("evidence_arc_steps").insert({
-            evidence_arc_id: arcRow.id, degree, node_type: "event", node_id: eventNode.id,
-            relationship_type: "supports",
-            explanation: `Event candidate: ${ev.title}`,
-            confidence: clamp01(ev.confidence), source_count: sourceDiv,
-          });
-          degree = 3;
-          for (const im of normalised.impacts.slice(0, 4)) {
-            await db.from("evidence_arc_steps").insert({
-              evidence_arc_id: arcRow.id, degree, node_type: "company", node_id: null,
-              relationship_type: im.impact_type === "beneficiary" ? "creates_opportunity" : (im.impact_type === "harmed" ? "exposes" : "affects"),
-              explanation: `${im.company}: ${im.pathway}`.slice(0, 240),
-              confidence: clamp01(im.confidence), source_count: 1,
-            });
-          }
-          if (normalised.opportunity) {
-            await db.from("evidence_arc_steps").insert({
-              evidence_arc_id: arcRow.id, degree: 4, node_type: "opportunity", node_id: null,
-              relationship_type: "creates_opportunity",
-              explanation: `${normalised.opportunity.title}: ${normalised.opportunity.summary ?? ""}`.slice(0, 240),
-              confidence: clamp01(normalised.opportunity.confidence), source_count: 1,
-            });
-          }
-        }
-      }
-
-      // ============ WATCHLIST → ALERT MATCHING ============
-      const { data: watchlists } = await db.from("watchlists").select("*");
-      for (const w of watchlists ?? []) {
-        const sectorMatch = !w.sectors?.length || w.sectors.map((x: string) => x.toLowerCase()).includes(sector);
-        const regionMatch = !w.regions?.length || w.regions.map((x: string) => x.toLowerCase()).includes((region ?? "").toLowerCase());
-        const kw = (w.keywords ?? []) as string[];
-        const hay = `${ev.title} ${ev.summary} ${sector} ${region}`.toLowerCase();
-        const kwMatch = !kw.length || kw.some((k) => hay.includes(k.toLowerCase()));
-        const scoreMatch =
-          Number(ev.risk_score) >= Number(w.min_risk ?? 0) &&
-          Number(ev.opportunity_score) >= Number(w.min_opportunity ?? 0) &&
-          Number(ev.confidence) >= Number(w.min_confidence ?? 0);
-        if (sectorMatch && regionMatch && kwMatch && scoreMatch) {
-          const parts: string[] = [];
-          if (kw.length) parts.push(`keywords: ${kw.filter((k) => hay.includes(k.toLowerCase())).join(", ")}`);
-          if (w.sectors?.length) parts.push(`sector ${sector}`);
-          if (w.regions?.length) parts.push(`region ${region}`);
-          await db.from("alerts").upsert({
-            user_id: w.user_id,
-            watchlist_id: w.id,
-            event_candidate_id: eventRow.id,
-            reason: `Matched watchlist "${w.name}" · ${parts.join(" · ") || "score thresholds"}`,
-            severity: Number(ev.risk_score) >= 0.7 ? "high" : (Number(ev.opportunity_score) >= 0.7 ? "info" : "low"),
-            seen: false,
-          }, { onConflict: "watchlist_id,event_candidate_id" });
-        }
-      }
-
-      await saveProgress(`Synthesised event from cluster ${key}.`);
-    } catch (err) {
-      notes.push(`Synthesis cluster ${key} failed: ${err instanceof Error ? err.message : String(err)}`);
-      eventsSkipped++;
-      await saveProgress();
-    }
-  }
+  await synthesizeClaimsIntoEvents(db, newClaims, settings, { runId: run.id, deadlineAtMs, notes, evCounts, saveProgress });
 
   const status = sourcesFailed > 0 ? "completed_with_errors" : "completed";
   // Prepend a compact summary + skip counters so the truncated `notes` column
   // still shows *why* events=0 even when hundreds of collection notes follow.
-  const summary = `Result — docs:${documentsCollected} claims:${atomicClaimsCreated} events:${eventsCreated} skipped:${eventsSkipped} bodies:${fetchedBodies}`;
+  const summary = `Result — docs:${documentsCollected} claims:${atomicClaimsCreated} events:${evCounts.created} skipped:${evCounts.skipped} bodies:${fetchedBodies}`;
   const joined = [summary, ...notes].join(" | ");
   // Keep the TAIL when we have to truncate — synth-drop / skip reasons are
   // appended later in the run and are the most useful diagnostic.
@@ -878,7 +900,7 @@ export async function runScanImpl() {
     sources_failed: sourcesFailed,
     documents_collected: documentsCollected,
     atomic_claims_created: atomicClaimsCreated,
-    events_created: eventsCreated,
+    events_created: evCounts.created,
     notes: packed.slice(0, 2000),
   }).eq("id", run.id);
 
@@ -1048,8 +1070,8 @@ export async function runScanImpl() {
     fetched_bodies: fetchedBodies,
 
     atomic_claims_created: atomicClaimsCreated,
-    events_created: eventsCreated,
-    events_skipped: eventsSkipped,
+    events_created: evCounts.created,
+    events_skipped: evCounts.skipped,
     precognition_processed: precogProcessed,
     predictions_frozen: predictionsFrozen,
     predictions_resolved: predictionsResolved,
