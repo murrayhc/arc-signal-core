@@ -1735,12 +1735,18 @@ async function fetchGoogleNews(query: string, limit = 8): Promise<Omit<LiveNewsI
   const url = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`;
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 7000);
+    const timeout = setTimeout(() => controller.abort(), 15000);
     let xml = "";
     try {
       const res = await fetch(url, {
         signal: controller.signal,
-        headers: { "User-Agent": "ArklightBot/0.1 (+public-signals)" },
+        redirect: "follow",
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+          Accept: "application/rss+xml, application/xml, text/xml, */*",
+          "Accept-Language": "en-US,en;q=0.9",
+        },
       });
       if (!res.ok) return [];
       xml = await res.text();
