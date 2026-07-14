@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Crosshair, Plus, Trash2, Check, X, Pencil, Radio } from "lucide-react";
+import { Crosshair, Plus, Trash2, Check, X, Pencil, Radio, Radar } from "lucide-react";
 import { AppShell } from "@/components/archlight/AppShell";
 import {
   addExposureItem,
@@ -12,6 +12,8 @@ import {
   removeExposureItem,
   updateExposureProfile,
 } from "@/lib/archlight/exposure.functions";
+import { scanMyItems } from "@/lib/archlight/pipeline.functions";
+import { getMyQuotas } from "@/lib/archlight/quota.functions";
 
 export const Route = createFileRoute("/exposures")({
   head: () => ({
@@ -57,6 +59,7 @@ function ExposuresPage() {
           <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
             Tell Arklight what you hold or care about. Every synthesised event is scored against these items, and the "why this matters to you" rail is built from those matches.
           </p>
+          <div className="mt-3"><ScanMyItemsButton /></div>
           <div className="mt-3">
             <Link
               to="/settings/delivery"
@@ -289,5 +292,86 @@ function ItemRow({ item, onRemoved }: { item: ProfileWithItems["items"][number];
         </button>
       </div>
     </li>
+  );
+}
+
+// DRAFT COPY — owner sign-off needed before final (SR4).
+function ScanMyItemsButton() {
+  const qc = useQueryClient();
+  const [confirming, setConfirming] = useState(false);
+  const { data: quotas } = useQuery({
+    queryKey: ["quota", "myQuotas"],
+    queryFn: () => getMyQuotas(),
+    staleTime: 30_000,
+  });
+  const scanQuota = quotas?.find((q) => q.action === "scan_my_items");
+  const remaining = scanQuota?.remaining ?? null;
+  const atLimit = !!scanQuota && scanQuota.remaining <= 0;
+
+  const scan = useMutation({
+    mutationFn: () => scanMyItems(),
+    onSuccess: (r) => {
+      setConfirming(false);
+      if (r.status === "no_items") {
+        toast.message("Nothing to scan yet", { description: r.notes[0] ?? "Add items to your book first." });
+      } else {
+        toast.success("Scan complete", {
+          description: `${r.events_created} new events · ${r.hits_created} matched to your items · ${r.scans_remaining} scans left today`,
+        });
+      }
+      qc.invalidateQueries({ queryKey: ["quota"] });
+      qc.invalidateQueries({ queryKey: ["exposures"] });
+    },
+    onError: (e) => {
+      setConfirming(false);
+      toast.error("Scan failed", { description: e instanceof Error ? e.message : String(e) });
+    },
+  });
+
+  if (confirming) {
+    return (
+      <div className="glass-panel rounded-xl border border-[color:var(--color-signal)]/40 p-4 max-w-xl">
+        <p className="text-sm text-foreground/90">
+          This scans only what's on your list right now. Add every company, holding, sector and
+          watchlist item you want covered before you run it.
+          {remaining !== null && <> You have <span className="font-medium">{remaining}</span> scans left today.</>}
+        </p>
+        <div className="mt-3 flex items-center gap-2">
+          <button
+            onClick={() => scan.mutate()}
+            disabled={scan.isPending}
+            className="h-8 px-3 rounded-md text-xs bg-[color:var(--color-signal)]/15 border border-[color:var(--color-signal)]/60 text-[color:var(--color-signal)] hover:bg-[color:var(--color-signal)]/25 disabled:opacity-50 flex items-center gap-1.5"
+          >
+            <Radar className="h-3.5 w-3.5" />{scan.isPending ? "Scanning…" : "Scan now"}
+          </button>
+          <button
+            onClick={() => setConfirming(false)}
+            disabled={scan.isPending}
+            className="h-8 px-3 rounded-md text-xs border border-border/60 text-muted-foreground hover:text-foreground hover:bg-accent/40 disabled:opacity-50"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-3 flex-wrap">
+      <button
+        onClick={() => setConfirming(true)}
+        disabled={atLimit || scan.isPending}
+        className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md text-xs border border-[color:var(--color-signal)]/60 text-[color:var(--color-signal)] hover:bg-[color:var(--color-signal)]/10 ring-signal disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        <Radar className="h-3.5 w-3.5" />{scan.isPending ? "Scanning…" : "Scan my items"}
+      </button>
+      {remaining !== null && (
+        <span className="text-[11px] font-mono text-muted-foreground">
+          {atLimit
+            ? `No scans left today · resets midnight GMT${scanQuota?.tier === "free" ? " · Pro gets more" : ""}`
+            : `${remaining} scan${remaining === 1 ? "" : "s"} left today`}
+        </span>
+      )}
+    </div>
   );
 }

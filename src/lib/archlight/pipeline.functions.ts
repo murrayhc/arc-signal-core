@@ -1,6 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireAdmin } from "@/lib/archlight/require-admin.server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import type { IngestSource } from "./ingest.server";
+import { assertWithinQuota } from "./quota.functions";
 import { z } from "zod";
 import { callAI, callJson, guardFinancialAdvice, pickModel } from "./ai-gateway.server";
 import { shingles, cosine, centroid, fetchFeed } from "./text.server";
@@ -1126,6 +1128,175 @@ export async function runScanImpl() {
 }
 
 export const runScan = createServerFn({ method: "POST" }).middleware([requireAdmin]).handler(async () => runScanImpl());
+
+// Fixed id of the "Member on-demand scan" source (seeded via migration) that
+// member-triggered fetches attribute their documents to.
+const MEMBER_SCAN_SOURCE_ID = "512a216f-ddc2-443b-95e9-a5443d92fba6";
+const MEMBER_SCAN_MAX_ENTITIES = 20;
+const MEMBER_SCAN_FETCH_BUDGET = 24;
+const MEMBER_SCAN_RUNTIME_MS = 3 * 60 * 1000;
+
+export interface ScanMyItemsResult {
+  status: string;
+  entities_scanned: number;
+  documents_collected: number;
+  events_created: number;
+  hits_created: number;
+  scans_remaining: number;
+  notes: string[];
+}
+
+// Member "Scan my items": fetch fresh news for the caller's tracked entities,
+// fold it into the shared graph (reusing the global synthesis), then re-score
+// their exposures. Quota-gated per tier via quota.functions.
+export const scanMyItems = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<ScanMyItemsResult> => {
+    const userId = context.userId as string;
+    const quota = await assertWithinQuota(userId, "scan_my_items"); // throws QUOTA:… if over
+    const db = await admin();
+
+    const { data: rawItems } = await db
+      .from("exposure_items")
+      .select("name, kind")
+      .eq("user_id", userId)
+      .limit(MEMBER_SCAN_MAX_ENTITIES);
+    const entities = (rawItems ?? []).filter((i) => (i.name ?? "").trim().length > 0);
+    if (entities.length === 0) {
+      return {
+        status: "no_items",
+        entities_scanned: 0,
+        documents_collected: 0,
+        events_created: 0,
+        hits_created: 0,
+        scans_remaining: quota.remaining,
+        notes: ["Add book or watchlist items before scanning."],
+      };
+    }
+
+    const memberSource: IngestSource = {
+      id: MEMBER_SCAN_SOURCE_ID,
+      name: "Member on-demand scan",
+      reliability_score: 0.5,
+      base_url: null,
+      feed_url: null,
+      is_synthetic: false,
+      independence_group: null,
+    };
+
+    const settings = await loadScanSettings();
+    const { data: run } = await db
+      .from("scan_runs")
+      .insert({ status: "running", started_at: new Date().toISOString(), triggered_by: userId, trigger_kind: "member_scoped" })
+      .select()
+      .single();
+    if (!run) throw new Error("Failed to open member scan run");
+
+    const notes: string[] = [];
+    const evCounts = { created: 0, skipped: 0 };
+    const newClaims: NewClaim[] = [];
+    let documentsCollected = 0;
+    const bodyBudget = { remaining: MEMBER_SCAN_FETCH_BUDGET };
+    // Reserve ~40% of the runtime for synthesis so collection can't starve it
+    // (same guard as the global scan).
+    const startMs = Date.now();
+    const collectionDeadlineAtMs = startMs + Math.floor(MEMBER_SCAN_RUNTIME_MS * 0.6);
+    const deadlineAtMs = startMs + MEMBER_SCAN_RUNTIME_MS;
+    const hasBudget = () => Date.now() < collectionDeadlineAtMs;
+
+    const { data: recentDocs } = await db
+      .from("documents")
+      .select("id, title, body, full_text, shingle_signature")
+      .order("fetched_at", { ascending: false })
+      .limit(80);
+    const recentShingleSets = (recentDocs ?? []).map((d) => ({
+      id: d.id,
+      s: shingles(`${d.title ?? ""} ${(d.full_text ?? d.body) ?? ""}`, 5),
+      sig: d.shingle_signature as string | null,
+    }));
+
+    const { ingestDocument } = await import("./ingest.server");
+    for (const entity of entities) {
+      if (!hasBudget() || bodyBudget.remaining <= 0) {
+        notes.push("Stopped early: fetch budget reached; remaining items not scanned this run.");
+        break;
+      }
+      let items: Awaited<ReturnType<typeof fetchGoogleNews>> = [];
+      try {
+        items = await fetchGoogleNews(entity.name, 4);
+      } catch (err) {
+        notes.push(`${entity.name}: news fetch failed (${err instanceof Error ? err.message : String(err)}).`);
+        continue;
+      }
+      for (const it of items.slice(0, 3)) {
+        if (!hasBudget()) break;
+        try {
+          const ing = await ingestDocument(db, {
+            src: memberSource,
+            title: it.title,
+            body: it.snippet,
+            url: it.link,
+            publishedAt: it.publishedAt,
+            isSynthetic: false,
+            collectedVia: "member_scan",
+            recentShingleSets,
+            copyLoopJaccard: settings.copy_loop_jaccard,
+            logStage: "member_scan",
+            enrichBody: true,
+            bodyBudget,
+          });
+          for (const n of ing.notes) notes.push(n);
+          if (ing.skipped) continue;
+          documentsCollected++;
+          for (const c of ing.newClaims) newClaims.push(c);
+        } catch (err) {
+          notes.push(`${entity.name}: ingest failed (${err instanceof Error ? err.message : String(err)}).`);
+        }
+      }
+    }
+
+    // Fold the collected claims into the shared graph (reuses the global synthesis).
+    const saveProgress = async () => {};
+    await synthesizeClaimsIntoEvents(db, newClaims, settings, {
+      runId: run.id,
+      deadlineAtMs,
+      notes,
+      evCounts,
+      saveProgress,
+    });
+
+    // Re-score this member's exposures against the new events.
+    let hitsCreated = 0;
+    try {
+      const { scoreExposures } = await import("./exposure.functions");
+      const ex = await scoreExposures({ userId });
+      hitsCreated = ex.hits_created;
+    } catch (err) {
+      notes.push(`Exposure scoring skipped: ${err instanceof Error ? err.message : String(err)}`);
+    }
+
+    await db
+      .from("scan_runs")
+      .update({
+        status: "completed",
+        finished_at: new Date().toISOString(),
+        documents_collected: documentsCollected,
+        atomic_claims_created: newClaims.length,
+        events_created: evCounts.created,
+        notes: notes.join(" | ").slice(0, 2000),
+      })
+      .eq("id", run.id);
+
+    return {
+      status: "completed",
+      entities_scanned: entities.length,
+      documents_collected: documentsCollected,
+      events_created: evCounts.created,
+      hits_created: hitsCreated,
+      scans_remaining: Math.max(0, quota.remaining - 1),
+      notes: notes.slice(-10),
+    };
+  });
 
 function clamp01(n: unknown): number {
   const v = typeof n === "number" ? n : Number(n);
