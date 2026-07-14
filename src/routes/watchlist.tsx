@@ -123,7 +123,7 @@ function WatchlistPage() {
                       <span className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground shrink-0">{a.severity}{a.seen ? " · seen" : ""}</span>
                     </div>
                     <div className="mt-1 flex items-center gap-3 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
-                      <span>{new Date(a.created_at).toISOString().slice(0, 16).replace("T", " ")}</span>
+                      <span>{formatDateTimeUK(a.created_at)}</span>
                       <Link to="/events/$id" params={{ id: a.event_candidate_id }} className="underline hover:text-foreground">view event →</Link>
                       {!a.seen && <button onClick={() => mark.mutate(a.id)} className="ml-auto underline hover:text-foreground">mark seen</button>}
                     </div>
