@@ -3,6 +3,7 @@ import { requireAdmin } from "@/lib/archlight/require-admin.server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { IngestSource } from "./ingest.server";
 import { assertWithinQuota } from "./quota.functions";
+import { gdeltSearch, type GdeltArticle } from "./search/gdelt.server";
 import { z } from "zod";
 import { callAI, callJson, guardFinancialAdvice, pickModel } from "./ai-gateway.server";
 import { shingles, cosine, centroid, fetchFeed } from "./text.server";
@@ -1216,49 +1217,50 @@ export const scanMyItems = createServerFn({ method: "POST" })
     }));
 
     const { ingestDocument } = await import("./ingest.server");
-    for (const entity of entities) {
-      if (!hasBudget() || bodyBudget.remaining <= 0) {
-        notes.push("Stopped early: fetch budget reached; remaining items not scanned this run.");
-        break;
-      }
-      let items: Awaited<ReturnType<typeof fetchGoogleNews>> = [];
-      try {
-        items = await fetchGoogleNews(entity.name, 4);
-      } catch (err) {
-        notes.push(`${entity.name}: news fetch failed (${err instanceof Error ? err.message : String(err)}).`);
-        continue;
-      }
-      notes.push(`${entity.name}: ${items.length} news item(s) fetched`);
-      let entityIngested = 0;
-      let entitySkipped = 0;
-      for (const it of items.slice(0, 3)) {
-        if (!hasBudget()) break;
-        try {
-          const ing = await ingestDocument(db, {
-            src: memberSource,
-            title: it.title,
-            body: it.snippet,
-            url: it.link,
-            publishedAt: it.publishedAt,
-            isSynthetic: false,
-            collectedVia: "member_scan",
-            recentShingleSets,
-            copyLoopJaccard: settings.copy_loop_jaccard,
-            logStage: "member_scan",
-            enrichBody: true,
-            bodyBudget,
-          });
-          for (const n of ing.notes) notes.push(n);
-          if (ing.skipped) { entitySkipped++; continue; }
-          documentsCollected++;
-          entityIngested++;
-          for (const c of ing.newClaims) newClaims.push(c);
-        } catch (err) {
-          notes.push(`${entity.name}: ingest failed (${err instanceof Error ? err.message : String(err)}).`);
-        }
-      }
-      notes.push(`${entity.name}: ingested ${entityIngested}, skipped ${entitySkipped}`);
+    // Google News blocks datacenter IPs, so collection uses GDELT (server-reachable,
+    // already used by the global scan's investigation step). ONE combined query across
+    // the member's items keeps us under GDELT's ~1-request-per-5s per-IP rate limit.
+    const gdeltQuery = entities
+      .map((e) => `"${(e.name ?? "").replace(/["()]/g, " ").trim()}"`)
+      .filter((s) => s.length > 3)
+      .join(" OR ")
+      .slice(0, 280);
+    let articles: GdeltArticle[] = [];
+    try {
+      articles = await gdeltSearch(gdeltQuery, { maxRecords: 20, timespan: "1week" });
+    } catch (err) {
+      notes.push(`News search failed (${err instanceof Error ? err.message : String(err)}).`);
     }
+    notes.push(`Found ${articles.length} article(s) across ${entities.length} item(s)`);
+    let ingestedCount = 0;
+    let skippedCount = 0;
+    for (const a of articles) {
+      if (!hasBudget() || bodyBudget.remaining <= 0) break;
+      try {
+        const ing = await ingestDocument(db, {
+          src: memberSource,
+          title: a.title,
+          body: a.title,
+          url: a.url,
+          publishedAt: a.seendate,
+          isSynthetic: false,
+          collectedVia: "member_scan",
+          recentShingleSets,
+          copyLoopJaccard: settings.copy_loop_jaccard,
+          logStage: "member_scan",
+          enrichBody: true,
+          bodyBudget,
+        });
+        for (const n of ing.notes) notes.push(n);
+        if (ing.skipped) { skippedCount++; continue; }
+        documentsCollected++;
+        ingestedCount++;
+        for (const c of ing.newClaims) newClaims.push(c);
+      } catch (err) {
+        notes.push(`ingest failed (${err instanceof Error ? err.message : String(err)}).`);
+      }
+    }
+    notes.push(`Ingested ${ingestedCount}, skipped ${skippedCount}`);
 
     // Fold the collected claims into the shared graph (reuses the global synthesis).
     const saveProgress = async () => {};
@@ -1299,7 +1301,7 @@ export const scanMyItems = createServerFn({ method: "POST" })
       events_created: evCounts.created,
       hits_created: hitsCreated,
       scans_remaining: Math.max(0, quota.remaining - 1),
-      notes: notes.filter((n) => /news item\(s\) fetched|ingested \d+, skipped/.test(n)).slice(-30),
+      notes: notes.filter((n) => /Found \d+ article|Ingested \d+, skipped|News search failed/.test(n)).slice(-8),
     };
   });
 
