@@ -497,7 +497,7 @@ function EventDetailPage() {
                           <div className="flex items-center gap-2 shrink-0 text-[10px] font-mono">
                             <span className="px-1.5 py-0.5 rounded border border-border/60 text-muted-foreground">stated {pct(p.predicted_probability)}%</span>
                             <span className="px-1.5 py-0.5 rounded border border-border/60 text-muted-foreground">live {pct(p.final_probability)}%</span>
-                            <span className="text-muted-foreground">by {new Date(p.deadline).toISOString().slice(0, 10)}</span>
+                            <span className="text-muted-foreground">by {formatDateUK(p.deadline)}</span>
                           </div>
                         </div>
                         <p className="text-sm mt-2">{p.prediction_text}</p>
