@@ -1,6 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireAdmin } from "@/lib/archlight/require-admin.server";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 
 async function admin() {
@@ -304,10 +303,9 @@ export const updateBeliefs = createServerFn({ method: "POST" }).middleware([requ
 // ============ READS ============
 
 export const getBeliefState = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ entityId: z.string().uuid() }).parse(d))
-  .handler(async ({ data, context }) => {
-    const db = context.supabase;
+  .handler(async ({ data }) => {
+    const db = await admin();
     const [{ data: ent }, { data: history }] = await Promise.all([
       db.from("entities").select("id, canonical_name, belief_stress, belief_trajectory, belief_updated_at, belief_components").eq("id", data.entityId).maybeSingle(),
       db.from("entity_belief_history").select("id, at, stress, trajectory, trigger").eq("entity_id", data.entityId).order("at", { ascending: false }).limit(40),
@@ -326,13 +324,11 @@ export const getBeliefState = createServerFn({ method: "GET" })
 
 // Rising-stress rail: entities the user is exposed to, ordered by belief_stress.
 export const getRisingStressRail = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
-    const db = context.supabase;
+  .handler(async () => {
+    const db = await admin();
     const { data: expItems } = await db
       .from("exposure_items")
       .select("entity_id, name")
-      .eq("user_id", context.userId)
       .not("entity_id", "is", null);
     const entityIds = Array.from(new Set((expItems ?? []).map((r) => r.entity_id as string).filter(Boolean)));
     if (entityIds.length === 0) return { rows: [] };
