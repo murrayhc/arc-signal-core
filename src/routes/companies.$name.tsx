@@ -201,7 +201,7 @@ function CompanyDetailPage() {
                       <Fingerprint className="h-4 w-4" style={{ color: "var(--color-risk)" }}/>
                       <h2 className="font-display text-sm">Distress signal profile</h2>
                       <span className="ml-auto text-[10px] font-mono text-muted-foreground">
-                        updated {new Date(distress.profile.computed_at).toLocaleDateString()}
+                        updated {formatDateUK(distress.profile.computed_at)}
                       </span>
                     </div>
                     {(() => {
