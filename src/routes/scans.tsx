@@ -93,7 +93,7 @@ function ScansPage() {
               {data.logs.length === 0 && <tr><td colSpan={8} className="text-center py-6 text-muted-foreground italic text-xs">No LLM calls logged.</td></tr>}
               {data.logs.map((l) => (
                 <tr key={l.id} className="border-t border-border/40 hover:bg-accent/20">
-                  <Td className="font-mono">{new Date(l.created_at).toLocaleTimeString()}</Td>
+                  <Td className="font-mono">{formatTimeUK(l.created_at)}</Td>
                   <Td className="font-mono">{l.task_type}</Td>
                   <Td className="font-mono text-muted-foreground">{l.model}</Td>
                   <Td><StatusBadge s={l.status}/></Td>
