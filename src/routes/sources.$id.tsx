@@ -59,7 +59,7 @@ function SourceDetailPage() {
                       </div>
                     </div>
                     <div className="mt-1 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
-                      {d.published_at ? new Date(d.published_at).toISOString().slice(0, 10) : "—"} · collected {d.fetched_at ? new Date(d.fetched_at).toISOString().slice(0, 10) : "—"}
+                      {d.published_at ? formatDateUK(d.published_at) : "—"} · collected {d.fetched_at ? formatDateUK(d.fetched_at) : "—"}
                     </div>
                   </li>
                 ))}
