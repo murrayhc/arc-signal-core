@@ -1187,7 +1187,7 @@ export const scanMyItems = createServerFn({ method: "POST" })
     };
     // Ensure the member-scan source row exists (documents.source_id FK); the
     // seed migration may not have applied. Idempotent, runs service-role.
-    await db.from("sources").upsert(
+    const { error: srcUpsertErr } = await db.from("sources").upsert(
       {
         id: MEMBER_SCAN_SOURCE_ID,
         name: "Member on-demand scan",
@@ -1210,6 +1210,7 @@ export const scanMyItems = createServerFn({ method: "POST" })
     if (!run) throw new Error("Failed to open member scan run");
 
     const notes: string[] = [];
+    if (srcUpsertErr) notes.push(`Member source upsert failed: ${srcUpsertErr.message}`);
     const evCounts = { created: 0, skipped: 0 };
     const newClaims: NewClaim[] = [];
     let documentsCollected = 0;
@@ -1326,7 +1327,7 @@ export const scanMyItems = createServerFn({ method: "POST" })
       events_created: evCounts.created,
       hits_created: hitsCreated,
       scans_remaining: Math.max(0, quota.remaining - 1),
-      notes: notes.filter((n) => /Found \d+ article|Ingested \d+, skipped|News search failed|insert doc failed|forbidden language/.test(n)).slice(-8),
+      notes: notes.filter((n) => /Found \d+ article|Ingested \d+, skipped|News search failed|insert doc failed|forbidden language|source upsert failed/.test(n)).slice(-8),
     };
   });
 
