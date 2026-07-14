@@ -239,7 +239,7 @@ function BacktestPage() {
                     <Td className="font-mono">{Math.round(Number(s.prevalence_in_failures) * 100)}%</Td>
                     <Td className="font-mono">{s.median_lead_days == null ? "—" : `${Math.round(Number(s.median_lead_days))}d`}</Td>
                     <Td className="font-mono">n={s.sample_size}</Td>
-                    <Td className="font-mono text-muted-foreground">{new Date(s.mined_at).toLocaleDateString()}</Td>
+                    <Td className="font-mono text-muted-foreground">{formatDateUK(s.mined_at)}</Td>
                   </tr>
                 ))}
               </tbody>
